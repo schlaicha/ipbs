@@ -1,4 +1,4 @@
-// meshtest.cc Read a gmsh file, and solve PB eq.
+// iPBS.cc Read a gmsh file and solve PB eq.
 // adapted from dunepdelab-howto/doc/howto/src_examples/
 // cadsample.cc 
 
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
   // check arguments
   if (argc!=3)
   {
-    std::cout << "usage: ./cadsample <meshfile> <level>" << std::endl;
+    std::cout << "usage: ./iPBS <meshfile> <refinement level>" << std::endl;
     return 1;
   }
 
