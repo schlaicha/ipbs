@@ -1,6 +1,7 @@
 iPBS ToDo Notes:
 ===============
 
+ - understand what parameter classes do!
  - Deal with boundary conditions
  - Implement PB-solver (existing in test)
  - Get spherical problem solved
