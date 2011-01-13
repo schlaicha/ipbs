@@ -1,0 +1,10 @@
+################################
+# Dune module information file #
+################################
+
+#Name of the module
+Module: iPBS
+Version: 0.1
+Maintainer: schlaich@icp.uni-stuttgart.de
+#depending on 
+Depends: dune-common dune-grid dune-localfunctions dune-istl dune-pdelab
