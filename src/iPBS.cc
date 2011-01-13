@@ -106,7 +106,7 @@ int main(int argc, char** argv)
   const GV& gv = grid.leafView();
 
   // call the problem solver
-  solver(gv);
+  solver(gv, gridName, level);
 
   // done
   return 0;

@@ -1,5 +1,5 @@
 template<class GV>
-void solver (const GV& gv)
+void solver (const GV& gv, const std::string& gridName, const int& level)
 {
   // <<<1>>> Choose domain and range field type
   typedef typename GV::Grid::ctype Coord;
@@ -70,7 +70,8 @@ void solver (const GV& gv)
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
  // vtkwriter.write("test",Dune::VTKOptions::binaryappended);
   vtkwriter.write("test-par_data",Dune::VTKOptions::ascii);
-*/  Dune::PDELab::FilenameHelper fn("output");
+*/
+  Dune::PDELab::FilenameHelper fn("output");
    {
     typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
     DGF udgf(gfs,u);

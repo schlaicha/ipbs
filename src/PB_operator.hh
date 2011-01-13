@@ -95,24 +95,23 @@ public:
 
         // evaluate parameters; 
         Dune::FieldVector<RF,dim> 
-          globalpos = eg.geometry().global(it->position());
+        globalpos = eg.geometry().global(it->position());
 	  
-	    Dune::FieldVector<RF,dim> midpoint(0.5);
+	Dune::FieldVector<RF,dim> midpoint(0.5);
         globalpos -= midpoint;
-        //double sig=.0100;
-        //double Sqrt2Pi=2.5066;
+        double sig=.0100;
+        double Sqrt2Pi=2.5066;
 
-        RF f=0;
+        RF f;
 
-        //if (globalpos.two_norm()<0.05)
-        //f = 2.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig));
+        //if (globalpos.two_norm()<2)
+	        f = 200.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig));
     	//f = -std::sinh(u)*100.0 + 100;
-	    //else
         // f = 2.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig))
     	//f = -std::sinh(u)*100.0;
 	  
-        //RF f = 0; 
-        RF a = 0; 
+	if(globalpos.two_norm()>2.25) f=-10.0; else f=10.0;  
+        RF a =10; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
