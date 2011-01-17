@@ -12,17 +12,13 @@
  *  -\nabla u \cdot n = j   on \Gamma_N = \partial\Omega\setminus\Gamma_D
  *
  * with conforming finite elements on all types of grids in any dimension
- *
- * \tparam B a function indicating the type of boundary condition
- */
-//template<class B>
+  */
+template<typename M, typename B>
 class PBLocalOperator : 
-  //public Dune::PDELab::NumericalJacobianApplyVolume<PBLocalOperator<B> >,
-  //public Dune::PDELab::NumericalJacobianVolume<PBLocalOperator<B> >,
-  //public Dune::PDELab::NumericalJacobianApplyBoundary<PBLocalOperator<B> >,
-  //public Dune::PDELab::NumericalJacobianBoundary<PBLocalOperator<B> >, 
-  public Dune::PDELab::NumericalJacobianApplyVolume<PBLocalOperator>,
-  public Dune::PDELab::NumericalJacobianVolume<PBLocalOperator>,
+  public Dune::PDELab::NumericalJacobianApplyVolume<PBLocalOperator<M, B> >,
+  public Dune::PDELab::NumericalJacobianVolume<PBLocalOperator<M, B> >,
+  public Dune::PDELab::NumericalJacobianApplyBoundary<PBLocalOperator<M, B> >,
+  public Dune::PDELab::NumericalJacobianBoundary<PBLocalOperator<M, B> >, 
   public Dune::PDELab::FullVolumePattern,
   public Dune::PDELab::LocalOperatorDefaultFlags
 {
@@ -34,11 +30,12 @@ public:
   enum { doAlphaVolume = true };
 //  enum { doAlphaBoundary = true };                                // assemble boundary
 
-//  PBLocalOperator (const B& b_, unsigned int intorder_=2)  // needs boundary cond. type
-//    : b(b_), intorder(intorder_)
-//  {}
+  // constructor parametrized by regions and boundary classes
+  PBLocalOperator (const M& m_, const B& b_, unsigned int intorder_=2)  // needs boundary cond. type
+    : m(m_), b(b_), intorder(intorder_)
+  {}
 
-  PBLocalOperator (unsigned int intorder_=2) : intorder(intorder_){}
+  //PBLocalOperator (unsigned int intorder_=2) : intorder(intorder_){}
 
   // volume integral depending on test and ansatz functions
   template<typename EG, typename LFSU, typename X, typename LFSV, typename R>
@@ -104,13 +101,14 @@ public:
 
         RF f;
 
-        //if (globalpos.two_norm()<2)
+        if (globalpos.two_norm()<2)
 	        f = 200.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig));
+	else f=0;
     	//f = -std::sinh(u)*100.0 + 100;
         // f = 2.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig))
     	//f = -std::sinh(u)*100.0;
 	  
-	if(globalpos.two_norm()>2.25) f=-10.0; else f=10.0;  
+	//if(globalpos.two_norm()>2.25) f=-10.0; else f=10.0;  
         RF a =10; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
@@ -119,7 +117,7 @@ public:
           r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
       }
   }
-/*
+
   // boundary integral
   template<typename IG, typename LFSU, typename X, typename LFSV, typename R>
   void alpha_boundary (const IG& ig, const LFSU& lfsu_s, const X& x_s, 
@@ -152,7 +150,7 @@ public:
  
         // skip rest if we are on Dirichlet boundary
         if (bctype>0) continue;
-
+/*
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());
 
@@ -174,11 +172,12 @@ public:
         // integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += j*phi[i]*factor;
+          r_s[i] += j*phi[i]*factor;*/
       }
   }
-*/
+
 private:
-  //const B& b;
+  const M& m;
+  const B& b;
   unsigned int intorder;
 };

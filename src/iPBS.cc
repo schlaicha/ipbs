@@ -49,6 +49,7 @@
 //#include"bcextension.hh"
 //#include"bctype.hh"
 #include "solver.hh"
+#include "parameters.hh"
 
 
 //===============================================================
@@ -89,14 +90,18 @@ int main(int argc, char** argv)
 
   // instanciate ug grid object
   typedef Dune::UGGrid<2> GridType; 	// 2d mesh
-  //GridType grid();            // Standard constructor reserver 200MB - but
+  //GridType grid();            // Standard constructor reserves 500MB - but
                                 //gmshreader.read can not be found
-  GridType grid(400);			// what's this number good for?
+  GridType grid(400);		// so we use this
                                 // heapSize: The size of UG's internal memory in megabytes for this grid. 
+
+  // define vectors to store boundary and element mapping
+  std::vector<int> boundaryIndexToEntity;
+  std::vector<int> elementIndexToEntity;
 
   // read a gmsh file
   Dune::GmshReader<GridType> gmshreader;
-  gmshreader.read(grid, gridName, true, false);
+  gmshreader.read(grid, gridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
 
   // refine grid
   grid.globalRefine(level);
@@ -105,9 +110,19 @@ int main(int argc, char** argv)
   typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
 
-  // call the problem solver
-  solver(gv, gridName, level);
+  // inner region, i.e. solve
+  typedef Regions<GV,double,std::vector<int>> M;
+  M m(gv, elementIndexToEntity);
 
+  // boundary condition
+  typedef BCType<GV,std::vector<int>> B;
+  B b(gv, boundaryIndexToEntity);
+  typedef BCExtension<GV,double,std::vector<int>> G;
+  G g(gv, boundaryIndexToEntity);
+
+  // call the problem solver
+  solver(gv, m, b, g, gridName, level);
+  
   // done
   return 0;
  }

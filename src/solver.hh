@@ -1,5 +1,5 @@
-template<class GV>
-void solver (const GV& gv, const std::string& gridName, const int& level)
+template<class GV, typename M, typename B, typename G>
+void solver (const GV& gv, const M& m, const B& b, const G& g, const std::string& gridName, const int& level)
 {
   // <<<1>>> Choose domain and range field type
   typedef typename GV::Grid::ctype Coord;
@@ -10,8 +10,8 @@ void solver (const GV& gv, const std::string& gridName, const int& level)
   typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM;
   FEM fem;
   // First we don't use constraints
-  typedef Dune::PDELab::NoConstraints CON;
-  //typedef Dune::PDELab::ConformingDirichletConstraints CON;     // constraints class
+  //typedef Dune::PDELab::NoConstraints CON;
+  typedef Dune::PDELab::ConformingDirichletConstraints CON;     // constraints class
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem);
@@ -19,27 +19,27 @@ void solver (const GV& gv, const std::string& gridName, const int& level)
   //B b(gv);
   typedef typename GFS::template ConstraintsContainer<Real>::Type CC;
   CC cc;
-  //Dune::PDELab::constraints(b,gfs,cc);                          // assemble constraints
-  //std::cout << "constrained dofs=" << cc.size() 
-  //          << " of " << gfs.globalSize() << std::endl;
+  Dune::PDELab::constraints(b,gfs,cc);                          // assemble constraints
+  std::cout << "constrained dofs=" << cc.size() 
+            << " of " << gfs.globalSize() << std::endl;
 
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
   typedef typename GFS::template VectorContainer<Real>::Type U;
   U u(gfs,0.0);
   //typedef BCExtension<GV,Real> G;                               // boundary value + extension
   //G g(gv);
-  //Dune::PDELab::interpolate(g,gfs,u);                           // interpolate coefficient vector
+  Dune::PDELab::interpolate(g,gfs,u);                           // interpolate coefficient vector
 
   
   // <<<4>>> Make grid operator space
   //typedef PBLocalOperator<B> LOP;                        // operator including boundary
-  typedef PBLocalOperator LOP;
-  //LOP lop(b);
-  LOP lop;
+  typedef PBLocalOperator<M,B> LOP;
+  LOP lop(m,b);
+  //LOP lop;
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE> GOS;
-  //GOS gos(gfs,cc,gfs,cc,lop);
-  GOS gos(gfs,gfs,lop);
+  GOS gos(gfs,cc,gfs,cc,lop);
+  //GOS gos(gfs,gfs,lop);
 
    // <<<5a>>> Select a linear solver backend
    //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
