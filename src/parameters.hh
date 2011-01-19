@@ -88,12 +88,14 @@ public:
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
-    //if ( (x[2]<20.+1E-6) || (x[2] > 59.979-1e-6 ) )
-    //  y = 1; // Dirichlet
-    //else
-    //  y = 0; // Neumann
+    //std::cout << "Boundary Condition Set, ID " << i.boundaryId() << std::endl;
+
+    // outer borders should be set to 0 Dirichlet BC
+    //y=1;
+    //if ( (x[2]> 0.1 || x[1] > 0.1))  y = 0; // Neumann in lower region
     //return;
 
+    // Now we only want Dirichlet 
     y=1;
     return;
 
@@ -145,7 +147,12 @@ public :
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
-    if ( x[2] > 3.0 || x[1] > 3.0 )
+    // What is inner, what is outer boundary?
+    // Print waht is e...
+    // std::cout << "e: " << e.type() << std::endl;
+
+//    if ( x[2] > 3.0 || x[1] > 3.0 )
+    if (x.two_norm() < 3.0)
       y = 5.0;
     else
       y = 0.0;
@@ -174,13 +181,13 @@ private :
   const PGMap& pg;
 };
 
-/*
+
 // function for defining radiation and Neumann boundary conditions
 template<typename GV, typename RF, typename PGMap>
-class CrankFlux
+class BoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, CrankFlux<GV,RF,PGMap> >
+           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap> >
 {
 public:
 
@@ -188,7 +195,7 @@ public:
           GV,RF,1,Dune::FieldVector<RF,1> > Traits;
 
   // constructor
-  CrankFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+  BoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
 
   // evaluate flux boundary condition
   template<typename I>
@@ -196,7 +203,7 @@ public:
                        typename Traits::RangeType& y) const
   {
     // could be handled as in the case of the BCType class!
-    y = 0.0;
+    y = 0;
     return;
   }
 
@@ -206,4 +213,4 @@ private:
   const PGMap& pg;
 };
 
-#endif*/
+//#endif

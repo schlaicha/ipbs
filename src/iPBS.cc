@@ -50,6 +50,7 @@
 //#include"bctype.hh"
 #include "solver.hh"
 #include "parameters.hh"
+//#include "boundary_adjust.hh"
 
 
 //===============================================================
@@ -89,7 +90,8 @@ int main(int argc, char** argv)
 //===============================================================
 
   // instanciate ug grid object
-  typedef Dune::UGGrid<2> GridType; 	// 2d mesh
+  const int dimgrid = 2;
+  typedef Dune::UGGrid<dimgrid> GridType; 	// 2d mesh
   //GridType grid();            // Standard constructor reserves 500MB - but
                                 //gmshreader.read can not be found
   GridType grid(400);		// so we use this
@@ -110,6 +112,8 @@ int main(int argc, char** argv)
   typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
 
+  //boundary_info(grid);
+
   // inner region, i.e. solve
   typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
@@ -120,8 +124,12 @@ int main(int argc, char** argv)
   typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
 
+  // boundary fluxes
+  typedef BoundaryFlux<GV,double,std::vector<int> > J;
+  J j(gv, boundaryIndexToEntity);
+
   // call the problem solver
-  solver(gv, m, b, g, gridName, level);
+  solver(gv, m, b, g, j, gridName, level);
   
   // done
   return 0;
@@ -133,3 +141,5 @@ int main(int argc, char** argv)
   std::cerr << "Unknown exception thrown!" << std::endl;
  }
 }
+
+

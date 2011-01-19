@@ -1,5 +1,5 @@
-template<class GV, typename M, typename B, typename G>
-void solver (const GV& gv, const M& m, const B& b, const G& g, const std::string& gridName, const int& level)
+template<class GV, typename M, typename B, typename G, typename J>
+void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const std::string& gridName, const int& level)
 {
   // <<<1>>> Choose domain and range field type
   typedef typename GV::Grid::ctype Coord;
@@ -33,8 +33,8 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const std::string
   
   // <<<4>>> Make grid operator space
   //typedef PBLocalOperator<B> LOP;                        // operator including boundary
-  typedef PBLocalOperator<M,B> LOP;
-  LOP lop(m,b);
+  typedef PBLocalOperator<M,B,J> LOP;
+  LOP lop(m,b,j);
   //LOP lop;
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE> GOS;
@@ -49,7 +49,7 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const std::string
    LS ls(gfs,cc,5000,5,1);
 
   // <<<5b>>> Solve nonlinear problem
-/*  Dune::PDELab::Newton<GOS,LS,U> newton(gos,u,ls);                        
+  Dune::PDELab::Newton<GOS,LS,U> newton(gos,u,ls);                        
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(2);
   newton.setReduction(1e-10);
@@ -57,7 +57,7 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const std::string
   newton.setMaxIterations(25);
   newton.setLineSearchMaxIterations(10);
   newton.apply();
-*/  
+  
   // <<<6>>> assemble and solve linear problem
   typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
   SLP slp(gos,u,ls,1e-10);
