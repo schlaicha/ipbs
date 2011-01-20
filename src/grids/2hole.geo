@@ -1,0 +1,12 @@
+Point(0) = {0, 0, 0, 0};
+Point(1) = {0, 5, 0, 0};
+Point(5) = {1, 0, 0, 0};
+Point(6) = {2, 1.9, 0, 0};
+Point(7) = {3, 1.9, 0, 0};
+Circle(1) = {1, 0, 1};
+Circle(4) = {5, 0, 5};
+Circle(10) = {7, 6, 7};
+Line Loop(11) = {1};
+Line Loop(12) = {10};
+Line Loop(13) = {4};
+Plane Surface(14) = {11, 12, 13};

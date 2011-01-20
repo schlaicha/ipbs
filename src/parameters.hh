@@ -90,10 +90,11 @@ public:
     Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
     //std::cout << "Boundary Condition Set, ID " << i.boundaryId() << std::endl;
 
-    // outer borders should be set to 0 Dirichlet BC
-    //y=1;
-    //if ( (x[2]> 0.1 || x[1] > 0.1))  y = 0; // Neumann in lower region
-    //return;
+    // outer borders should be set to Zero Dirichlet BC (Open Boundary)
+    if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
+    else
+	    y=1;
+    return;
 
     // Now we only want Dirichlet 
     y=1;
@@ -152,10 +153,10 @@ public :
     // std::cout << "e: " << e.type() << std::endl;
 
 //    if ( x[2] > 3.0 || x[1] > 3.0 )
-    if (x.two_norm() < 3.0)
-      y = 5.0;
-    else
-      y = 0.0;
+//    if (x.two_norm() < 3.0)
+//      y = 5.0;
+ //   else
+     y = 0.0;
     return;
 /*
     // evaluate with maps
@@ -203,7 +204,7 @@ public:
                        typename Traits::RangeType& y) const
   {
     // could be handled as in the case of the BCType class!
-    y = 0;
+    y = 2;
     return;
   }
 

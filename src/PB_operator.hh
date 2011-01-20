@@ -107,7 +107,7 @@ public:
     	//f = -std::sinh(u)*100.0 + 100;
         // f = 2.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig))
     	
-	f = -std::sinh(5*u)*5.0;
+	f = -std::sinh(0.2*u)*10.0;
 	  
 	//if(globalpos.two_norm()>2.25) f=-10.0; else f=10.0;  
         RF a =0; 

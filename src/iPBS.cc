@@ -46,8 +46,6 @@
 
 // include application heaeders
 #include"PB_operator.hh"
-//#include"bcextension.hh"
-//#include"bctype.hh"
 #include "solver.hh"
 #include "parameters.hh"
 //#include "boundary_adjust.hh"
@@ -71,9 +69,9 @@ int main(int argc, char** argv)
   }
 
   // check arguments
-  if (argc!=3)
+  if (argc!=4)
   {
-    std::cout << "usage: ./iPBS <meshfile> <refinement level>" << std::endl;
+    std::cout << "usage: ./iPBS <meshfile> <refinement level> <MaxNewtonIterations>" << std::endl;
     return 1;
   }
 
@@ -82,8 +80,10 @@ int main(int argc, char** argv)
 
   // refinement level
   int level = 0;
-  sscanf(argv[2],"%d",&level);
-  std::cout << "Using " << level << " refinement levels." << std::endl;
+  Cmdparam cmdparam;
+  sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
+  sscanf(argv[3],"%d",&cmdparam.NewtonMaxIteration);
+  std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels." << std::endl;
 
 //===============================================================
 // Setup the problem from mesh file
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
   gmshreader.read(grid, gridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
 
   // refine grid
-  grid.globalRefine(level);
+  grid.globalRefine(cmdparam.RefinementLevel);
 
   // get a grid view
   typedef GridType::LeafGridView GV;
@@ -129,8 +129,8 @@ int main(int argc, char** argv)
   J j(gv, boundaryIndexToEntity);
 
   // call the problem solver
-  solver(gv, m, b, g, j, gridName, level);
-  
+  solver(gv, m, b, g, j, gridName, cmdparam);
+ 
   // done
   return 0;
  }
