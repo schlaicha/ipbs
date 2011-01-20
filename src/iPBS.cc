@@ -45,11 +45,10 @@
 #include<dune/pdelab/stationary/linearproblem.hh>
 
 // include application heaeders
+#include "extensions.hh"
 #include"PB_operator.hh"
 #include "solver.hh"
 #include "parameters.hh"
-//#include "boundary_adjust.hh"
-
 
 //===============================================================
 // Main program with grid setup
@@ -92,10 +91,7 @@ int main(int argc, char** argv)
   // instanciate ug grid object
   const int dimgrid = 2;
   typedef Dune::UGGrid<dimgrid> GridType; 	// 2d mesh
-  //GridType grid();            // Standard constructor reserves 500MB - but
-                                //gmshreader.read can not be found
-  GridType grid(400);		// so we use this
-                                // heapSize: The size of UG's internal memory in megabytes for this grid. 
+  GridType grid(400);		// heapSize: The size of UG's internal memory in megabytes for this grid. 
 
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
@@ -112,6 +108,7 @@ int main(int argc, char** argv)
   typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
 
+  // Visit boundary elements and say hello
   //boundary_info(grid);
 
   // inner region, i.e. solve

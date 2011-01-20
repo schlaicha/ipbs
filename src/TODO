@@ -1,15 +1,18 @@
 iPBS ToDo Notes:
 ===============
 
- - understand what parameter classes do!
- - Deal with boundary conditions
- - Implement PB-solver (existing in test)
- - Get spherical problem solved
  - Think about physical units
  - Compare solving whole geometry with making use of symmetry
  - Test 3D
  - Maybe we can give dimensionality and boundaries as parameter, so solver is universal
+   NOTE This is by making use of the Cmd_params class!
+ - Improve Cmd_Params
+ - Implement Iterations
+
+ - Write an output routine
+ - Implement parallel - What is in there does not work!!!
 
 far-goal:
- - Implement iterative procedure
  - Can we use dune's quadrature?
+ - Understand GMSH and .msh format - Can give boundary values to programm?
+   What about the dielectric constant?
