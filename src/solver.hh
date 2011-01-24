@@ -1,5 +1,5 @@
 template<class GV, typename M, typename B, typename G, typename J>
-void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const std::string& gridName, const Cmdparam &cmdparam)
+void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const Cmdparam &cmdparam)
 {
   // <<<1>>> Choose domain and range field type
   typedef typename GV::Grid::ctype Coord;
@@ -9,13 +9,14 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const
   // <<<2>>> Make grid function space
   typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM;
   FEM fem;
-  typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;     // constraints class
+  typedef Dune::PDELab::ConformingDirichletConstraints CON;     // constraints class
+  //typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;     // constraints class
   CON con;
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem);
 
-  con.compute_ghosts(gfs);	// con stores indices of ghost nodes
+  //con.compute_ghosts(gfs);	// con stores indices of ghost nodes
 
   typedef typename GFS::template ConstraintsContainer<Real>::Type CC;
   CC cc;
@@ -27,7 +28,7 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const
   typedef typename GFS::template VectorContainer<Real>::Type U;
   U u(gfs,0.0);
   Dune::PDELab::interpolate(g,gfs,u);                           // interpolate coefficient vector
-  Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
+  //Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
 
   
   // <<<4>>> Make grid operator space
@@ -38,12 +39,10 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const
   GOS gos(gfs,cc,gfs,cc,lop);
 
    // <<<5a>>> Select a linear solver backend
-   //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
-   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-   LS ls(gfs, 5000, 1);
-   //LS ls(5000,true);
-   //typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS; // select parallel backend !
-   //LS ls(gfs,cc,5000,5,1);
+   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+   LS ls(5000,true);
+   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS; // parallel backend
+   //LS ls(gfs, 5000, 1);
 
   // <<<5b>>> Solve nonlinear problem
   Dune::PDELab::Newton<GOS,LS,U> newton(gos,u,ls);                        
@@ -69,4 +68,12 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
     vtkwriter.write(fn.getName(),Dune::VTKOptions::binaryappended);
   }
-} 
+
+
+  // Gnuplot output
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+  DGF udgf(gfs,u);
+  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  gnuplotwriter.addVertexData(u,"solution");
+  gnuplotwriter.write("gnuplot.dat");
+}

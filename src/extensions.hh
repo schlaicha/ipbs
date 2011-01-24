@@ -3,11 +3,18 @@
 
 typedef struct {
 	int NewtonMaxIteration; 
-	int RefinementLevel; 
+	int RefinementLevel;
+	std::string GridName;
 } Cmdparam;
 
 
+double compute_pbeq(const double &u)
+{
+	return (-std::sinh(0.2*u)*10.0);
+}
 
+
+/*
 // EXPLAIN WHAT YOU ARE DOING!!!
 template<class G>
 void boundary_info(const G& grid)
@@ -55,5 +62,5 @@ void boundary_info(const G& grid)
   }
   std::cout << "visited " << itcount << " elements with boundaries" << std::endl;
   std::cout << "visited " << iicount << " intersections with boundaries" << std::endl;
-}
+}*/
 

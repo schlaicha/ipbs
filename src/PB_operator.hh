@@ -5,14 +5,8 @@
 #include<dune/pdelab/localoperator/pattern.hh>
 #include<dune/pdelab/localoperator/flags.hh>
 
-/** a local operator for solving the equation -- MODIFY !!!!
- *
- *   - \Delta u + a*u = f   in \Omega
- *                  u = g   on \Gamma_D\subseteq\partial\Omega
- *  -\nabla u \cdot n = j   on \Gamma_N = \partial\Omega\setminus\Gamma_D
- *
- * with conforming finite elements on all types of grids in any dimension
-  */
+// Local Operator for IPBS
+
 template<typename M, typename B, typename J>
 class PBLocalOperator : 
   public Dune::PDELab::NumericalJacobianApplyVolume<PBLocalOperator<M, B, J> >,
@@ -34,8 +28,6 @@ public:
   PBLocalOperator (const M& m_, const B& b_, const J& j_, unsigned int intorder_=2)  // needs boundary cond. type
     : m(m_), b(b_), j(j_), intorder(intorder_)
   {}
-
-  //PBLocalOperator (unsigned int intorder_=2) : intorder(intorder_){}
 
   // volume integral depending on test and ansatz functions
   template<typename EG, typename LFSU, typename X, typename LFSV, typename R>
@@ -91,26 +83,19 @@ public:
           gradu.axpy(x[i],gradphi[i]);
 
         // evaluate parameters; 
-        Dune::FieldVector<RF,dim> 
-        globalpos = eg.geometry().global(it->position());
+        //Dune::FieldVector<RF,dim> 
+        //globalpos = eg.geometry().global(it->position());
 	  
-	Dune::FieldVector<RF,dim> midpoint(0.5);
-        globalpos -= midpoint;
-        double sig=.0100;
-        double Sqrt2Pi=2.5066;
+	//Dune::FieldVector<RF,dim> midpoint(0.5);
+        //globalpos -= midpoint;
+        //double sig=.0100;
+        //double Sqrt2Pi=2.5066;
 
-        RF f;
+        RF f = compute_pbeq(u);
 
-        //if (globalpos.two_norm()<2)
-	 //       f = 200.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig));
-	//else f=0;
-    	//f = -std::sinh(u)*100.0 + 100;
-        // f = 2.0*1/(sig*Sqrt2Pi)*std::exp(-0.5*globalpos.two_norm2()*globalpos.two_norm2()/(sig*sig))
-    	
-	f = -std::sinh(0.2*u)*10.0;
-	  
-	//if(globalpos.two_norm()>2.25) f=-10.0; else f=10.0;  
-        RF a =0; 
+	//f = -std::sinh(0.2*u)*10.0;
+        
+	RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
@@ -165,10 +150,6 @@ public:
           u += x_s[i]*phi[i];
             
         // evaluate flux boundary condition
-        /*Dune::FieldVector<RF,dim> 
-          globalpos = ig.geometry().global(it->position());
-        RF j;
-        if (globalpos[1]<0.5) j = 1.0; else j = -1.0; // some outflow */
 	typename J::Traits::RangeType y;
 	j.evaluate(ig, it->position(), y);
         	    

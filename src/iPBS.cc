@@ -1,6 +1,4 @@
 // iPBS.cc Read a gmsh file and solve PB eq.
-// adapted from dunepdelab-howto/doc/howto/src_examples/
-// cadsample.cc 
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -18,6 +16,7 @@
 #include<dune/common/fvector.hh>
 #include<dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include<dune/grid/io/file/gmshreader.hh>
+#include <dune/grid/io/file/gnuplot.hh>
 
 // we use UG
 #include<dune/grid/uggrid.hh>
@@ -60,7 +59,7 @@ int main(int argc, char** argv)
   Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
   std::cout << "Hello World! This is iPBS." << std::endl;
   if(Dune::MPIHelper::isFake)
-    std::cout<< "This is not a sequential program!" << std::endl;
+    std::cout<< "This is (at the moment) a sequential program!" << std::endl;
   else
   {
     if(helper.rank()==0)
@@ -70,16 +69,16 @@ int main(int argc, char** argv)
   // check arguments
   if (argc!=4)
   {
-    std::cout << "usage: ./iPBS <meshfile> <refinement level> <MaxNewtonIterations>" << std::endl;
-    return 1;
+    if (helper.rank()==0)
+    {
+	std::cout << "usage: ./iPBS <meshfile> <refinement level> <MaxNewtonIterations>" << std::endl;
+	return 1;
+    }
   }
 
-  // scan mesh name
-  std::string gridName = argv[1];
-
-  // refinement level
-  int level = 0;
+  // Read in comandline arguments
   Cmdparam cmdparam;
+  cmdparam.GridName=argv[1];
   sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
   sscanf(argv[3],"%d",&cmdparam.NewtonMaxIteration);
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels." << std::endl;
@@ -99,7 +98,7 @@ int main(int argc, char** argv)
 
   // read a gmsh file
   Dune::GmshReader<GridType> gmshreader;
-  gmshreader.read(grid, gridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
+  gmshreader.read(grid, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
 
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
@@ -126,7 +125,7 @@ int main(int argc, char** argv)
   J j(gv, boundaryIndexToEntity);
 
   // call the problem solver
-  solver(gv, m, b, g, j, gridName, cmdparam);
+  solver(gv, m, b, g, j, cmdparam);
  
   // done
   return 0;
