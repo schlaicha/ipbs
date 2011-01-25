@@ -1,3 +1,22 @@
+// Input/Output
+#include <dune/grid/io/file/gnuplot.hh>
+#include<dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+
+// pdelab includes
+#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
+#include<dune/pdelab/instationary/onestep.hh>   // Filenamehelper
+#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
+#include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
+#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
+#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
+#include<dune/pdelab/gridfunctionspace/interpolate.hh>
+#include<dune/pdelab/gridfunctionspace/constraints.hh>
+#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
+#include<dune/pdelab/backend/istlvectorbackend.hh>
+#include<dune/pdelab/backend/istlmatrixbackend.hh>
+#include<dune/pdelab/backend/istlsolverbackend.hh>
+#include<dune/pdelab/stationary/linearproblem.hh>
+
 template<class GV, typename M, typename B, typename G, typename J>
 void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const Cmdparam &cmdparam)
 {
@@ -68,7 +87,6 @@ void solver (const GV& gv, const M& m, const B& b, const G& g, const J& j, const
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
     vtkwriter.write(fn.getName(),Dune::VTKOptions::binaryappended);
   }
-
 
   // Gnuplot output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;

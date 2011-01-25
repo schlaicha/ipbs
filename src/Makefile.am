@@ -3,7 +3,7 @@ SUBDIRS =
 
 noinst_PROGRAMS = iPBS
 
-iPBS_SOURCES = iPBS.cc
+iPBS_SOURCES = iPBS.cc sysparams.cc
 
 iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(DUNEMPICPPFLAGS) \

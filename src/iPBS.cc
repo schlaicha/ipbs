@@ -14,40 +14,29 @@
 #include<dune/common/mpihelper.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
-#include<dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include<dune/grid/io/file/gmshreader.hh>
-#include <dune/grid/io/file/gnuplot.hh>
 
 // we use UG
 #include<dune/grid/uggrid.hh>
-#include<dune/istl/bvector.hh>
-#include<dune/istl/operators.hh>
-#include<dune/istl/solvers.hh>
-#include<dune/istl/preconditioners.hh>
-#include<dune/istl/io.hh>
-#include<dune/istl/superlu.hh>
-
-// pdelab includes
-#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include<dune/pdelab/instationary/onestep.hh>
-#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
-#include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
-#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
-#include<dune/pdelab/gridfunctionspace/interpolate.hh>
-#include<dune/pdelab/gridfunctionspace/constraints.hh>
-#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
-#include<dune/pdelab/gridoperatorspace/instationarygridoperatorspace.hh>
-#include<dune/pdelab/backend/istlvectorbackend.hh>
-#include<dune/pdelab/backend/istlmatrixbackend.hh>
-#include<dune/pdelab/backend/istlsolverbackend.hh>
-#include<dune/pdelab/stationary/linearproblem.hh>
 
 // include application heaeders
-#include "extensions.hh"
+#include "ipbs.hh"
 #include"PB_operator.hh"
 #include "solver.hh"
 #include "parameters.hh"
+
+#ifndef _SYSPARAMS_H
+#define _SYSPARAMS_H
+#include "sysparams.hh"
+#endif
+
+template <typename PositionVector>
+//double compute_pbeq(const double &u, Dune::FieldVector<double, dim> &r)
+double compute_pbeq(const double &u, const PositionVector &r)
+{
+	return (- sysParams.get_lambda2i() * std::sinh(u));
+}
+
 
 //===============================================================
 // Main program with grid setup
@@ -83,6 +72,9 @@ int main(int argc, char** argv)
   sscanf(argv[3],"%d",&cmdparam.NewtonMaxIteration);
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels." << std::endl;
 
+
+  sysParams.set_lambda(2.0);
+
 //===============================================================
 // Setup the problem from mesh file
 //===============================================================
@@ -107,9 +99,6 @@ int main(int argc, char** argv)
   typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
 
-  // Visit boundary elements and say hello
-  //boundary_info(grid);
-
   // inner region, i.e. solve
   typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
@@ -123,6 +112,10 @@ int main(int argc, char** argv)
   // boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int> > J;
   J j(gv, boundaryIndexToEntity);
+
+//===============================================================
+// Solve
+//===============================================================
 
   // call the problem solver
   solver(gv, m, b, g, j, cmdparam);

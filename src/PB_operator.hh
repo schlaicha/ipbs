@@ -83,18 +83,10 @@ public:
           gradu.axpy(x[i],gradphi[i]);
 
         // evaluate parameters; 
-        //Dune::FieldVector<RF,dim> 
-        //globalpos = eg.geometry().global(it->position());
+        Dune::FieldVector<RF,dim> 
+        globalpos = eg.geometry().global(it->position());
 	  
-	//Dune::FieldVector<RF,dim> midpoint(0.5);
-        //globalpos -= midpoint;
-        //double sig=.0100;
-        //double Sqrt2Pi=2.5066;
-
-        RF f = compute_pbeq(u);
-
-	//f = -std::sinh(0.2*u)*10.0;
-        
+        RF f = compute_pbeq(u, globalpos);
 	RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i

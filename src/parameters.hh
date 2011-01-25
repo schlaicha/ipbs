@@ -1,5 +1,7 @@
-/*#ifndef __CADSAMPLE_PARAMETER_HH_
-#define __CADSAMPLE_PARAMETER_HH_*/
+#ifndef _SYSPARAMS_H
+#define _SYSPARAMS_H
+#include "sysparams.hh"
+#endif
 
 // layout for codim0 data
 template <int dim>
@@ -88,16 +90,11 @@ public:
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
-    //std::cout << "Boundary Condition Set, ID " << i.boundaryId() << std::endl;
-
+    
     // outer borders should be set to Zero Dirichlet BC (Open Boundary)
     if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
     else
 	    y=1;
-    return;
-
-    // Now we only want Dirichlet 
-    y=1;
     return;
 
     /*// evaluate with maps
@@ -149,13 +146,7 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
     // What is inner, what is outer boundary?
-    // Print waht is e...
-    // std::cout << "e: " << e.type() << std::endl;
-
-//    if ( x[2] > 3.0 || x[1] > 3.0 )
-//    if (x.two_norm() < 3.0)
-//      y = 5.0;
- //   else
+    // Dirichlet is used only for outer boundary, so set to 0
      y = 0.0;
     return;
 /*
@@ -203,8 +194,7 @@ public:
   inline void evaluate(I& i, const typename Traits::DomainType& xlocal,
                        typename Traits::RangeType& y) const
   {
-    // could be handled as in the case of the BCType class!
-    y = 2;
+    y = sysParams.get_sigma_init();
     return;
   }
 
@@ -213,5 +203,3 @@ private:
   const GV&    gv;
   const PGMap& pg;
 };
-
-//#endif
