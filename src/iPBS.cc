@@ -34,6 +34,10 @@ void save(const DGF &udgf, const GV &gv)
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
     vtkwriter.write(fn.getName(),Dune::VTKOptions::binaryappended);
   }
+  // Gnuplot output
+  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  gnuplotwriter.addVertexData(u,"solution");
+  gnuplotwriter.write("gnuplot.dat");
 }
 
 void calculate_phi(const GV &gv, const DGF &udgf)
