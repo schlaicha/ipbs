@@ -4,26 +4,10 @@
 #include "config.h"
 #endif
 
-// std includes
-#include<math.h>
-#include<iostream>
-#include<vector>
-#include<string>
-
-// dune includes
-#include<dune/common/mpihelper.hh>
-#include<dune/common/exceptions.hh>
-#include<dune/common/fvector.hh>
-#include<dune/grid/io/file/gmshreader.hh>
-
-// we use UG
-#include<dune/grid/uggrid.hh>
-
 // include application heaeders
-#include "ipbs.hh"
 #include"PB_operator.hh"
-#include "solver.hh"
 #include "parameters.hh"
+#include "ipbs.hh"
 
 #ifndef _SYSPARAMS_H
 #define _SYSPARAMS_H
@@ -31,15 +15,63 @@
 #endif
 
 template <typename PositionVector>
-//double compute_pbeq(const double &u, Dune::FieldVector<double, dim> &r)
 double compute_pbeq(const double &u, const PositionVector &r)
 {
 	return (- sysParams.get_lambda2i() * std::sinh(u));
 }
 
+void solver (NEWTON &newton, SLP &slp)
+{
+	newton.apply();
+	slp.apply();
+}
+
+void save(const DGF &udgf, const GV &gv)
+{
+  Dune::PDELab::FilenameHelper fn("output");
+   {
+    Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
+    vtkwriter.write(fn.getName(),Dune::VTKOptions::binaryappended);
+  }
+}
+
+void calculate_phi(const GV &gv, const DGF &udgf)
+{
+  // Get the potential at the particle's surface
+  std::cout << "Particle Boundaries at:" << std::endl;
+  // define iterators
+  typedef GV::Codim<0>::Iterator ElementLeafIterator;
+  typedef GV::IntersectionIterator IntersectionIterator;
+  int iicount=0;
+  double phi=0;
+ for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
+  {
+	if (it->hasBoundaryIntersections()==true)
+	{
+		for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+		{
+  			Traits::DomainType xlocal;
+  			Traits::RangeType y;
+			if (ii->boundary()==true)
+			{
+			   udgf.evaluate(*it,xlocal,y);
+			   Dune::FieldVector<double,dim> x = it->geometry().global(xlocal);
+			   if (x.two_norm() < 4.7)				
+			   {    
+				//std::cout << "x= " << x[0] << "\t y = " << x[1] << "\t Phi = " << y << std::endl;
+			        ++iicount;
+				phi += y;
+			   }
+			}
+		}
+	}
+  }
+  std::cout << std::endl << "Phi_init = " << sysParams.get_phi_init() << "\t Phi_S = " << phi/iicount << std::endl;
+}
 
 //===============================================================
-// Main program with grid setup
+// Main programm
 //===============================================================
 int main(int argc, char** argv)
 {
@@ -72,16 +104,10 @@ int main(int argc, char** argv)
   sscanf(argv[3],"%d",&cmdparam.NewtonMaxIteration);
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels." << std::endl;
 
-
-  sysParams.set_lambda(2.0);
-
-//===============================================================
-// Setup the problem from mesh file
-//===============================================================
+  
+  // <<<1>>> Setup the problem from mesh file
 
   // instanciate ug grid object
-  const int dimgrid = 2;
-  typedef Dune::UGGrid<dimgrid> GridType; 	// 2d mesh
   GridType grid(400);		// heapSize: The size of UG's internal memory in megabytes for this grid. 
 
   // define vectors to store boundary and element mapping
@@ -96,30 +122,79 @@ int main(int argc, char** argv)
   grid.globalRefine(cmdparam.RefinementLevel);
 
   // get a grid view
-  typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
 
   // inner region, i.e. solve
-  typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
 
   // boundary condition
-  typedef BCType<GV,std::vector<int>> B;
   B b(gv, boundaryIndexToEntity);
-  typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
 
   // boundary fluxes
-  typedef BoundaryFlux<GV,double,std::vector<int> > J;
   J j(gv, boundaryIndexToEntity);
 
-//===============================================================
-// Solve
-//===============================================================
+  // <<<2>>> Make grid function space
+  FEM fem;
+  CON con;
+  GFS gfs(gv,fem);
+  CC cc;
+  Dune::PDELab::constraints(b,gfs,cc);                          // assemble constraints
+  std::cout << "constrained dofs=" << cc.size() 
+            << " of " << gfs.globalSize() << std::endl;
 
-  // call the problem solver
-  solver(gv, m, b, g, j, cmdparam);
- 
+  // <<<3>>> Make FE function extending Dirichlet boundary conditions
+  U u(gfs,0.0);
+  Dune::PDELab::interpolate(g,gfs,u);                           // interpolate coefficient vector
+  
+  // <<<4>>> Make grid operator space
+  LOP lop(m,b,j);
+  GOS gos(gfs,cc,gfs,cc,lop);
+
+  // <<<5a>>> Select a linear solver backend
+  LS ls(5000,true);
+  
+  // <<<5b>>> Instantiate solver for nonlinear problem
+  NEWTON newton(gos,u,ls); 
+  newton.setReassembleThreshold(0.0);
+  newton.setVerbosityLevel(2);
+  newton.setReduction(1e-10);
+  newton.setMinLinearReduction(1e-4);
+  newton.setMaxIterations(cmdparam.NewtonMaxIteration);
+  newton.setLineSearchMaxIterations(10);
+
+  // <<<5c>>> Instantiate Solver for linear problem
+  SLP slp(gos,u,ls,1e-10); 
+
+  // <<<6>>> Solve Problem
+  solver(newton, slp);
+
+  // Create Grid Function Space
+  DGF udgf(gfs,u);
+
+  // graphical output
+  save(udgf, gv);
+
+  calculate_phi(gv, udgf);
+  
+  // Try what we need in the iteration circle
+  sysParams.set_phi_init(5.0);
+  U u_new(gfs,0.0);
+  Dune::PDELab::interpolate(g,gfs,u_new);
+  LOP lop_new(m,b,j);
+  GOS gos_new(gfs,cc,gfs,cc,lop_new);
+  NEWTON newton_new(gos_new,u_new,ls); 
+  newton_new.setReassembleThreshold(0.0);
+  newton_new.setVerbosityLevel(2);
+  newton_new.setReduction(1e-10);
+  newton_new.setMinLinearReduction(1e-4);
+  newton_new.setMaxIterations(cmdparam.NewtonMaxIteration);
+  newton_new.setLineSearchMaxIterations(10);
+  SLP slp_new(gos_new,u_new,ls,1e-10);
+  solver(newton_new, slp_new);
+  DGF udgf_new(gfs,u_new);
+  calculate_phi(gv, udgf_new);
+
   // done
   return 0;
  }
@@ -129,6 +204,4 @@ int main(int argc, char** argv)
  catch (...){
   std::cerr << "Unknown exception thrown!" << std::endl;
  }
-}
-
-
+}  

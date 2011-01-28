@@ -92,8 +92,8 @@ public:
     Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
     
     // outer borders should be set to Zero Dirichlet BC (Open Boundary)
-    if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
-    else
+    //if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
+    //else
 	    y=1;
     return;
 
@@ -147,7 +147,10 @@ public :
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
     // What is inner, what is outer boundary?
     // Dirichlet is used only for outer boundary, so set to 0
-     y = 0.0;
+    if (x.two_norm() < 4.7)
+	    y = sysParams.get_phi_init();
+    else
+	    y = 0.0;
     return;
 /*
     // evaluate with maps
