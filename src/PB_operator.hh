@@ -102,11 +102,11 @@ public:
                        const LFSV& lfsv_s, R& r_s) const
   {
     // some types
-    typedef typename LFSV::Traits::LocalFiniteElementType::
+    typedef typename LFSV::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSV::Traits::LocalFiniteElementType::
+    typedef typename LFSV::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSV::Traits::LocalFiniteElementType::
+    typedef typename LFSV::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename LFSV::Traits::SizeType size_type;
         
