@@ -143,7 +143,9 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
 
-    if (x.two_norm() < 4.7 && e.hasBoundaryIntersections() == true)
+    //if (x.two_norm() < 4.7 && e.hasBoundaryIntersections() == true)
+    //if (e.hasBoundaryIntersections() == true)
+    if (x.two_norm() < 1.0+2E-1)
 	y = sysParams.get_phi_init();	// set particles potential
     else
       y = 0.0;				// set domain boundary
@@ -193,15 +195,15 @@ public :
 
 
 
-    if (x.two_norm() < 3.0 && e.hasBoundaryIntersections() == true)	// i.e. is particle
+    //if (x.two_norm() < 3.0 && e.hasBoundaryIntersections() == true)	// i.e. is particle
+    if (x.two_norm() < 1.0+2E-1)
     {
 	// Take a SOR step towards the correct solution (see paper)
 	// calculate B.C. according to eq. 2 (paper)
 	y = 0;
-
 	//calculate_phi(gv, udgf);
 
-        typedef typename GV::template Codim<0>::Iterator LeafIterator;
+    typedef typename GV::template Codim<0>::Iterator LeafIterator;
 	for (LeafIterator it = gv.template begin<0>(); it != gv.template end<0>(); ++it)
 	{
 	  typename Traits::RangeType value;
@@ -224,7 +226,7 @@ public :
 	sysParams.add_error(y);
 	//if (y!=y || y == std::numeric_limits<double>::infinity())
 	//    y = -1.0;
-        std::cout << "x[1] = " << x.vec_access(0) << "\tx[2] = " << x.vec_access(1) << "\ty = " << y << std::endl;
+    //    std::cout << "x[1] = " << x.vec_access(0) << "\tx[2] = " << x.vec_access(1) << "\ty = " << y << std::endl;
     }
     else
       y = 0.0;			// Dirichlet B.C. for domain

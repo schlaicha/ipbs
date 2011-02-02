@@ -266,7 +266,7 @@ void save(const DGF &udgf, const U &u, const GV &gv, const std::string filename)
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write("gnuplot.dat");
+  gnuplotwriter.write(filename);
 }
 
 
