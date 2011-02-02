@@ -1,7 +1,11 @@
+// boundaries.hh - Adjust the boundary conditions for the iPBS scheme
+
 #ifndef _SYSPARAMS_H
 #define _SYSPARAMS_H
 #include "sysparams.hh"
 #endif
+
+// ============================================================================
 
 // layout for codim0 data
 template <int dim>
@@ -15,8 +19,8 @@ struct P0Layout
 };
 
 //===============================================================
-// parameter classes - define what are inner, boundary and
-// extended boundary elements
+// boundary classes - define what are inner, boundary (Neumann)
+// and extended boundary (Dirichlet)elements
 //===============================================================
 
 // function defining the inner elements
@@ -63,6 +67,7 @@ private:
   const PGMap& pg;
 };
 
+// ============================================================================
 
 /** \brief boundary grid function selecting boundary conditions
  * 0 means Neumann
@@ -96,18 +101,6 @@ public:
     //else
 	    y=1;
     return;
-
-    /*// evaluate with maps
-    int physgroup_index = pg[i.boundarySegmentIndex()];
-    switch ( physgroup_index )
-    {
-      case 0  : y = 0; break;
-      case 1  : y = 0; break;
-    //  case 4  : y = 1; break;
-    //  case 5  : y = 1; break;
-    //  default : y = 0; break; // Neumann
-    }
-    return;*/
   }
 
   //! get a reference to the grid view
@@ -119,51 +112,40 @@ private:
   const PGMap& pg;
 };
 
-/**
- * \brief A function that defines Dirichlet boundary conditions AND its extension to the interior
- */
+// ============================================================================
+
+// This sets the initial potential at the particle's surface and zero Dirichlet at the domain boundaries
+
 template<typename GV, typename RF, typename PGMap>
-class BCExtension
+class BCExtension_init
   : public Dune::PDELab::GridFunctionBase<Dune::PDELab::
            GridFunctionTraits<GV,RF,1,Dune::FieldVector<RF,1> >,
-           BCExtension<GV,RF,PGMap> >
+           BCExtension_init<GV,RF,PGMap> >
 {
 public :
 
   typedef Dune::PDELab::GridFunctionTraits<GV,RF,1,Dune::FieldVector<RF,1> > Traits;
   typedef typename GV::IntersectionIterator IntersectionIterator;
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
 
   //! construct from grid view
-  BCExtension(const GV& gv_, const PGMap& pg_) : gv(gv_), mapper(gv), pg(pg_) {}
+  BCExtension_init(const GV& gv_, const PGMap& pg_) : gv(gv_), mapper(gv), pg(pg_) {}
 
   //! evaluate extended function on element
   inline void evaluate (const typename Traits::ElementType& e,
                         const typename Traits::DomainType& xlocal,
                         typename Traits::RangeType& y) const
   {
-    // evaluate with global ccordinates
+    // evaluate with global cordinates
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
-    // What is inner, what is outer boundary?
-    // Dirichlet is used only for outer boundary, so set to 0
+
     if (x.two_norm() < 4.7)
-	    y = sysParams.get_phi_init();
+	y = sysParams.get_phi_init();	// set particles potential
     else
-	    y = 0.0;
+      y = 0.0;				// set domain boundary
     return;
-/*
-    // evaluate with maps
-    int physgroup_index = pg[e.boundarySegmentIndex()];
-    switch ( physgroup_index )
-    {
-      case 0  : y = -10; break;
-      case 1  : y = 10; break;
-    //  case 4  : y = 1; break;
-    //  case 5  : y = 1; break;
-    //  default : y = 0; break; // Neumann
-    }
-    return;*/
   }
 
   //! get a reference to the grid view
@@ -176,8 +158,92 @@ private :
   const PGMap& pg;
 };
 
+// ============================================================================
+
+// This sets the potential at the particle's surface and zero Dirichlet at the domain boundaries during iteration
+
+template<typename GV, typename RF, typename PGMap>
+class BCExtension_iterate
+  : public Dune::PDELab::GridFunctionBase<Dune::PDELab::
+           GridFunctionTraits<GV,RF,1,Dune::FieldVector<RF,1> >,
+           BCExtension_iterate<GV,RF,PGMap> >
+{
+public :
+
+  typedef Dune::PDELab::GridFunctionTraits<GV,RF,1,Dune::FieldVector<RF,1> > Traits;
+  typedef typename GV::IntersectionIterator IntersectionIterator;
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+
+  //! construct from grid view
+  BCExtension_iterate(const GV& gv_, const PGMap& pg_, const DGF &udgf_) : gv(gv_), mapper(gv), pg(pg_), udgf(udgf_) {}
+
+  //! evaluate extended function on element
+  inline void evaluate (const typename Traits::ElementType& e,
+                        const typename Traits::DomainType& xlocal,
+                        typename Traits::RangeType& y) const
+  {
+    // evaluate with global ccordinates
+    const int dim = Traits::GridViewType::Grid::dimension;
+    typedef typename Traits::GridViewType::Grid::ctype ctype;
+    Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
+    typename Traits::RangeType y_old;	// store potential at actual element for SOR step
+    udgf.evaluate(e,xlocal,y_old);
+
+    typedef typename GV::template Codim<0>::Iterator LeafIterator;
+
+
+    if (x.two_norm() < 4.7)	// i.e. is particle
+    {
+	// Take a SOR step towards the correct solution (see paper)
+	// calculate B.C. according to eq. 2 (paper)
+	y = 0;
+
+	//calculate_phi(gv, udgf);
+
+	for (LeafIterator it = gv.template begin<0>(); it != gv.template end<0>(); ++it)
+	{
+	  typename Traits::RangeType value;
+	  Dune::FieldVector<ctype,dim> x_prime = it->geometry().global(xlocal);
+	  if (x != x_prime)	// make sure we have no zero division
+	  {
+	    udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
+	    Dune::FieldVector<ctype,dim> dist = x - x_prime;
+	    //std::cout << "value = " << value << std::endl;
+
+  	    y += std::sinh(value) / dist.two_norm() * it->geometry().volume();
+	  }
+	}
+	y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4*3.14);
+	// Currently we use a fixed point charge at origin (sphere case)
+	y += sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * x.two_norm());
+	// SOR step
+	y = sysParams.alpha * y + (1.0 - sysParams.alpha) * y_old;
+	// Calculate error
+	sysParams.add_error(y);
+	//if (std::isnan(double(y)) || std::isinf(double(y)))
+	//    y = 0.0;
+    }
+    else
+      y = 0.0;			// Dirichlet B.C. for domain
+    //std::cout << "y = " << y << std::endl;
+    return;
+  }
+
+  //! get a reference to the grid view
+  inline const GV& getGridView() { return gv; }
+
+private :
+
+  const GV& gv;
+  const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
+  const PGMap& pg;
+  const DGF& udgf;
+};
+
+// ============================================================================
 
 // function for defining radiation and Neumann boundary conditions
+
 template<typename GV, typename RF, typename PGMap>
 class BoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<

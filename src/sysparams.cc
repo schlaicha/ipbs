@@ -3,6 +3,8 @@
 #include "sysparams.hh"
 #endif
 
+#include <iostream>
+
 // Implementation of SysParams functionality
 
 // Constructor
@@ -12,6 +14,41 @@ SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, d
 	lambda2i = 1 / (lambda * lambda);
 	phi_init = bjerrum * charge / (epsilon * radius * radius);
 	sigma_init = phi_init / (2.0*3.14);
+	totalError = 0;
+	oldValue = phi_init;
+}
+
+void SysParams::add_error(double inValue)
+{
+	double error = 2.0 * (inValue - oldValue) / (inValue + oldValue);
+	if (error > totalError)
+		totalError = error;
+	oldValue = inValue;
+}
+
+void SysParams::reset_error()
+{
+	totalError = 0;
+}
+
+double SysParams::get_error()
+{
+		return totalError;
+}
+
+double SysParams::get_epsilon()
+{
+	return epsilon;
+}
+
+double SysParams::get_charge()
+{
+	return charge;
+}
+
+double SysParams::get_bjerrum()
+{
+	return bjerrum;
 }
 
 double SysParams::get_lambda2i()
