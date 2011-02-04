@@ -143,8 +143,6 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
 
-    //if (x.two_norm() < 4.7 && e.hasBoundaryIntersections() == true)
-    //if (e.hasBoundaryIntersections() == true)
     if (x.two_norm() < 1.0+2E-1)
 	y = sysParams.get_phi_init();	// set particles potential
     else
@@ -194,16 +192,12 @@ public :
     udgf.evaluate(e,xlocal,y_old);
 
 
-
-    //if (x.two_norm() < 3.0 && e.hasBoundaryIntersections() == true)	// i.e. is particle
-    if (x.two_norm() < 1.0+2E-1)
+    if (x.two_norm() < 1.0+5E-1)
     {
-	// Take a SOR step towards the correct solution (see paper)
+        // Take a SOR step towards the correct solution (see paper)
 	// calculate B.C. according to eq. 2 (paper)
 	y = 0;
-	//calculate_phi(gv, udgf);
-
-    typedef typename GV::template Codim<0>::Iterator LeafIterator;
+	typedef typename GV::template Codim<0>::Iterator LeafIterator;
 	for (LeafIterator it = gv.template begin<0>(); it != gv.template end<0>(); ++it)
 	{
 	  typename Traits::RangeType value;
@@ -212,25 +206,19 @@ public :
 	  {
 	    udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
 	    Dune::FieldVector<ctype,dim> dist = x - x_prime;
-	    //std::cout << "value = " << value << std::endl;
-
   	    y += std::sinh(value) / dist.two_norm() * it->geometry().volume();
 	  }
 	}
 	y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4*3.14);
 	// Currently we use a fixed point charge at origin (sphere case)
-	y += sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * x.two_norm());
+	y += 0.028 * sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * x.two_norm());
 	// SOR step
 	y = sysParams.alpha * y + (1.0 - sysParams.alpha) * y_old;
 	// Calculate error
-	sysParams.add_error(y);
-	//if (y!=y || y == std::numeric_limits<double>::infinity())
-	//    y = -1.0;
-    //    std::cout << "x[1] = " << x.vec_access(0) << "\tx[2] = " << x.vec_access(1) << "\ty = " << y << std::endl;
+	sysParams.add_error(2*(y-y_old)/(y+y_old));
     }
     else
       y = 0.0;			// Dirichlet B.C. for domain
-    // std::cout << "x[1] = " << x.vec_access(0) << "\tx[2] = " << x.vec_access(1) << "\ty = " << y << std::endl;
     return;
   }
 

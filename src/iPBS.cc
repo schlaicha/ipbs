@@ -44,7 +44,7 @@ typedef GridType::LeafGridView GV;
 typedef GV::Grid::ctype Coord;
 typedef double Real;
 const int dim = GV::dimension;
-typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM;
+typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM; // DEPRECATED
 typedef Dune::PDELab::ConformingDirichletConstraints CON;
 typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
@@ -116,7 +116,8 @@ int main(int argc, char** argv)
   // <<<1>>> Setup the problem from mesh file
 
   // instanciate ug grid object
-  GridType grid(400);		// heapSize: The size of UG's internal memory in megabytes for this grid. 
+  GridType grid(400);		// heapSize: The size of UG's internal memory in megabytes for this grid.
+				// This Constructor is DEPRECATED
 
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
@@ -160,9 +161,7 @@ int main(int argc, char** argv)
   // graphical output
   std::string vtk_filename = "step_0";
   save(udgf, u, gv, vtk_filename);
-  
-//  calculate_phi(gv, udgf);
-  
+
   // HERE ITERATION STARTS HERE
   int iterationCounter = 1;
   while (sysParams.get_error() > 0.01 || iterationCounter == 1)
@@ -181,7 +180,6 @@ int main(int argc, char** argv)
     save(udgf_it, u, gv, vtk_filename);
     ++iterationCounter;
   }
-
 
   // done
   return 0;
@@ -260,13 +258,12 @@ void save(const DGF &udgf, const U &u, const GV &gv, const std::string filename)
   // {
     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-    //vtkwriter.write(fn.getName(),Dune::VTKOptions::binaryappended);
-    vtkwriter.write(filename,Dune::VTKOptions::binaryappended);
+    vtkwriter.write(filename,Dune::VTK::appendedraw);
   // }
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename);
+  gnuplotwriter.write(filename + ".dat");
 }
 
 

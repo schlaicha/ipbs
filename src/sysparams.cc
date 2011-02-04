@@ -18,12 +18,14 @@ SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, d
 	oldValue = phi_init;
 }
 
-void SysParams::add_error(double inValue)
+void SysParams::add_error(double error)
 {
-	double error = 2.0 * (inValue - oldValue) / (inValue + oldValue);
+	//double error = 2.0 * (inValue - oldValue) / (inValue + oldValue);
 	if (error > totalError)
-		totalError = error;
-	oldValue = inValue;
+	{
+	  totalError = error;
+	  // oldValue = inValue;
+	}
 }
 
 void SysParams::reset_error()
