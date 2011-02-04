@@ -27,6 +27,7 @@
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 // #include<dune/pdelab/instationary/onestep.hh>   // Filenamehelper
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
+//#include<dune/pdelab/finiteelementmap/p0fem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 #include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
@@ -45,6 +46,7 @@ typedef GV::Grid::ctype Coord;
 typedef double Real;
 const int dim = GV::dimension;
 typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM; // DEPRECATED
+//typedef Dune::PDELab::P0LocalFiniteElementMap<Coord,Real,dim> FEM;
 typedef Dune::PDELab::ConformingDirichletConstraints CON;
 typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
@@ -100,7 +102,7 @@ int main(int argc, char** argv)
   {
     if (helper.rank()==0)
     {
-	std::cout << "usage: ./iPBS <meshfile> <refinement level> <MaxNewtonIterations>" << std::endl;
+	std::cout << "usage: ./iPBS <meshfile> <refinement level> <SOR Parameter>" << std::endl;
 	return 1;
     }
   }
@@ -109,9 +111,11 @@ int main(int argc, char** argv)
   Cmdparam cmdparam;
   cmdparam.GridName=argv[1];
   sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
-  sscanf(argv[3],"%d",&cmdparam.NewtonMaxIteration);
-  std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels." << std::endl;
-
+  //sscanf(argv[3],"%f",&cmdparam.alpha_sor);
+  double alpha;
+  sscanf(argv[3],"%f", &alpha);
+  std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels. alpha" << alpha << std::endl;
+  sysParams.set_alpha(alpha);
   
   // <<<1>>> Setup the problem from mesh file
 
@@ -164,21 +168,26 @@ int main(int argc, char** argv)
 
   // HERE ITERATION STARTS HERE
   int iterationCounter = 1;
-  while (sysParams.get_error() > 0.01 || iterationCounter == 1)
+  while (sysParams.get_error() > 1E-7 || iterationCounter < 3)
   {
-    std::cout << std::endl << "IN ITERATION " << iterationCounter <<"\t actual error is: " << sysParams.get_error() << std::endl << std::endl;
+    std::cout << std::endl << "IN ITERATION " << iterationCounter << std::endl << std::endl;
     // Create DGF for constructor of G
     DGF udgf_it(gfs,u);
     // Reset error for new iteration
     sysParams.reset_error();
     // use updated Dirichlet
     G g(gv, boundaryIndexToEntity, udgf_it);
+    // Reset coefficient vector
+    //U u_it(gfs,0.0);
     get_solution(u, gv, gfs, m, b, g, j);
     std::stringstream out;
     out << "step_" << iterationCounter;
     vtk_filename = out.str();
-    save(udgf_it, u, gv, vtk_filename);
+    DGF udgf_save(gfs,u);
+    save(udgf_save, u, gv, vtk_filename);
     ++iterationCounter;
+    std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
+    //u=u_it;
   }
 
   // done

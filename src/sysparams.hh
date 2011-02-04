@@ -2,6 +2,7 @@ class SysParams {
    public:
 	SysParams(double _lambda, double _bjerrum, int _charge, double _epsilon, double _radius);	// Constructor
 	double get_bjerrum();
+	double get_radius();
 	double get_charge();
 	double get_epsilon();
 	double get_lambda2i();
@@ -12,7 +13,9 @@ class SysParams {
 	double get_error();
 	void set_lambda (double value);
 	void set_phi_init (double value);
-	static const double alpha = 0.7;	// SOR parameter
+	static const double pi = 3.14159265358979323846;
+	double get_alpha();
+	void set_alpha(double);
    private:
 	double lambda;
 	double lambda2i;
@@ -24,6 +27,7 @@ class SysParams {
 	double radius;
 	double totalError;
 	double oldValue;
+	double alpha;	// SOR parameter
 };
 
 extern SysParams sysParams;

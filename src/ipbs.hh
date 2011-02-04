@@ -7,7 +7,7 @@ double compute_pbeq(const double &u, const PositionVector &r);
 
 // container for commandline arguments
 typedef struct {
-	int NewtonMaxIteration; 
+	double alpha_sor; 
 	int RefinementLevel;
 	std::string GridName;
 } Cmdparam;

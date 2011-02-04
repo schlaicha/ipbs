@@ -12,20 +12,37 @@
 SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, double _epsilon=80.0, double _radius=5.0):lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
 {
 	lambda2i = 1 / (lambda * lambda);
-	phi_init = bjerrum * charge / (epsilon * radius * radius);
+	phi_init = bjerrum * charge / (epsilon * radius);
 	sigma_init = phi_init / (2.0*3.14);
 	totalError = 0;
 	oldValue = phi_init;
 }
 
+double SysParams::get_radius()
+{
+	return radius;
+}
+
 void SysParams::add_error(double error)
 {
 	//double error = 2.0 * (inValue - oldValue) / (inValue + oldValue);
+	//std::cout << "aktueller Error: " << error;
 	if (error > totalError)
 	{
 	  totalError = error;
 	  // oldValue = inValue;
 	}
+}
+
+void SysParams::set_alpha(double alpha_in)
+{
+	alpha=alpha_in;
+	std::cout << " SOR alpha = " << alpha;
+}
+
+double SysParams::get_alpha()
+{
+	return alpha;
 }
 
 void SysParams::reset_error()

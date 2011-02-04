@@ -5,7 +5,8 @@
 #include "sysparams.hh"
 #endif
 
-#include <limits>
+//#include <limits>
+//#include <cstdlib>
 
 // ============================================================================
 
@@ -143,8 +144,13 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
 
+    // std::cout << "The value of RAND_MAX is " <<  RAND_MAX << std::endl;
     if (x.two_norm() < 1.0+2E-1)
-	y = sysParams.get_phi_init();	// set particles potential
+    {
+	//y = sysParams.get_phi_init();	// set particles potential
+	y = double(rand())/(32676.0*3267.0)/5.0+0.0;
+	// std::cout << "Value: " << y << std::endl;
+    }
     else
       y = 0.0;				// set domain boundary
     return;
@@ -189,10 +195,13 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
     typename Traits::RangeType y_old;	// store potential at actual element for SOR step
-    udgf.evaluate(e,xlocal,y_old);
+    udgf.evaluate(e,e.geometry().local(e.geometry().center()),y_old);
+    //double store = y_old;
+    //std::cout << "Store: " << store;
+    Dune::FieldVector <ctype,dim> r = e.geometry().center();
+    r *= sysParams.get_radius();		// scale all vectors with the length-scale of our systems
 
-
-    if (x.two_norm() < 1.0+5E-1)
+    if (x.two_norm() < 1.0+2E-1)
     {
         // Take a SOR step towards the correct solution (see paper)
 	// calculate B.C. according to eq. 2 (paper)
@@ -201,21 +210,29 @@ public :
 	for (LeafIterator it = gv.template begin<0>(); it != gv.template end<0>(); ++it)
 	{
 	  typename Traits::RangeType value;
-	  Dune::FieldVector<ctype,dim> x_prime = it->geometry().global(xlocal);
-	  if (x != x_prime)	// make sure we have no zero division
+	  Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
+          r_prime *= sysParams.get_radius();	// scale all vectors with the length-scale of our systems
+	  if (r != r_prime)	// make sure we have no zero division
 	  {
 	    udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
-	    Dune::FieldVector<ctype,dim> dist = x - x_prime;
+	    Dune::FieldVector<ctype,dim> dist = r - r_prime;
+    	    //std::cout << "Value: " << value << std::endl;
   	    y += std::sinh(value) / dist.two_norm() * it->geometry().volume();
+    	    //std::cout << "sinh: " << y << std::endl;
 	  }
 	}
-	y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4*3.14);
+    	//std::cout << "\ty nach int: " << y << std::endl;
+	y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);
 	// Currently we use a fixed point charge at origin (sphere case)
-	y += 0.028 * sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * x.two_norm());
+	y += sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * r.two_norm());
+    	//std::cout << "\ty nach pointcharge: " << y;
 	// SOR step
-	y = sysParams.alpha * y + (1.0 - sysParams.alpha) * y_old;
+	//y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
+	y = 0.7 * y + (1.0 - 0.7) * y_old;
+	//std::cout << "y nach SOR: " <<  y << "\ty_old = " << store << std::endl;
 	// Calculate error
-	sysParams.add_error(2*(y-y_old)/(y+y_old));
+	sysParams.add_error(2.0*(y-y_old)/(y+y_old));
+	// sysParams.add_error(y-y_old);
     }
     else
       y = 0.0;			// Dirichlet B.C. for domain
