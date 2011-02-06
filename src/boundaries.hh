@@ -145,11 +145,14 @@ public :
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
 
     // std::cout << "The value of RAND_MAX is " <<  RAND_MAX << std::endl;
-    if (x.two_norm() < 1.0+2E-1)
+    if (x.two_norm() < 3.0+2E-1)
+    //if (e.hasBoundaryIntersections() == true && x.two_norm() < 4.7)
     {
-	//y = sysParams.get_phi_init();	// set particles potential
-	y = double(rand())/(32676.0*3267.0)/5.0+0.0;
+	// y = sysParams.get_phi_init();	// set particles potential
+	y = double(rand())/(32676.0*3267.0)/5.0+0.1;
+	// y=5.0;
 	// std::cout << "Value: " << y << std::endl;
+	return;
     }
     else
       y = 0.0;				// set domain boundary
@@ -197,12 +200,13 @@ public :
     typename Traits::RangeType y_old;	// store potential at actual element for SOR step
     udgf.evaluate(e,e.geometry().local(e.geometry().center()),y_old);
     //double store = y_old;
-    //std::cout << "Store: " << store;
     Dune::FieldVector <ctype,dim> r = e.geometry().center();
     r *= sysParams.get_radius();		// scale all vectors with the length-scale of our systems
 
-    if (x.two_norm() < 1.0+2E-1)
+    //if (x.two_norm() < 1.0+2E-1)
+    if (e.hasBoundaryIntersections() == true && x.two_norm() < 2.0)
     {
+    	// std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\ty_old: " << y_old << std::endl;
         // Take a SOR step towards the correct solution (see paper)
 	// calculate B.C. according to eq. 2 (paper)
 	y = 0;
@@ -216,7 +220,7 @@ public :
 	  {
 	    udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
 	    Dune::FieldVector<ctype,dim> dist = r - r_prime;
-    	    //std::cout << "Value: " << value << std::endl;
+    	    //std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\tValue: " << value << std::endl;
   	    y += std::sinh(value) / dist.two_norm() * it->geometry().volume();
     	    //std::cout << "sinh: " << y << std::endl;
 	  }
@@ -225,14 +229,22 @@ public :
 	y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);
 	// Currently we use a fixed point charge at origin (sphere case)
 	y += sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * r.two_norm());
-    	//std::cout << "\ty nach pointcharge: " << y;
+    	// std::cout << "\ty_neu: " << y;
 	// SOR step
-	//y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
+	// y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
 	y = 0.7 * y + (1.0 - 0.7) * y_old;
-	//std::cout << "y nach SOR: " <<  y << "\ty_old = " << store << std::endl;
+	//std::cout << std::endl <<"y nach SOR: " <<  y << "\ty_old = " << y_old << "\t|y-y_old|: " << double(abs(double(y)-double(y_old))) << std::endl;
 	// Calculate error
-	sysParams.add_error(2.0*(y-y_old)/(y+y_old));
-	// sysParams.add_error(y-y_old);
+	//if (fabs(y - y_old) > 0.001)
+	//{
+           double error = fabs(2.0*(double(y-y_old)/double(y+y_old)));
+	if (y_old > 1E-5)
+	//	std::cout << std::endl << "An x = " << x.vec_access(0) << " y = " << x.vec_access(1) <<  ":" << std::endl <<"y nach SOR: " <<  y << "\ty_old = " << y_old << "\terror: " << error << std::endl;
+	  //sysParams.add_error(2.0*(double(y-y_old)/double(y+y_old));
+	  //sysParams.add_error(error);
+	  sysParams.add_error(y-y_old);
+	//}
+	return;
     }
     else
       y = 0.0;			// Dirichlet B.C. for domain

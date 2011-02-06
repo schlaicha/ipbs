@@ -178,7 +178,8 @@ int main(int argc, char** argv)
     // use updated Dirichlet
     G g(gv, boundaryIndexToEntity, udgf_it);
     // Reset coefficient vector
-    //U u_it(gfs,0.0);
+    // U u_it(gfs,0.0);
+    // u=u_it;
     get_solution(u, gv, gfs, m, b, g, j);
     std::stringstream out;
     out << "step_" << iterationCounter;
@@ -187,7 +188,6 @@ int main(int argc, char** argv)
     save(udgf_save, u, gv, vtk_filename);
     ++iterationCounter;
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
-    //u=u_it;
   }
 
   // done
