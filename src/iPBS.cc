@@ -113,7 +113,7 @@ int main(int argc, char** argv)
   sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
   //sscanf(argv[3],"%f",&cmdparam.alpha_sor);
   double alpha;
-  sscanf(argv[3],"%f", &alpha);
+  sscanf(argv[3],"%lf", &alpha);
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels. alpha" << alpha << std::endl;
   sysParams.set_alpha(alpha);
   
@@ -267,7 +267,7 @@ void save(const DGF &udgf, const U &u, const GV &gv, const std::string filename)
   // {
     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-    vtkwriter.write(filename,Dune::VTK::appendedraw);
+    vtkwriter.write(filename,Dune::VTK::ascii);
   // }
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);

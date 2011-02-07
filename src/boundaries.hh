@@ -148,8 +148,8 @@ public :
     if (x.two_norm() < 3.0+2E-1)
     //if (e.hasBoundaryIntersections() == true && x.two_norm() < 4.7)
     {
-	// y = sysParams.get_phi_init();	// set particles potential
-	y = double(rand())/(32676.0*3267.0)/5.0+0.1;
+	y = sysParams.get_phi_init();	// set particles potential
+	// y = double(rand())/(32676.0*3267.0)/5.0+0.1;
 	// y=5.0;
 	// std::cout << "Value: " << y << std::endl;
 	return;
@@ -203,8 +203,8 @@ public :
     Dune::FieldVector <ctype,dim> r = e.geometry().center();
     r *= sysParams.get_radius();		// scale all vectors with the length-scale of our systems
 
-    //if (x.two_norm() < 1.0+2E-1)
-    if (e.hasBoundaryIntersections() == true && x.two_norm() < 2.0)
+    if (x.two_norm() < 1.0+2E-1)
+    //if (e.hasBoundaryIntersections() == true && x.two_norm() < 2.0)
     {
     	// std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\ty_old: " << y_old << std::endl;
         // Take a SOR step towards the correct solution (see paper)
@@ -231,22 +231,22 @@ public :
 	y += sysParams.get_bjerrum() * sysParams.get_charge() / (sysParams.get_epsilon() * r.two_norm());
     	// std::cout << "\ty_neu: " << y;
 	// SOR step
-	// y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
-	y = 0.7 * y + (1.0 - 0.7) * y_old;
+	 y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
+	// y = 0.7 * y + (1.0 - 0.7) * y_old;
 	//std::cout << std::endl <<"y nach SOR: " <<  y << "\ty_old = " << y_old << "\t|y-y_old|: " << double(abs(double(y)-double(y_old))) << std::endl;
 	// Calculate error
-	//if (fabs(y - y_old) > 0.001)
-	//{
+	if (fabs(y - y_old) > sysParams.error_cut)
+	{
            double error = fabs(2.0*(double(y-y_old)/double(y+y_old)));
-	if (y_old > 1E-5)
+	if (fabs(y_old) > 1E-3)
 	//	std::cout << std::endl << "An x = " << x.vec_access(0) << " y = " << x.vec_access(1) <<  ":" << std::endl <<"y nach SOR: " <<  y << "\ty_old = " << y_old << "\terror: " << error << std::endl;
 	  //sysParams.add_error(2.0*(double(y-y_old)/double(y+y_old));
-	  //sysParams.add_error(error);
-	  sysParams.add_error(y-y_old);
-	//}
+	  sysParams.add_error(error);
+	  //sysParams.add_error(y-y_old);
+	}
 	return;
     }
-    else
+    else if (x.two_norm() > 4.9)
       y = 0.0;			// Dirichlet B.C. for domain
     return;
   }
