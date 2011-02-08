@@ -100,8 +100,8 @@ public:
     Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
     
     // outer borders should be set to Zero Dirichlet BC (Open Boundary)
-    //if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
-    //else
+    if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
+    else
 	    y=1;
     return;
   }
@@ -144,17 +144,15 @@ public :
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
 
-    // std::cout << "The value of RAND_MAX is " <<  RAND_MAX << std::endl;
-    if (x.two_norm() < 3.0+2E-1)
-    //if (e.hasBoundaryIntersections() == true && x.two_norm() < 4.7)
+    /*if (x.two_norm() < 1.0+2E-1)
     {
-	y = sysParams.get_phi_init();	// set particles potential
-	// y = double(rand())/(32676.0*3267.0)/5.0+0.1;
-	// y=5.0;
+	//y = sysParams.get_phi_init();	// set particles potential
+	//y = double(rand())/(32676.0*3267.0)/5.0+0.1;
+	y=5.0;
 	// std::cout << "Value: " << y << std::endl;
 	return;
     }
-    else
+    else*/
       y = 0.0;				// set domain boundary
     return;
   }
@@ -172,7 +170,7 @@ private :
 // ============================================================================
 
 // This sets the potential at the particle's surface and zero Dirichlet at the domain boundaries during iteration
-
+/*
 template<typename GV, typename RF, typename PGMap>
 class BCExtension_iterate
   : public Dune::PDELab::GridFunctionBase<Dune::PDELab::
@@ -261,7 +259,7 @@ private :
   const PGMap& pg;
   const DGF& udgf;
 };
-
+*/
 // ============================================================================
 
 // function for defining radiation and Neumann boundary conditions
@@ -276,16 +274,24 @@ public:
 
   typedef Dune::PDELab::BoundaryGridFunctionTraits<
           GV,RF,1,Dune::FieldVector<RF,1> > Traits;
+  typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   // constructor
   BoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
 
   // evaluate flux boundary condition
-  template<typename I>
-  inline void evaluate(I& i, const typename Traits::DomainType& xlocal,
+  template<typename I, typename E>
+  inline void evaluate(I& i, E& e,
                        typename Traits::RangeType& y) const
   {
-    y = sysParams.get_sigma_init();
+    // Get the vector of the actual element
+    Dune::FieldVector<ctype,dim> r = i.geometry().global(e->position());
+    // Scale the vectors with particle's radius
+    r *= sysParams.get_radius();
+    // Get the unit normal vector of the surface element
+    Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
+    // Calculate Q/R^2 * [\vec(r) * \vec(n)]
+    y = sysParams.get_charge() / (sysParams.get_radius() * sysParams.get_radius()) * (r * unitNormal) ;
     return;
   }
 

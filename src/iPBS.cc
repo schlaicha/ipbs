@@ -58,7 +58,7 @@ typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 typedef Regions<GV,double,std::vector<int>> M;
 typedef BCType<GV,std::vector<int>> B;
 typedef BCExtension_init<GV,double,std::vector<int>> G_init;
-typedef BCExtension_iterate<GV,double,std::vector<int>> G;
+//typedef BCExtension_iterate<GV,double,std::vector<int>> G;
 typedef BoundaryFlux<GV,double,std::vector<int> > J;
 
 #include"PB_operator.hh"
@@ -138,11 +138,16 @@ int main(int argc, char** argv)
   const GV& gv = grid.leafView();
 
   //define boundaries
+  
   // inner region
   M m(gv, elementIndexToEntity);
   // boundary
   B b(gv, boundaryIndexToEntity);
-
+    // Dirichlet
+  G_init g_init(gv, boundaryIndexToEntity);
+  // boundary fluxes
+  J j(gv, boundaryIndexToEntity);
+  
   // Create finite element map
   FEM fem;
 
@@ -152,11 +157,6 @@ int main(int argc, char** argv)
   // Create coefficient vector (with zero values)
   U u(gfs,0.0);
 
-  // Get initial solution
-  // Dirichlet
-  G_init g_init(gv, boundaryIndexToEntity);
-  // boundary fluxes
-  J j(gv, boundaryIndexToEntity);
   // get initial coefficient vector
   get_solution(u, gv, gfs, m, b, g_init, j);
 
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
   std::string vtk_filename = "step_0";
   save(udgf, u, gv, vtk_filename);
 
-  // HERE ITERATION STARTS HERE
+/*  // HERE ITERATION STARTS HERE
   int iterationCounter = 1;
   while (sysParams.get_error() > 1E-7 || iterationCounter < 3)
   {
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
     ++iterationCounter;
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
   }
-
+*/
   // done
   return 0;
  }
