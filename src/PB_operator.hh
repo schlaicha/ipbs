@@ -25,8 +25,8 @@ public:
   enum { doAlphaBoundary = true };                                // assemble boundary
 
   // constructor parametrized by regions and boundary classes
-  PBLocalOperator (const M& m_, const B& b_, const J& j_, unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), intorder(intorder_)
+  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, unsigned int intorder_=2)  // needs boundary cond. type
+    : m(m_), b(b_), j(j_), udgf(udgf_), intorder(intorder_)
   {}
 
   // volume integral depending on test and ansatz functions
@@ -143,7 +143,7 @@ public:
             
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
-	j.evaluate(ig, it, y);
+	j.evaluate(ig, it, y, udgf);
         	    
         // integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
@@ -156,5 +156,6 @@ private:
   const M& m;
   const B& b;
   const J& j;
+  const DGF& udgf;
   unsigned int intorder;
 };

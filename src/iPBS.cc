@@ -52,6 +52,8 @@ typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
 typedef GFS::ConstraintsContainer<Real>::Type CC;
 typedef GFS::VectorContainer<Real>::Type U;
+typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+
 typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
 #include "boundaries.hh"
@@ -67,7 +69,6 @@ typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
 typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
 typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
 typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
-typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
 typedef DGF::Traits Traits;
 
 // include application heaeders
@@ -144,7 +145,7 @@ int main(int argc, char** argv)
   // boundary
   B b(gv, boundaryIndexToEntity);
     // Dirichlet
-  G_init g_init(gv, boundaryIndexToEntity);
+  G_init g(gv, boundaryIndexToEntity);
   // boundary fluxes
   J j(gv, boundaryIndexToEntity);
   
@@ -157,39 +158,35 @@ int main(int argc, char** argv)
   // Create coefficient vector (with zero values)
   U u(gfs,0.0);
 
+  // MAYBE GET AN INITAL SOLUTION (see below) 
   // get initial coefficient vector
-  get_solution(u, gv, gfs, m, b, g_init, j);
-
+/*  get_solution(u, gv, gfs, m, b, g, j);
   // Create Discrete Grid Function Space
   DGF udgf(gfs,u);
   // graphical output
   std::string vtk_filename = "step_0";
   save(udgf, u, gv, vtk_filename);
-
-/*  // HERE ITERATION STARTS HERE
-  int iterationCounter = 1;
-  while (sysParams.get_error() > 1E-7 || iterationCounter < 3)
+*/
+  // ITERATION STARTS HERE
+  // we don't need an initialisation step but can(!) use one...
+  // (e.g. for random initial conditions of surface charge distribution)
+  int iterationCounter = 0;
+  //while (sysParams.get_error() > 1E-4)
+  while(iterationCounter < 4)
   {
     std::cout << std::endl << "IN ITERATION " << iterationCounter << std::endl << std::endl;
-    // Create DGF for constructor of G
-    DGF udgf_it(gfs,u);
     // Reset error for new iteration
-    sysParams.reset_error();
-    // use updated Dirichlet
-    G g(gv, boundaryIndexToEntity, udgf_it);
-    // Reset coefficient vector
-    // U u_it(gfs,0.0);
-    // u=u_it;
+    //sysParams.reset_error();
     get_solution(u, gv, gfs, m, b, g, j);
     std::stringstream out;
     out << "step_" << iterationCounter;
-    vtk_filename = out.str();
+    std::string vtk_filename = out.str();
     DGF udgf_save(gfs,u);
     save(udgf_save, u, gv, vtk_filename);
     ++iterationCounter;
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
   }
-*/
+
   // done
   return 0;
  }
