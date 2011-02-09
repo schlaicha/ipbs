@@ -14,7 +14,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const M &m, const B &b, co
   
       
   // construct discrete grid function for access to solution
-  DGF udgf(gfs,u);
+  const DGF udgf(gfs, u);
 
   // <<<4>>> Make grid operator space
   LOP lop(m,b,j, udgf);

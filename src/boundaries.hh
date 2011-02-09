@@ -292,13 +292,12 @@ public:
     Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
     
     typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
-    Dune::FieldVector<ctype,dim> surfaceElementCenter = i.geometryInInside().center();
-    //udgf.evaluate(*i.inside(),i.geometry().global(e->position()),phi_old);
-    surfaceElementCenter[0]=2.5;
-    surfaceElementCenter[1]=2.5;
-    udgf.evaluate(*i.inside(),surfaceElementCenter,phi_old);
-    
-    typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
+    typename Traits::DomainType xlocal;
+    //Dune::FieldVector<ctype,dim> surfaceElementCenter = i.geometryInInside().center();
+    udgf.evaluate(*i.inside(),i.geometry().global(e->position()),phi_old);
+    //udgf.evaluate(*i.inside(), xlocal, phi_old);
+    std::cout << "Evaluated potential at " << i.geometry().global(e->position()) << "\tvalue: " << phi_old << std::endl;
+    //typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
     
     //y = 0;
     /*
@@ -319,8 +318,8 @@ public:
     */
     
     // Calculate Q/R^3 * [\vec(r) * \vec(n)]
-    y = 5.0 / sysParams.get_radius() * (r * unitNormal);
-    std::cout << "At position " << r << "\tphi_old = " << phi_old << "\tsigma = " << y << std::endl;
+    y = sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
+    //std::cout << "At position " << r << "\tphi_old = " << phi_old << "\tsigma = " << y << std::endl;
     /*
     y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * phi_old;
     double error = fabs(2.0*(double(y-y_old)/double(y+y_old)));

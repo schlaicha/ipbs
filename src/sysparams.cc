@@ -83,7 +83,7 @@ double SysParams::get_phi_init()
 
 double SysParams::get_sigma_sphere()
 {
-	//return sigma_sphere;
+	return sigma_sphere;
 }
 
 void SysParams::set_lambda(double value)
