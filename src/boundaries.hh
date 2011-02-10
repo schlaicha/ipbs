@@ -296,14 +296,16 @@ public:
     //Dune::FieldVector<ctype,dim> surfaceElementCenter = i.geometryInInside().center();
     udgf.evaluate(*i.inside(),i.geometry().global(e->position()),phi_old);
     //udgf.evaluate(*i.inside(), xlocal, phi_old);
-    std::cout << "Evaluated potential at " << i.geometry().global(e->position()) << "\tvalue: " << phi_old << std::endl;
-    //typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
+    //std::cout << "Evaluated potential at " << i.geometry().global(e->position()) << "\tvalue: " << phi_old << std::endl;
     
-    //y = 0;
-    /*
+    typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
+
+    y = 0.0;
+    
     // Integration Loop
-    for (LeafIterator integrationIterator = gv.template begin<0>(); integrationIterator != gv.template end<0>(); ++integrationIterator)
-    {
+
+     for (LeafIterator integrationIterator = gv.template begin<0>(); integrationIterator != gv.template end<0>(); ++integrationIterator)
+     {
       typename Traits::RangeType value;
       Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
       r_prime *= sysParams.get_radius();	// scale all vectors with the particle's radius
@@ -312,19 +314,20 @@ public:
       //std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\tValue: " << value << std::endl;
       double volume = integrationIterator->geometry().volume() * sysParams.get_radius() * sysParams.get_radius() * sysParams.get_radius();
       y += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) * volume * (dist * unitNormal);
-      //std::cout << "sinh: " << y << std::endl;
-    }
+      //std::cout << "sinh: " << test << std::endl;
+     }
     y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);
-    */
+    
     
     // Calculate Q/R^3 * [\vec(r) * \vec(n)]
-    y = sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
+    y += sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
     //std::cout << "At position " << r << "\tphi_old = " << phi_old << "\tsigma = " << y << std::endl;
-    /*
-    y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * phi_old;
-    double error = fabs(2.0*(double(y-y_old)/double(y+y_old)));
-    sysParams.add_error(error);
-    */
+    
+    //double y_old=sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
+    //y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
+    //double error = fabs(2.0*(double(y-phi_old)/double(y+phi_old)));
+    //sysParams.add_error(error);
+    
     return;
   }
 

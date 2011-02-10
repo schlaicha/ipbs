@@ -118,6 +118,12 @@ int main(int argc, char** argv)
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels. alpha" << alpha << std::endl;
   sysParams.set_alpha(alpha);
   
+  
+//===============================================================
+// Setup problem
+//===============================================================
+  
+  
   // <<<1>>> Setup the problem from mesh file
 
   // instanciate ug grid object
@@ -157,6 +163,17 @@ int main(int argc, char** argv)
 
   // Create coefficient vector (with zero values)
   U u(gfs,0.0);
+  
+  // <<<3>>> Make FE function extending Dirichlet boundary conditions
+  CC cc;
+  Dune::PDELab::constraints(b,gfs,cc); 
+  //std::cout << "constrained dofs=" << cc.size() 
+  //          << " of " << gfs.globalSize() << std::endl;
+
+  // interpolate coefficient vector
+  Dune::PDELab::interpolate(g,gfs,u);
+  
+  //std::cout << "VECTOR u" << std::endl << "==============" << std::endl << u << std::endl;
 
   // MAYBE GET AN INITAL SOLUTION (see below) 
   // get initial coefficient vector
@@ -170,22 +187,9 @@ int main(int argc, char** argv)
   // ITERATION STARTS HERE
   // we don't need an initialisation step but can(!) use one...
   // (e.g. for random initial conditions of surface charge distribution)
-  int iterationCounter = 0;
-  //while (sysParams.get_error() > 1E-4)
-  while(iterationCounter < 4)
-  {
-    std::cout << std::endl << "IN ITERATION " << iterationCounter << std::endl << std::endl;
-    // Reset error for new iteration
-    //sysParams.reset_error();
-    get_solution(u, gv, gfs, m, b, g, j);
-    std::stringstream out;
-    out << "step_" << iterationCounter;
-    std::string vtk_filename = out.str();
-    DGF udgf_save(gfs,u);
-    save(udgf_save, u, gv, vtk_filename);
-    ++iterationCounter;
-    std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
-  }
+  
+  get_solution(u, gv, gfs, cc, m, b, j);
+  
 
   // done
   return 0;
