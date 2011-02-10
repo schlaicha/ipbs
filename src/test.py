@@ -54,7 +54,7 @@ def main():
     filename2 = sys.argv[2]
     x1, y1, z1 = readfile(filename1)
     x2, y2, z2 = readfile(filename2)
-    z = abs(z2 - z1)
+    z = abs((z2 - z1))
     xi, yi = defgrid(x1,y1)
     zi = interpolacion(x1,y1,z,xi,yi)
     plotear(xi,yi,zi)
