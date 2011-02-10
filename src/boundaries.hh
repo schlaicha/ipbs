@@ -282,16 +282,49 @@ public:
   // evaluate flux boundary condition
   template<typename I, typename E>
   inline void evaluate(I& i, E& e,
-                       typename Traits::RangeType& y) const
+                       typename Traits::RangeType& y, const DGF& udgf) const
   {
-    // Get the vector of the actual element
+    // Get the vector of the actual intersection
     Dune::FieldVector<ctype,dim> r = i.geometry().global(e->position());
     // Scale the vectors with particle's radius
     r *= sysParams.get_radius();
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
-    // Calculate Q/R^2 * [\vec(r) * \vec(n)]
-    y = sysParams.get_charge() / (sysParams.get_radius() * sysParams.get_radius()) * (r * unitNormal) ;
+    
+    typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
+    typename Traits::DomainType xlocal;
+    //Dune::FieldVector<ctype,dim> surfaceElementCenter = i.geometryInInside().center();
+    udgf.evaluate(*i.inside(),i.geometry().global(e->position()),phi_old);
+    //udgf.evaluate(*i.inside(), xlocal, phi_old);
+    std::cout << "Evaluated potential at " << i.geometry().global(e->position()) << "\tvalue: " << phi_old << std::endl;
+    //typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
+    
+    //y = 0;
+    /*
+    // Integration Loop
+    for (LeafIterator integrationIterator = gv.template begin<0>(); integrationIterator != gv.template end<0>(); ++integrationIterator)
+    {
+      typename Traits::RangeType value;
+      Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
+      r_prime *= sysParams.get_radius();	// scale all vectors with the particle's radius
+      udgf.evaluate(*integrationIterator,r_prime,value);
+      Dune::FieldVector<ctype,dim> dist = r - r_prime;
+      //std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\tValue: " << value << std::endl;
+      double volume = integrationIterator->geometry().volume() * sysParams.get_radius() * sysParams.get_radius() * sysParams.get_radius();
+      y += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) * volume * (dist * unitNormal);
+      //std::cout << "sinh: " << y << std::endl;
+    }
+    y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);
+    */
+    
+    // Calculate Q/R^3 * [\vec(r) * \vec(n)]
+    y = sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
+    //std::cout << "At position " << r << "\tphi_old = " << phi_old << "\tsigma = " << y << std::endl;
+    /*
+    y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * phi_old;
+    double error = fabs(2.0*(double(y-y_old)/double(y+y_old)));
+    sysParams.add_error(error);
+    */
     return;
   }
 

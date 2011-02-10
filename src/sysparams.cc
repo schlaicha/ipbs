@@ -13,7 +13,7 @@ SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, d
 {
 	lambda2i = 1 / (lambda * lambda);
 	phi_init = bjerrum * charge / (epsilon * radius);
-	sigma_init = phi_init / (2.0*3.14);
+	sigma_sphere = charge / (4 * pi * epsilon * radius * radius);
 	totalError = 0;
 	oldValue = phi_init;
 }
@@ -81,9 +81,9 @@ double SysParams::get_phi_init()
 	return phi_init;
 }
 
-double SysParams::get_sigma_init()
+double SysParams::get_sigma_sphere()
 {
-	return sigma_init;
+	return sigma_sphere;
 }
 
 void SysParams::set_lambda(double value)

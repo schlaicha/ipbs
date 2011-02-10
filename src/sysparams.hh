@@ -6,7 +6,7 @@ class SysParams {
 	double get_charge();
 	double get_epsilon();
 	double get_lambda2i();
-	double get_sigma_init();
+	double get_sigma_sphere();
 	double get_phi_init();
 	void add_error(double);
 	void reset_error();
@@ -20,7 +20,7 @@ class SysParams {
    private:
 	double lambda;
 	double lambda2i;
-	double sigma_init;
+	double sigma_sphere;
 	double phi_init;
 	double bjerrum;
 	int charge;

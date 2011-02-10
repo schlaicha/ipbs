@@ -11,9 +11,13 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const M &m, const B &b, co
 
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
+  
+      
+  // construct discrete grid function for access to solution
+  const DGF udgf(gfs, u);
 
   // <<<4>>> Make grid operator space
-  LOP lop(m,b,j);
+  LOP lop(m,b,j, udgf);
   GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
