@@ -312,7 +312,7 @@ public:
       udgf.evaluate(*integrationIterator,r_prime,value);
       Dune::FieldVector<ctype,dim> dist = r - r_prime;
       //std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\tValue: " << value << std::endl;
-      double volume = integrationIterator->geometry().volume() * sysParams.get_radius() * sysParams.get_radius() * sysParams.get_radius();
+      double volume = integrationIterator->geometry().volume();
       y += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) * volume * (dist * unitNormal);
       //std::cout << "sinh: " << test << std::endl;
      }
