@@ -109,10 +109,13 @@ public:
     typedef typename LFSV::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename LFSV::Traits::SizeType size_type;
+    typedef typename LFSU::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::JacobianType JacobianType;
         
     // dimensions
-    const int dim = IG::dimension;
-        
+    const int dim = IG::dimension;  
+    const int dimw = IG::Geometry::dimensionworld;
+
     // select quadrature rule for face
     Dune::GeometryType gtface = ig.geometryInInside().type();
     const Dune::QuadratureRule<DF,dim-1>& 
@@ -140,6 +143,21 @@ public:
         RF u=0.0;
         for (size_type i=0; i<lfsu_s.size(); i++)
           u += x_s[i]*phi[i];
+/*
+	// We need the gradient for the calculation of /grad /vec(E)
+	
+	// evaluate gradient of basis functions on reference element
+        std::vector<JacobianType> js(lfsu_s.size());
+        lfsu_s.localFiniteElement().localBasis().evaluateJacobian(local,js);
+
+	 // transform gradients from reference element to real element
+        //const Dune::FieldMatrix<DF,dimw,dim> jac = ig.geometry().jacobianInverseTransposed(local);
+        const Dune::FieldMatrix<double, 2, 2> jac = *ig.geometry().jacobianInverseTransposed(local);
+
+        std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu_s.size());
+        for (size_type i=0; i<lfsu_s.size(); i++)
+          jac.mv(js[i][0],gradphi[i]);
+*/
             
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
