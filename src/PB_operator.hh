@@ -25,8 +25,8 @@ public:
   enum { doAlphaBoundary = true };                                // assemble boundary
 
   // constructor parametrized by regions and boundary classes
-  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), udgf(udgf_), intorder(intorder_)
+  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, const GV& gv_, unsigned int intorder_=1)  // needs boundary cond. type
+    : m(m_), b(b_), j(j_), udgf(udgf_), gv(gv_), intorder(intorder_)
   {}
 
   // volume integral depending on test and ansatz functions
@@ -109,9 +109,12 @@ public:
     typedef typename LFSV::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename LFSV::Traits::SizeType size_type;
+     typedef typename LFSU::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::JacobianType JacobianType;
         
     // dimensions
     const int dim = IG::dimension;
+    const int dimw = IG::dimensionworld;
         
     // select quadrature rule for face
     Dune::GeometryType gtface = ig.geometryInInside().type();
@@ -128,6 +131,7 @@ public:
  
         // skip rest if we are on Dirichlet boundary
         if (bctype>0) continue;
+	// skip rest if intersection is not a boundary
 
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());
@@ -135,15 +139,32 @@ public:
         // evaluate basis functions at integration point
         std::vector<RangeType> phi(lfsv_s.size());
         lfsu_s.localFiniteElement().localBasis().evaluateFunction(local,phi);
+	
+	// evaluate gradient of basis functions on reference element
+        std::vector<JacobianType> js(lfsu_s.size());
+        lfsu_s.localFiniteElement().localBasis().evaluateJacobian(local,js);
 
+        // transform gradients from reference element to real element
+        const Dune::FieldMatrix<DF,dimw,1> 	// mydim = 1 -- check theory !!!
+          jac = ig.geometry().jacobianInverseTransposed(it->position());
+        std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu_s.size());
+        for (size_type i=0; i<lfsu_s.size(); i++)
+          jac.mv(js[i][0],gradphi[i]);
+        
+        // compute gradient of u
+        Dune::FieldVector<RF,dim> gradu(0.0);
+        for (size_type i=0; i<lfsu_s.size(); i++)
+          gradu.axpy(x_s[i],gradphi[i]);
+/*
         // evaluate u (e.g. flux may depend on u)
         RF u=0.0;
         for (size_type i=0; i<lfsu_s.size(); i++)
           u += x_s[i]*phi[i];
-            
+*/     
+
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
-	j.evaluate(ig, it, y, udgf);
+	j.evaluate(ig, it, y, udgf, gradu);
         	    
         // integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
@@ -151,11 +172,12 @@ public:
           r_s[i] += y*phi[i]*factor;
       }
   }
-
+  
 private:
   const M& m;
   const B& b;
   const J& j;
   const DGF& udgf;
+  const GV& gv;
   unsigned int intorder;
 };

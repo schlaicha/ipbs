@@ -20,7 +20,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
     //const DGF udgf(gfs, u);
     
     // <<<4>>> Make grid operator space
-    LOP lop(m,b,j, udgf);
+    LOP lop(m,b,j, udgf, gv);
     GOS gos(gfs,cc,gfs,cc,lop);
     
     // <<<5a>>> Select a linear solver backend

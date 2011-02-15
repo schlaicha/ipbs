@@ -282,7 +282,7 @@ public:
   // evaluate flux boundary condition
   template<typename I, typename E>
   inline void evaluate(I& i, E& e,
-                       typename Traits::RangeType& y, const DGF& udgf) const
+                       typename Traits::RangeType& y, const DGF& udgf, Dune::FieldVector<RF,dim> grad) const
   {
     // Get the vector of the actual intersection
     Dune::FieldVector<ctype,dim> r = i.geometry().global(e->position());
@@ -320,8 +320,11 @@ public:
     
     
     // Calculate Q/R^3 * [\vec(r) * \vec(n)]
-    y += sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
-    //std::cout << "At position " << r << "\tphi_old = " << phi_old << "\tsigma = " << y << std::endl;
+    y += sysParams.get_sigma_sphere() / (sysParams.get_radius()*sysParams.get_radius()* sysParams.get_radius())* (r * unitNormal);
+    
+    //if (i.neighbor()==false && i.boundary()==true)
+    std::cout << "\tsigma = " << y << "\t grad*/vec r /r = " << 1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
+    << "\tnormal = " << i.unitOuterNormal(e->position()) << "\tr = " << i.geometry().global(e->position()) << std::endl;
     
     //double y_old=sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
     //y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
