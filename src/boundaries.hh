@@ -282,8 +282,9 @@ public:
   // evaluate flux boundary condition
   template<typename I, typename E>
   inline void evaluate(I& i, E& e,
-                       typename Traits::RangeType& y, const DGF& udgf, Dune::FieldVector<RF,dim> grad) const
+                       typename Traits::RangeType& y, const DGF& udgf, Dune::FieldVector<RF,dim> gradu) const
   {
+    
     // Get the vector of the actual intersection
     Dune::FieldVector<ctype,dim> r = i.geometry().global(e->position());
     // Scale the vectors with particle's radius
@@ -322,14 +323,16 @@ public:
     // Calculate Q/R^3 * [\vec(r) * \vec(n)]
     y += sysParams.get_sigma_sphere() / (sysParams.get_radius()*sysParams.get_radius()* sysParams.get_radius())* (r * unitNormal);
     
-    //if (i.neighbor()==false && i.boundary()==true)
-    std::cout << "\tsigma = " << y << "\t grad*/vec r /r = " << 1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
-    << "\tnormal = " << i.unitOuterNormal(e->position()) << "\tr = " << i.geometry().global(e->position()) << std::endl;
+    // std::cout << "\tsigma = " << y << "\t-grad*n = " << -1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
+    // << "\tunitOuterNormal = " << i.unitOuterNormal(e->position()) << "\tcenterUnitOuterNormal = " << unitNormal << std::endl;
     
-    //double y_old=sysParams.get_sigma_sphere() / sysParams.get_radius() * (r * unitNormal);
-    //y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * y_old;
-    //double error = fabs(2.0*(double(y-phi_old)/double(y+phi_old)));
-    //sysParams.add_error(error);
+    double yOld = - 1.0 * (gradu * unitNormal);
+    y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
+    double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
+    sysParams.add_error(error);
+    
+    
+    //y = - 1.0 * (gradu * i.centerUnitOuterNormal());
     
     return;
   }

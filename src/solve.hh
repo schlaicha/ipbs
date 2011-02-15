@@ -52,6 +52,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
     save(udgf_save, u, gv, vtk_filename);
     ++iterationCounter;
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
+    sysParams.add_error(1.0);
   }
   
   
