@@ -64,7 +64,7 @@ public:
       {
         // evaluate basis functions on reference element
         std::vector<RangeType> phi(lfsu.size());
-        lfsu.localFiniteElement().localBasis().evaluateFunction(it->position(),phi);
+        lfsu.finiteElement().localBasis().evaluateFunction(it->position(),phi);
 
         // compute u at integration point
         RF u=0.0;
@@ -73,7 +73,7 @@ public:
 
         // evaluate gradient of basis functions on reference element
         std::vector<JacobianType> js(lfsu.size());
-        lfsu.localFiniteElement().localBasis().evaluateJacobian(it->position(),js);
+        lfsu.finiteElement().localBasis().evaluateJacobian(it->position(),js);
 
         // transform gradients from reference element to real element
         const Dune::FieldMatrix<DF,dimw,dim> 
@@ -143,11 +143,11 @@ public:
 
         // evaluate basis functions at integration point
         std::vector<RangeType> phi(lfsv_s.size());
-        lfsu_s.localFiniteElement().localBasis().evaluateFunction(local,phi);
+        lfsu_s.finiteElement().localBasis().evaluateFunction(local,phi);
 	
 	// evaluate gradient of basis functions on reference element
         std::vector<JacobianType> js(lfsu_s.size());
-        lfsu_s.localFiniteElement().localBasis().evaluateJacobian(local,js);
+        lfsu_s.finiteElement().localBasis().evaluateJacobian(local,js);
 
         // transform gradients from reference element to real element
 	// Note that we want the gradient of the element, so we have to use the pointer to it
@@ -168,6 +168,11 @@ public:
 	typename J::Traits::RangeType y;
 	j.evaluate(ig, it, y, udgf, gradu);
 	
+	/*if (sysParams.init == true)
+	  y = sysParams.get_sigma_sphere();
+	else
+	  y = -1.0 * (gradu * ig.centerUnitOuterNormal());
+	std::cout << "y = " << y << std::endl;*/
 
         	    
         // integrate j

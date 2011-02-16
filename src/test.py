@@ -11,7 +11,7 @@ def readfile(file):
     return x, y, z
 
 def defgrid(x,y):
-    paso = 400.
+    paso = 800.
     intervalx = (x.max()-x.min())/paso
     intervaly = (y.max()-y.min())/paso
     xvalues = arange(x.min(),x.max(),intervalx)
@@ -31,7 +31,7 @@ def interpolacion(x,y,z,xi,yi):
 
 def plotear(xi,yi,zi):
     # mask inner circle
-    interior = sqrt((xi**2) + (yi**2)) < 1.0
+    interior = sqrt((xi**2) + (yi**2)) < 1.0 - 1E-4
     zi[interior] = ma.masked
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]

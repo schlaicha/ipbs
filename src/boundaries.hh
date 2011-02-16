@@ -326,13 +326,14 @@ public:
     // std::cout << "\tsigma = " << y << "\t-grad*n = " << -1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
     // << "\tunitOuterNormal = " << i.unitOuterNormal(e->position()) << "\tcenterUnitOuterNormal = " << unitNormal << std::endl;
     
+    //std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
+    
     double yOld = - 1.0 * (gradu * unitNormal);
     y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
     double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
     sysParams.add_error(error);
-    
-    
-    //y = - 1.0 * (gradu * i.centerUnitOuterNormal());
+
+    //std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << std::endl;
     
     return;
   }

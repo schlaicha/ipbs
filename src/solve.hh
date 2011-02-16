@@ -4,17 +4,16 @@ template <typename U>
 void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, const B &b, const J&j)
 {
   int iterationCounter = 0;
-  //while (sysParams.get_error() > 1E-4)
-  while(iterationCounter < 10)
+  sysParams.init = true;
+  while (sysParams.get_error() > 1E-2)
+  //while(iterationCounter < 10)
   {
     std::cout << std::endl << "IN ITERATION " << iterationCounter << std::endl << std::endl;
     // Reset error for new iteration
     sysParams.reset_error();
     
     // construct discrete grid function for access to solution
-  //const U storeCoefficientVector(gfs,200.0);
     const U storeCoefficientVector = u;
-  //std::cout << "VECTOR store" << std::endl << "==============" << std::endl << storeCoefficientVector << std::endl;
     const DGF udgf(gfs, storeCoefficientVector);
   
     //const DGF udgf(gfs, u);
@@ -44,7 +43,6 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
     slp.apply();
     
     
-    
     std::stringstream out;
     out << "step_" << iterationCounter;
     std::string vtk_filename = out.str();
@@ -52,7 +50,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
     save(udgf_save, u, gv, vtk_filename);
     ++iterationCounter;
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
-    sysParams.add_error(1.0);
+    sysParams.init = false;
   }
   
   

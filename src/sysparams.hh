@@ -2,6 +2,7 @@ class SysParams {
    public:
 	SysParams(double _lambda, double _bjerrum, int _charge, double _epsilon, double _radius);	// Constructor
 	double get_bjerrum();
+	bool init;
 	double get_radius();
 	double get_charge();
 	double get_epsilon();

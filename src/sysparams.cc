@@ -9,7 +9,7 @@
 
 // Constructor
 // Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
-SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, double _epsilon=80.0, double _radius=5.0):lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
+SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=-100, double _epsilon=80.0, double _radius=5.0):lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
 {
 	lambda2i = 1 / (lambda * lambda);
 	phi_init = bjerrum * charge / (epsilon * radius);
