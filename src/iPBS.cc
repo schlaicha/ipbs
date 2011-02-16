@@ -45,7 +45,7 @@ typedef GridType::LeafGridView GV;
 typedef GV::Grid::ctype Coord;
 typedef double Real;
 const int dim = GV::dimension;
-typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM; // DEPRECATED
+typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM;
 //typedef Dune::PDELab::P0LocalFiniteElementMap<Coord,Real,dim> FEM;
 typedef Dune::PDELab::ConformingDirichletConstraints CON;
 typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
@@ -53,7 +53,6 @@ typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
 typedef GFS::ConstraintsContainer<Real>::Type CC;
 typedef GFS::VectorContainer<Real>::Type U;
 typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
-
 typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
 #include "boundaries.hh"
@@ -127,8 +126,7 @@ int main(int argc, char** argv)
   // <<<1>>> Setup the problem from mesh file
 
   // instanciate ug grid object
-  GridType grid(400);		// heapSize: The size of UG's internal memory in megabytes for this grid.
-				// This Constructor is DEPRECATED
+  GridType grid;
 
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
@@ -141,7 +139,25 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  // get a grid view
+  for (int i=0; i<5; i++)
+  {
+  // get a grid view - this one is for the refinement iterator...
+  const GV& gv_tmp = grid.leafView();
+  // iterate once over the surface and refine
+  typedef GV::Codim<0>::Iterator ElementLeafIterator;
+  for (ElementLeafIterator it = gv_tmp.begin<0>(); it != gv_tmp.end<0>(); ++it)
+    {
+      if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
+      {
+	grid.mark(1,*it);
+      }
+    }
+  grid.preAdapt();
+  grid.adapt();
+  grid.postAdapt();
+  std::cout << "Adaptive Refinement step " << i << " done."  << std::endl;
+  }
+  
   const GV& gv = grid.leafView();
 
   //define boundaries
@@ -187,6 +203,14 @@ int main(int argc, char** argv)
   // ITERATION STARTS HERE
   // we don't need an initialisation step but can(!) use one...
   // (e.g. for random initial conditions of surface charge distribution)
+  
+  
+
+
+  
+  
+  
+  
   
   get_solution(u, gv, gfs, cc, m, b, j);
   

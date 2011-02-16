@@ -30,7 +30,7 @@ public:
   enum { doAlphaBoundary = true };                                // assemble boundary
 
   // constructor parametrized by regions and boundary classes
-  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, const GV& gv_, unsigned int intorder_=1)  // needs boundary cond. type
+  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, const GV& gv_, unsigned int intorder_=2)  // needs boundary cond. type
     : m(m_), b(b_), j(j_), udgf(udgf_), gv(gv_), intorder(intorder_)
   {}
 
@@ -119,7 +119,7 @@ public:
         
     // dimensions
     const int dim = IG::dimension;
-    const int dimw = IG::dimensionworld; //maybe IG::Geometry::dimensionworld?
+    const int dimw = IG::dimensionworld;
         
     // select quadrature rule for face
     Dune::GeometryType gtface = ig.geometryInInside().type();
