@@ -55,6 +55,14 @@ typedef GFS::VectorContainer<Real>::Type U;
 typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
 typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
+#ifndef _P0LAYOUT_H
+#define _P0LAYOUT_H
+#include "p0layout.hh"
+#endif
+
+#include <dune/grid/common/mcmgmapper.hh>
+typedef Dune::LeafMultipleCodimMultipleGeomTypeMapper<GridType, P0Layout> Mapper;
+
 #include "boundaries.hh"
 typedef Regions<GV,double,std::vector<int>> M;
 typedef BCType<GV,std::vector<int>> B;
@@ -72,13 +80,15 @@ typedef DGF::Traits Traits;
 
 // include application heaeders
 #include "ipbs.hh"
+#include "solve.hh"
 
 #ifndef _SYSPARAMS_H
 #define _SYSPARAMS_H
 #include "sysparams.hh"
 #endif
 
-#include "solve.hh"
+
+
 
 //===============================================================
 // Main programm
@@ -139,7 +149,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  for (int i=0; i<1; i++)
+  for (int i=0; i<5; i++)
   {
   // get a grid view - this one is for the refinement iterator...
   const GV& gv_tmp = grid.leafView();
@@ -205,14 +215,7 @@ int main(int argc, char** argv)
   // (e.g. for random initial conditions of surface charge distribution)
   
   
-
-
-  
-  
-  
-  
-  
-  get_solution(u, gv, gfs, cc, m, b, j);
+  get_solution(u, gv, gfs, cc, grid, m, b, j);
   
 
   // done
@@ -224,50 +227,6 @@ int main(int argc, char** argv)
  catch (...){
   std::cerr << "Unknown exception thrown!" << std::endl;
  }
-} 
-
-
-// ============================================================================
-
-void calculate_phi(const GV &gv, const DGF &udgf)
-{
-  // Get the potential at the particle's surface
-  // std::cout << "Particle Boundaries at:" << std::endl;
-  // define iterators
-  typedef GV::Codim<0>::Iterator ElementLeafIterator;
-  typedef GV::IntersectionIterator IntersectionIterator;
-  int iicount=0;
-  double phi1=0;
-  // double phi2=0;
- for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
-  {
-    //if (it->hasBoundaryIntersections()==true)
-    //{
-	//for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
-	//{
-		Traits::DomainType xlocal;
-		Traits::RangeType y1;
-		Traits::RangeType y2;
-		//if (ii->boundary()==true)
-		//{
-		   Dune::FieldVector<double,dim> x1 = it->geometry().global(xlocal);
-		   //Dune::FieldVector<double,dim> x2 = it->geometry().center();
-		   udgf.evaluate(*it,x1,y1);
-		   //udgf.evaluate(*it,x2,y2);
-		   //if (x1.two_norm() < 4.7)				
-		   //{    
-		     ++iicount;
-		     std::cout << "x= " << x1[0] << "\t y = " << x1[1] << "\t Phi = " << y1 << std::endl;
-		     //std::cout << "Boundary \t x= " << x2[0] << "\t y = " << x2[1] << "\t Phi = " << y2 << std::endl;
-		     phi1 += y1;
-		     //phi2 += y2;
-		   //}
-		//}
-	//}
-    //}
-  }
-  std::cout << std::endl << "Phi_init = " << sysParams.get_phi_init() << "\t Phi_S = " << phi1/iicount << std::endl;
-//   << "\t Phi_S (Boundary) = " << phi2/iicount << std::endl;
 } 
 
 // ============================================================================

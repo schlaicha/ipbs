@@ -30,8 +30,11 @@ public:
   enum { doAlphaBoundary = true };                                // assemble boundary
 
   // constructor parametrized by regions and boundary classes
-  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, const GV& gv_, unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), udgf(udgf_), gv(gv_), intorder(intorder_)
+  PBLocalOperator (const M& m_, const B& b_, const J& j_, const DGF& udgf_, const GV& gv_, const Mapper& mapper_, 
+		   const  std::vector<Dune::FieldVector<double,dim>>& gradientContainer_, std::vector<Dune::FieldVector<double,dim>>& 
+		   gradientBackupContainer_, unsigned int intorder_=2)  // needs boundary cond. type
+    : m(m_), b(b_), j(j_), udgf(udgf_), gv(gv_), mapper(mapper_), gradientContainer(gradientContainer_), gradientBackupContainer(gradientBackupContainer_),
+    intorder(intorder_)
   {}
 
   // volume integral depending on test and ansatz functions
@@ -168,13 +171,24 @@ public:
 	
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
-	j.evaluate(ig, it, y, udgf, gradu);
-	
-	/*if (sysParams.init == true)
+	//j.evaluate(ig, it, y, udgf, gradientContainer[mapper.map(*ig.inside())]);
+	double yOld = 0.0;
+	if (sysParams.counter == 0)
+	{
 	  y = sysParams.get_sigma_sphere();
+	  sysParams.add_error(1E8);
+	}
 	else
-	  y = -1.0 * (gradu * ig.centerUnitOuterNormal());
-	std::cout << "y = " << y << std::endl;*/
+	{
+	  y = -1.0 * (gradientContainer[mapper.map(*ig.inside())] * ig.centerUnitOuterNormal());
+	  // Calculate SOR step
+	  if (sysParams.counter > 1)
+	  yOld = - 1.0 * (gradientBackupContainer[mapper.map(*ig.inside())] * ig.centerUnitOuterNormal());
+	  y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
+	  double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
+	  sysParams.add_error(error);
+	}
+	//std::cout << "y = " << y << "yOld = " << yOld << std::endl;
 
         	    
         // integrate j
@@ -190,5 +204,8 @@ private:
   const J& j;
   const DGF& udgf;
   const GV& gv;
+  const Mapper& mapper;
+  const std::vector<Dune::FieldVector<double,dim>>& gradientContainer;
+  std::vector<Dune::FieldVector<double,dim>>& gradientBackupContainer;
   unsigned int intorder;
 };

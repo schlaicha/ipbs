@@ -5,21 +5,14 @@
 #include "sysparams.hh"
 #endif
 
+#ifndef _P0LAYOUT_H
+#define _P0LAYOUT_H
+#include "p0layout.hh"
+#endif
+
 //#include <limits>
 //#include <cstdlib>
 
-// ============================================================================
-
-// layout for codim0 data
-template <int dim>
-struct P0Layout
-{
-  bool contains(Dune::GeometryType gt)
-  {
-    if ( gt.dim() == dim ) return true;
-    return false;
-  }
-};
 
 //===============================================================
 // boundary classes - define what are inner, boundary (Neumann)
@@ -326,14 +319,15 @@ public:
     // std::cout << "\tsigma = " << y << "\t-grad*n = " << -1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
     // << "\tunitOuterNormal = " << i.unitOuterNormal(e->position()) << "\tcenterUnitOuterNormal = " << unitNormal << std::endl;
     
-    //std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
+    std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
     
     double yOld = - 1.0 * (gradu * unitNormal);
+    //if (sysParams.init == false)
     y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
     double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
     sysParams.add_error(error);
 
-    //std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << std::endl;
+    std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << std::endl;
     
     return;
   }
