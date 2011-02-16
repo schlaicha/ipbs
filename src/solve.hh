@@ -19,12 +19,13 @@ template <typename U>
 void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, const B &b, const J&j)
 {
   
-  /*LFSU lfsu(gfs);
-  lfsu.debug();
+  LFSU lfsu(gfs);
+  lfsu.setup(gfs);
+  
   typedef GV::Codim<0>::Iterator ElementLeafIterator;
   typedef GV::IntersectionIterator IntersectionIterator;
   const int dimw = 2;
-  */
+  
   
   
   int iterationCounter = 0;
@@ -32,18 +33,31 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
   //while (sysParams.get_error() > 1E-2)
   while(iterationCounter < 10)
   {
-    /*
+    
     // Try to get gradients here
     for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
     {
+      
       if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
       {
 	for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
 	{
 	  if (ii->boundary()==true)
 	{
-	std::cout << "Visited element at surface with";
-	 
+	
+	// Bind Local Function Space to this element  
+	lfsu.bind(*it);
+	  
+	std::cout << "Visited element at surface. ";
+	
+	// local reference coordinate is the center of the intersection :-)
+	Dune::FieldVector<DF,dim> local = ii->geometry().center();
+	
+	// Vector container for storing the coefficients on the actual element
+	GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
+	// get coefficients of this element
+	lfsu.vread(u,x_s);
+	
 	// evaluate gradient of basis functions on reference element
 	std::vector<JacobianType> js(lfsu.size());
         lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
@@ -55,17 +69,19 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const M &m, 
         std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
         for (size_type i=0; i<lfsu.size(); i++)
           jac.mv(js[i][0],gradphi[i]);
+	
+	//std::cout << "\tgradphi = " << gradphi[1];
         
         // compute gradient of u
         Dune::FieldVector<RF,dim> gradu(0.0);
         for (size_type i=0; i<lfsu.size(); i++)
-          gradu.axpy(u[i],gradphi[i]);
+          gradu.axpy(x_s[i],gradphi[i]);
 	
-	std::cout <<  "\tGradient u is: " << gradu << std::endl;
+	std::cout <<  "\tGradient u is: " << gradu << "its two_norm is: " << gradu.two_norm() << std::endl;
 	}
 	}
       }
-    }*/
+    }
     
     
     std::cout << std::endl << "IN ITERATION " << iterationCounter << std::endl << std::endl;

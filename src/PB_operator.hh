@@ -58,6 +58,8 @@ public:
     const Dune::QuadratureRule<DF,dim>& 
       rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
 
+    //lfsu.debug();
+      
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
            it=rule.begin(); it!=rule.end(); ++it)

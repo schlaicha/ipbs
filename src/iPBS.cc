@@ -139,7 +139,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  for (int i=0; i<5; i++)
+  for (int i=0; i<1; i++)
   {
   // get a grid view - this one is for the refinement iterator...
   const GV& gv_tmp = grid.leafView();
