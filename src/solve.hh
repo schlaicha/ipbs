@@ -3,13 +3,13 @@
 typedef typename GFS::LocalFunctionSpace LFSU;
 // extract some types
 typedef typename LFSU::Traits::FiniteElementType::
-  Traits::LocalBasisType::Traits::DomainFieldType DF;
+Traits::LocalBasisType::Traits::DomainFieldType DF;
 typedef typename LFSU::Traits::FiniteElementType::
-  Traits::LocalBasisType::Traits::RangeFieldType RF;
+Traits::LocalBasisType::Traits::RangeFieldType RF;
 typedef typename LFSU::Traits::FiniteElementType::
-  Traits::LocalBasisType::Traits::JacobianType JacobianType;
+Traits::LocalBasisType::Traits::JacobianType JacobianType;
 typedef typename LFSU::Traits::FiniteElementType::
-  Traits::LocalBasisType::Traits::RangeType RangeType;
+Traits::LocalBasisType::Traits::RangeType RangeType;
 typedef typename LFSU::Traits::SizeType size_type;
 
 
@@ -31,69 +31,59 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
   
   //int iterationCounter = 0;
   //sysParams.init = true;
-  while (sysParams.get_error() > 1E-4)
-  //while(iterationCounter < 10)
+  while (sysParams.get_error() > 2E-3)
+    //while(iterationCounter < 10)
   {
     std::vector<Dune::FieldVector<RF,dim>> gradientContainer(mapper.size());
     
     // Get gradients at boundaries
     for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
-    {
-      
+    {      
       if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
       {
 	for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
 	{
 	  if (ii->boundary()==true)
-	{
-	
-	// Bind Local Function Space to this element  
-	lfsu.bind(*it);
-	  
-	//std::cout << "Visited element with ID " << ii->boundarySegmentIndex() << " " << ii->indexInInside() << " at surface. ";
-	
-	// local reference coordinate is the center of the intersection :-)
-	Dune::FieldVector<DF,dim> local = ii->geometry().center();
-	
-	// Vector container for storing the coefficients on the actual element (same as U...)
-	GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
-	// get coefficients of this element
-	lfsu.vread(u,x_s);
-	
-	// evaluate gradient of basis functions on reference element
-	std::vector<JacobianType> js(lfsu.size());
-        lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
-
-	// transform gradients from reference element to real element
-        const Dune::FieldMatrix<DF,dimw,dim> 
-          jac = it->geometry().jacobianInverseTransposed(ii->geometry().center());
-        std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
-        for (size_type i=0; i<lfsu.size(); i++)
-          jac.mv(js[i][0],gradphi[i]);
-	
-        // compute gradient of u
-        Dune::FieldVector<RF,dim> gradu(0.0);
-        for (size_type i=0; i<lfsu.size(); i++)
-          gradu.axpy(x_s[i],gradphi[i]);
-	
-	// Store gradient vector of this element for later access
-	gradientContainer[mapper.map(*it)] = gradu;
-	
-	//std::cout <<  "\tGradient u is: " << gradu << "its two_norm is: " << gradu.two_norm() << std::endl;
-	}
+	  {	
+	    // Bind Local Function Space to this element  
+	    lfsu.bind(*it);
+	    
+	    // local reference coordinate is the center of the intersection :-)
+	    Dune::FieldVector<DF,dim> local = ii->geometry().center();
+	    
+	    // Vector container for storing the coefficients on the actual element (same as U...)
+	    GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
+	    // get coefficients of this element
+	    lfsu.vread(u,x_s);
+	    
+	    // evaluate gradient of basis functions on reference element
+	    std::vector<JacobianType> js(lfsu.size());
+	    lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
+	    
+	    // transform gradients from reference element to real element
+	    const Dune::FieldMatrix<DF,dimw,dim> 
+	    jac = it->geometry().jacobianInverseTransposed(ii->geometry().center());
+	    std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
+	    for (size_type i=0; i<lfsu.size(); i++)
+	      jac.mv(js[i][0],gradphi[i]);
+	    
+	    // compute gradient of u
+	      Dune::FieldVector<RF,dim> gradu(0.0);
+	      for (size_type i=0; i<lfsu.size(); i++)
+		gradu.axpy(x_s[i],gradphi[i]);
+	      
+	      // Store gradient vector of this element for later access
+		gradientContainer[mapper.map(*it)] = gradu;
+	  }
 	}
       }
     }
-    
-    
+        
     std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
     // Reset error for new iteration
     sysParams.reset_error();
     
     // construct discrete grid function for access to solution
-    //const U storeCoefficientVector = u;
-    //const DGF udgf(gfs, storeCoefficientVector);
-    
     const DGF udgf(gfs, u);
     
     // <<<4>>> Make grid operator space
@@ -116,7 +106,6 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     SLP slp(gos,u,ls,1e-10); 
     
     // <<<6>>> Solve Problem
-    //solver(newton, slp);
     newton.apply();
     slp.apply();
     
@@ -131,8 +120,4 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     sysParams.counter ++;
     gradientBackupContainer = gradientContainer;
   }
-  
-  
-  
-  
 }

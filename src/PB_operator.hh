@@ -96,7 +96,7 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 	  
-        RF f = compute_pbeq(u, globalpos);
+        RF f = sysParams.compute_pbeq(u, it);
 	RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
@@ -171,24 +171,28 @@ public:
 	
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
-	//j.evaluate(ig, it, y, udgf, gradientContainer[mapper.map(*ig.inside())]);
-	double yOld = 0.0;
+	j.evaluate(ig, it, y, udgf, mapper, gradientContainer);
+	
+	/*double yOld = 0.0;
 	if (sysParams.counter == 0)
 	{
-	  y = sysParams.get_sigma_sphere();
+	  y = sysParams.get_E_init();
+	  //y = 0.0;
 	  sysParams.add_error(1E8);
 	}
 	else
 	{
 	  y = -1.0 * (gradientContainer[mapper.map(*ig.inside())] * ig.centerUnitOuterNormal());
-	  // Calculate SOR step
-	  if (sysParams.counter > 1)
-	  yOld = - 1.0 * (gradientBackupContainer[mapper.map(*ig.inside())] * ig.centerUnitOuterNormal());
+	   //Calculate SOR step
+	  if (sysParams.counter == 1)
+	    yOld = sysParams.get_E_init();
+	   else
+	    yOld =  -1.0 * (gradientBackupContainer[mapper.map(*ig.inside())] * ig.centerUnitOuterNormal());
 	  y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
 	  double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
 	  sysParams.add_error(error);
 	}
-	//std::cout << "y = " << y << "yOld = " << yOld << std::endl;
+	std::cout << "y = " << y << "yOld = " << yOld << std::endl;*/
 
         	    
         // integrate j

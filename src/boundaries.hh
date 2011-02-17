@@ -275,7 +275,8 @@ public:
   // evaluate flux boundary condition
   template<typename I, typename E>
   inline void evaluate(I& i, E& e,
-                       typename Traits::RangeType& y, const DGF& udgf, Dune::FieldVector<RF,dim> gradu) const
+                       typename Traits::RangeType& y, const DGF& udgf,
+		       const Mapper& mapper, const  std::vector<Dune::FieldVector<double,dim>>& gradientContainer) const
   {
     
     // Get the vector of the actual intersection
@@ -285,49 +286,76 @@ public:
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
     
-    typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
-    typename Traits::DomainType xlocal;
-    //Dune::FieldVector<ctype,dim> surfaceElementCenter = i.geometryInInside().center();
-    udgf.evaluate(*i.inside(),i.geometry().global(e->position()),phi_old);
-    //udgf.evaluate(*i.inside(), xlocal, phi_old);
-    //std::cout << "Evaluated potential at " << i.geometry().global(e->position()) << "\tvalue: " << phi_old << std::endl;
+    Dune::FieldVector <ctype,dim> gradu = gradientContainer[mapper.map(*i.inside())];
     
+    typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
+    typename Traits::RangeType value;	// store potential during integration
+    typename Traits::DomainType xlocal;
+    udgf.evaluate(*i.inside(),i.geometry().center(),phi_old);
     typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
 
-    y = 0.0;
+    double fluxIntegrated = 0.0;
+    double fluxCoulomb = 0.0;
     
     // Integration Loop
-
-     for (LeafIterator integrationIterator = gv.template begin<0>(); integrationIterator != gv.template end<0>(); ++integrationIterator)
-     {
-      typename Traits::RangeType value;
-      Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
-      r_prime *= sysParams.get_radius();	// scale all vectors with the particle's radius
-      udgf.evaluate(*integrationIterator,r_prime,value);
-      Dune::FieldVector<ctype,dim> dist = r - r_prime;
-      //std::cout << "x = " << x.vec_access(0) << "\ty = " << x.vec_access(1) << "\tValue: " << value << std::endl;
-      double volume = integrationIterator->geometry().volume();
-      y += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) * volume * (dist * unitNormal);
-      //std::cout << "sinh: " << test << std::endl;
-     }
-    y *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);
     
+     for (LeafIterator integrationIterator = gv.template begin<0>();
+	  integrationIterator != gv.template end<0>(); ++integrationIterator)
+     {
+       Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
+       r_prime *= sysParams.get_radius();	// scale all vectors with the particle's radius
+       Dune::FieldVector<ctype,dim> dist = r - r_prime;
+       
+       // integrating sinh over all elements but all the surface ones, where
+       // the densiy of counterions is zero by definition)
+       if (integrationIterator->hasBoundaryIntersections() == false)
+       {
+	 udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
+	 fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) 
+	    * integrationIterator->geometry().volume() * (dist * unitNormal);
+       }
+      else
+      // add surface charge contribution from all other surface elements but this one
+      // (using standard coulomb field formula)
+      {
+	// Use constant surface charge density at the moment ...
+	// if (sysParams.counter != 0)
+	    
+	/* The formula we need is:
+	 * 	E = - \grad \Phi_prime * unitNormal * 1 /|dist|^2
+	 * For the constant case this is E_prime = E_init*/
+	
+	if (integrationIterator != i.inside())
+	    fluxCoulomb += (-1.0 * (gradientContainer[mapper.map(*integrationIterator)] * r_prime) / r_prime.two_norm() 
+		+ sysParams.get_E_init() ) / (dist.two_norm() *dist.two_norm()) * integrationIterator->geometry().volume();
+      }       
+    }
+    // Multply with factor
+    fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);    
+    
+    //if (sysParams.counter == 0)
+	//fluxCoulomb = sysParams.get_E_init();	// Assign the initial value
     
     // Calculate Q/R^3 * [\vec(r) * \vec(n)]
-    y += sysParams.get_sigma_sphere() / (sysParams.get_radius()*sysParams.get_radius()* sysParams.get_radius())* (r * unitNormal);
+    //fluxCoulomb += sysParams.get_sigma_sphere() / (sysParams.get_radius()*sysParams.get_radius()* sysParams.get_radius())* (r * unitNormal);
     
     // std::cout << "\tsigma = " << y << "\t-grad*n = " << -1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
     // << "\tunitOuterNormal = " << i.unitOuterNormal(e->position()) << "\tcenterUnitOuterNormal = " << unitNormal << std::endl;
     
-    std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
+    // std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
     
+    // Calculate normal flux
     double yOld = - 1.0 * (gradu * unitNormal);
-    //if (sysParams.init == false)
-    y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
+    y = fluxIntegrated + fluxCoulomb;
+    
+    // Do SOR step
+    if (sysParams.counter != 0)
+	y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;
+    
     double error = fabs(2.0*(double(y-yOld)/double(y+yOld)));
     sysParams.add_error(error);
 
-    std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << std::endl;
+    //std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << "\tflux_int: " << fluxIntegrated << "\tflux_col: " << fluxCoulomb << std::endl;
     
     return;
   }

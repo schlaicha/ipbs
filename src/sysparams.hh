@@ -1,3 +1,5 @@
+#include<math.h>
+
 class SysParams {
    public:
 	SysParams(double _lambda, double _bjerrum, int _charge, double _epsilon, double _radius);	// Constructor
@@ -8,21 +10,31 @@ class SysParams {
 	double get_epsilon();
 	double get_lambda2i();
 	double get_sigma_sphere();
-	double get_phi_init();
+	double get_E_init();
 	void add_error(double);
 	void reset_error();
 	double get_error();
 	void set_lambda (double value);
-	void set_phi_init (double value);
+	void set_E_init (double value);
 	static const double pi = 3.14159265358979323846;
 	double get_alpha();
 	void set_alpha(double);
 	static const double error_cut = 4.0E-3;
+	
+	template <typename Iterator>
+	double compute_pbeq(const double &u, const Iterator &it)
+	{
+	  //if (it->position().two_norm() < 1.01)
+	  //  return - 1.0 * (lambda2i * sinh(u) - (charge * bjerrum / (radius * radius)));
+	  //else
+	    return - 1.0 * (lambda2i * sinh(u));
+	}
+	
    private:
 	double lambda;
 	double lambda2i;
 	double sigma_sphere;
-	double phi_init;
+	double E_init;
 	double bjerrum;
 	int charge;
 	double epsilon;

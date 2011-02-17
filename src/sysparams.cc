@@ -9,13 +9,14 @@
 
 // Constructor
 // Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
-SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=-100, double _epsilon=80.0, double _radius=5.0):lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
+SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, int _charge=100, double _epsilon=80.0, double _radius=5.0)
+    :lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
 {
 	lambda2i = 1 / (lambda * lambda);
-	phi_init = bjerrum * charge / (epsilon * radius);
+	E_init = bjerrum * charge / (epsilon * radius * radius);
 	sigma_sphere = charge / (4 * pi * epsilon * radius * radius);
 	totalError = 1E8;
-	oldValue = phi_init;
+	oldValue = E_init;
 }
 
 double SysParams::get_radius()
@@ -76,9 +77,9 @@ double SysParams::get_lambda2i()
 }
 
 
-double SysParams::get_phi_init()
+double SysParams::get_E_init()
 {
-	return phi_init;
+	return E_init;
 }
 
 double SysParams::get_sigma_sphere()
@@ -92,9 +93,11 @@ void SysParams::set_lambda(double value)
 	lambda2i = 1 / (lambda * lambda);
 }
 
-void SysParams::set_phi_init(double value)
+void SysParams::set_E_init(double value)
 {
-	phi_init = value;
+	E_init = value;
 }
+
+
 
 SysParams sysParams;

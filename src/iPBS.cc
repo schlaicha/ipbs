@@ -149,7 +149,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  for (int i=0; i<5; i++)
+  for (int i=0; i<3; i++)
   {
   // get a grid view - this one is for the refinement iterator...
   const GV& gv_tmp = grid.leafView();
@@ -157,10 +157,12 @@ int main(int argc, char** argv)
   typedef GV::Codim<0>::Iterator ElementLeafIterator;
   for (ElementLeafIterator it = gv_tmp.begin<0>(); it != gv_tmp.end<0>(); ++it)
     {
-      if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
+      //if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7)
+      if (it->geometry().center().two_norm() < 1.7 && i < 2) 
       {
 	grid.mark(1,*it);
       }
+      if (i >= 2 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
     }
   grid.preAdapt();
   grid.adapt();
@@ -231,11 +233,7 @@ int main(int argc, char** argv)
 
 // ============================================================================
 
-template <typename PositionVector>
-double compute_pbeq(const double &u, const PositionVector &r)
-{
-	return (- sysParams.get_lambda2i() * std::sinh(u));
-}
+
 
 void solver (NEWTON &newton, SLP &slp)
 {
