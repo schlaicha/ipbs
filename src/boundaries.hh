@@ -276,7 +276,8 @@ public:
   template<typename I, typename E>
   inline void evaluate(I& i, E& e,
                        typename Traits::RangeType& y, const DGF& udgf,
-		       const Mapper& mapper, const  std::vector<Dune::FieldVector<double,dim>>& gradientContainer) const
+		       const Mapper& mapper, std::vector<double>& fluxContainer,
+		       std::vector<double>& fluxBackupContainer) const
   {
     
     // Get the vector of the actual intersection
@@ -286,7 +287,8 @@ public:
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
     
-    Dune::FieldVector <ctype,dim> gradu = gradientContainer[mapper.map(*i.inside())];
+    //Dune::FieldVector <ctype,dim> gradu = fluxContainer[mapper.map(*i.inside())];
+    double& yOld = fluxBackupContainer[mapper.map(*i.inside())];
     
     typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
     typename Traits::RangeType value;	// store potential during integration
@@ -317,36 +319,37 @@ public:
       else
       // add surface charge contribution from all other surface elements but this one
       // (using standard coulomb field formula)
+      //if (integrationIterator->hasBoundaryIntersections() == true) 
       {
-	// Use constant surface charge density at the moment ...
-	// if (sysParams.counter != 0)
-	    
+
 	/* The formula we need is:
 	 * 	E = - \grad \Phi_prime * unitNormal * 1 /|dist|^2
 	 * For the constant case this is E_prime = E_init*/
 	
 	if (integrationIterator != i.inside())
-	    fluxCoulomb += (-1.0 * (gradientContainer[mapper.map(*integrationIterator)] * r_prime) / r_prime.two_norm() 
-		+ sysParams.get_E_init() ) / (dist.two_norm() *dist.two_norm()) * integrationIterator->geometry().volume();
+	    //fluxCoulomb += (-1.0 * (gradientContainer[mapper.map(*integrationIterator)] * r_prime) / r_prime.two_norm()
+	    //	- sysParams.get_E_init()) / (dist.two_norm() *dist.two_norm()) * integrationIterator->geometry().volume() * 4.0 * sysParams.pi;
+	    //if (sysParams.counter == 0)
+		fluxCoulomb += - 1.0 * sysParams.get_E_init() / (dist.two_norm() *dist.two_norm())
+		      * integrationIterator->geometry().volume() * 4.0 * sysParams.pi;
+	    //else
+	    //fluxCoulomb -= fluxBackupContainer[mapper.map(*integrationIterator)]
+		// / (dist.two_norm() *dist.two_norm()) //* integrationIterator->geometry().volume()
+		// * 4.0 * sysParams.pi;
       }       
     }
     // Multply with factor
-    fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0*sysParams.pi);    
+    fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum();    
     
-    //if (sysParams.counter == 0)
-	//fluxCoulomb = sysParams.get_E_init();	// Assign the initial value
     
-    // Calculate Q/R^3 * [\vec(r) * \vec(n)]
-    //fluxCoulomb += sysParams.get_sigma_sphere() / (sysParams.get_radius()*sysParams.get_radius()* sysParams.get_radius())* (r * unitNormal);
     
-    // std::cout << "\tsigma = " << y << "\t-grad*n = " << -1.0 * (grad * i.unitOuterNormal(e->position())) << "\tgrad = " << grad 
-    // << "\tunitOuterNormal = " << i.unitOuterNormal(e->position()) << "\tcenterUnitOuterNormal = " << unitNormal << std::endl;
-    
-    // std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) <<  ":\t y = " << y << std::endl;
+    //std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) << std::endl;
     
     // Calculate normal flux
-    double yOld = - 1.0 * (gradu * unitNormal);
-    y = fluxIntegrated + fluxCoulomb;
+    //double yOld = - 1.0 * (gradu * unitNormal);
+    y = fluxCoulomb - fluxIntegrated;
+    
+    //std::cout << "\tj = " << y;
     
     // Do SOR step
     if (sysParams.counter != 0)
@@ -357,10 +360,48 @@ public:
 
     //std::cout <<"\ty nach SOR: " <<  y << "\ty_old = " << yOld << "\terror: " << error << "\tflux_int: " << fluxIntegrated << "\tflux_col: " << fluxCoulomb << std::endl;
     
+    fluxContainer[mapper.map(*i.inside())] = y;
+    
     return;
   }
 
 private:
+
+  const GV&    gv;
+  const PGMap& pg;
+};
+
+
+// ============================================================================
+
+// function for defining radiation and Neumann boundary conditions
+
+template<typename GV, typename RF, typename PGMap>
+class BoundaryFluxRef
+  : public Dune::PDELab::BoundaryGridFunctionBase<
+           Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
+           Dune::FieldVector<RF,1> >, BoundaryFluxRef<GV,RF,PGMap> >
+{
+public:
+
+  typedef Dune::PDELab::BoundaryGridFunctionTraits<
+          GV,RF,1,Dune::FieldVector<RF,1> > Traits;
+  typedef typename Traits::GridViewType::Grid::ctype ctype;
+
+  // constructor
+  BoundaryFluxRef(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+
+  // evaluate flux boundary condition
+  template<typename I, typename E>
+  inline void evaluate(I& i, E& e,
+                       typename Traits::RangeType& y, const DGF& udgf,
+		       const Mapper& mapper, const  std::vector<Dune::FieldVector<double,dim>>& gradientContainer) const
+  {
+    y = 1.0;
+    return;
+  }
+  
+  private:
 
   const GV&    gv;
   const PGMap& pg;

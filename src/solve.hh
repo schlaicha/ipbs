@@ -1,24 +1,24 @@
 // solve.hh - solve the PB equation
 
-typedef typename GFS::LocalFunctionSpace LFSU;
+typedef GFS::LocalFunctionSpace LFSU;
 // extract some types
-typedef typename LFSU::Traits::FiniteElementType::
+typedef LFSU::Traits::FiniteElementType::
 Traits::LocalBasisType::Traits::DomainFieldType DF;
-typedef typename LFSU::Traits::FiniteElementType::
+typedef LFSU::Traits::FiniteElementType::
 Traits::LocalBasisType::Traits::RangeFieldType RF;
-typedef typename LFSU::Traits::FiniteElementType::
+typedef LFSU::Traits::FiniteElementType::
 Traits::LocalBasisType::Traits::JacobianType JacobianType;
-typedef typename LFSU::Traits::FiniteElementType::
+typedef LFSU::Traits::FiniteElementType::
 Traits::LocalBasisType::Traits::RangeType RangeType;
-typedef typename LFSU::Traits::SizeType size_type;
+typedef LFSU::Traits::SizeType size_type;
 
 
 template <typename U>
 void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridType& grid, const M &m, const B &b, const J&j)
 {
   
-  LFSU lfsu(gfs);
-  lfsu.setup(gfs);
+  //LFSU lfsu(gfs);
+  //lfsu.setup(gfs);
   
   typedef GV::Codim<0>::Iterator ElementLeafIterator;
   typedef GV::IntersectionIterator IntersectionIterator;
@@ -27,58 +27,62 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
   // Provide a mapper for storing gradients
   Mapper mapper (grid);
   // allocate a vector for the data
-  std::vector<Dune::FieldVector<RF,dim>> gradientBackupContainer(mapper.size());
+  std::vector<double> fluxContainer(mapper.size());
+  std::vector<double> fluxBackupContainer(mapper.size());
+  //std::vector<Dune::FieldVector<RF,dim>> gradientContainer(mapper.size());
   
-  //int iterationCounter = 0;
-  //sysParams.init = true;
-  while (sysParams.get_error() > 2E-3)
-    //while(iterationCounter < 10)
+  //while (sysParams.get_error() > 2E-3)
+  while(sysParams.counter < 10)
   {
-    std::vector<Dune::FieldVector<RF,dim>> gradientContainer(mapper.size());
-    
-    // Get gradients at boundaries
-    for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
-    {      
-      if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
-      {
-	for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+    if (sysParams.counter == 1)
+    {	
+      // Get gradients at boundaries
+      for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
+      {      
+	/*if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
 	{
-	  if (ii->boundary()==true)
-	  {	
-	    // Bind Local Function Space to this element  
-	    lfsu.bind(*it);
-	    
-	    // local reference coordinate is the center of the intersection :-)
-	    Dune::FieldVector<DF,dim> local = ii->geometry().center();
-	    
-	    // Vector container for storing the coefficients on the actual element (same as U...)
-	    GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
-	    // get coefficients of this element
-	    lfsu.vread(u,x_s);
-	    
-	    // evaluate gradient of basis functions on reference element
-	    std::vector<JacobianType> js(lfsu.size());
-	    lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
-	    
-	    // transform gradients from reference element to real element
-	    const Dune::FieldMatrix<DF,dimw,dim> 
-	    jac = it->geometry().jacobianInverseTransposed(ii->geometry().center());
-	    std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
-	    for (size_type i=0; i<lfsu.size(); i++)
-	      jac.mv(js[i][0],gradphi[i]);
-	    
-	    // compute gradient of u
+	  for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+	  {
+	    if (ii->boundary()==true)
+	    {	
+	      // Bind Local Function Space to this element  
+	      lfsu.bind(*it);
+	      
+	      // local reference coordinate is the center of the intersection :-)
+	      Dune::FieldVector<DF,dim> local = ii->geometry().center();
+	      
+	      // Vector container for storing the coefficients on the actual element (same as U...)
+	      GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
+	      // get coefficients of this element
+	      lfsu.vread(u,x_s);
+	      
+	      // evaluate gradient of basis functions on reference element
+	      std::vector<JacobianType> js(lfsu.size());
+	      lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
+	      
+	      // transform gradients from reference element to real element
+	      const Dune::FieldMatrix<DF,dimw,dim> 
+	      jac = it->geometry().jacobianInverseTransposed(ii->geometry().center());
+	      std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
+	      for (size_type i=0; i<lfsu.size(); i++)
+		jac.mv(js[i][0],gradphi[i]);
+	      
+	      // compute gradient of u
 	      Dune::FieldVector<RF,dim> gradu(0.0);
 	      for (size_type i=0; i<lfsu.size(); i++)
 		gradu.axpy(x_s[i],gradphi[i]);
-	      
+		
 	      // Store gradient vector of this element for later access
-		gradientContainer[mapper.map(*it)] = gradu;
-	  }
-	}
+	      //gradientContainer[mapper.map(*it)] = gradu;
+	      
+	    }	    
+	  }	  
+	}*/
+	fluxContainer[mapper.map(*it)] = sysParams.get_E_init();
+	fluxBackupContainer[mapper.map(*it)] = 0.0;
       }
     }
-        
+    
     std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
     // Reset error for new iteration
     sysParams.reset_error();
@@ -87,7 +91,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     const DGF udgf(gfs, u);
     
     // <<<4>>> Make grid operator space
-    LOP lop(m,b,j, udgf, gv, mapper, gradientContainer, gradientBackupContainer);
+    LOP lop(m,b,j, udgf, gv, mapper, fluxContainer, fluxBackupContainer);
     GOS gos(gfs,cc,gfs,cc,lop);
     
     // <<<5a>>> Select a linear solver backend
@@ -115,9 +119,10 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     
     DGF udgf_save(gfs,u);
     save(udgf_save, u, gv, vtk_filename);
-    //++iterationCounter;
+    
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
     sysParams.counter ++;
-    gradientBackupContainer = gradientContainer;
+    fluxBackupContainer = fluxContainer;
+    //gradientBackupContainer = gradientContainer;
   }
 }

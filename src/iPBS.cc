@@ -69,13 +69,18 @@ typedef BCType<GV,std::vector<int>> B;
 typedef BCExtension_init<GV,double,std::vector<int>> G_init;
 //typedef BCExtension_iterate<GV,double,std::vector<int>> G;
 typedef BoundaryFlux<GV,double,std::vector<int> > J;
+typedef BoundaryFluxRef<GV,double,std::vector<int> > J_ref;
 
 #include"PB_operator.hh"
 typedef PBLocalOperator<M,B,J> LOP;
+typedef PBLocalOperatorRef<M,B,J_ref> LOP_ref;
 typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP_ref,CC,CC,MBE,true> GOS_ref;
 typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
 typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
+typedef Dune::PDELab::Newton<GOS_ref,LS,U> NEWTON_ref;
 typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
+typedef Dune::PDELab::StationaryLinearProblemSolver<GOS_ref,LS,U> SLP_ref;
 typedef DGF::Traits Traits;
 
 // include application heaeders
@@ -149,7 +154,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  for (int i=0; i<3; i++)
+  for (int i=0; i<2; i++)
   {
   // get a grid view - this one is for the refinement iterator...
   const GV& gv_tmp = grid.leafView();
@@ -158,11 +163,11 @@ int main(int argc, char** argv)
   for (ElementLeafIterator it = gv_tmp.begin<0>(); it != gv_tmp.end<0>(); ++it)
     {
       //if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7)
-      if (it->geometry().center().two_norm() < 1.7 && i < 2) 
+      if (it->geometry().center().two_norm() < 1.7 && i < 1) 
       {
 	grid.mark(1,*it);
       }
-      if (i >= 2 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
+      if (i >= 1 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
     }
   grid.preAdapt();
   grid.adapt();
@@ -182,6 +187,7 @@ int main(int argc, char** argv)
   G_init g(gv, boundaryIndexToEntity);
   // boundary fluxes
   J j(gv, boundaryIndexToEntity);
+  J_ref j_ref(gv, boundaryIndexToEntity);
   
   // Create finite element map
   FEM fem;
@@ -201,25 +207,51 @@ int main(int argc, char** argv)
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
   
-  //std::cout << "VECTOR u" << std::endl << "==============" << std::endl << u << std::endl;
-
-  // MAYBE GET AN INITAL SOLUTION (see below) 
-  // get initial coefficient vector
-/*  get_solution(u, gv, gfs, m, b, g, j);
-  // Create Discrete Grid Function Space
-  DGF udgf(gfs,u);
-  // graphical output
-  std::string vtk_filename = "step_0";
-  save(udgf, u, gv, vtk_filename);
-*/
-  // ITERATION STARTS HERE
-  // we don't need an initialisation step but can(!) use one...
-  // (e.g. for random initial conditions of surface charge distribution)
-  
-  
+  // Call function exectuting the iterative procedure
   get_solution(u, gv, gfs, cc, grid, m, b, j);
   
-
+    // get the Neumann solution as reference
+  
+  // construct discrete grid function for access to solution
+  U u_ref(gfs,0.0);
+  const DGF udgf_ref(gfs, u_ref);
+  
+  LOP_ref lop_ref(m,b,j_ref);
+  GOS_ref gos_ref(gfs,cc,gfs,cc,lop_ref);
+  
+  // <<<5a>>> Select a linear solver backend
+  LS ls_ref(5000,true);
+    
+  // <<<5b>>> Instantiate solver for nonlinear problem
+  NEWTON_ref newton_ref(gos_ref,u_ref,ls_ref); 
+  newton_ref.setReassembleThreshold(0.0);
+  newton_ref.setVerbosityLevel(1);
+  newton_ref.setReduction(1e-10);
+  newton_ref.setMinLinearReduction(1e-4);
+  newton_ref.setMaxIterations(20);
+  newton_ref.setLineSearchMaxIterations(10);
+    
+  // <<<5c>>> Instantiate Solver for linear problem
+  SLP_ref slp_ref(gos_ref,u_ref,ls_ref,1e-10); 
+  
+  // <<<6>>> Solve Problem
+  newton_ref.apply();
+  slp_ref.apply();
+  
+  DGF udgf_refSave(gfs,u_ref);
+  save(udgf_refSave, u_ref, gv, "reference");
+  
+  U u_diff(gfs);
+  std::vector<double> tmp1, tmp2;
+  u.std_copy_to(tmp1);
+  u_ref.std_copy_to(tmp2);
+  for (int i = 0; i < tmp1.size(); i++) {
+    tmp1[i] = tmp2[i] - tmp1[i];
+  }
+  u_diff.std_copy_from(tmp1);
+  DGF udgf_diffSave(gfs,u_diff);
+  save(udgf_diffSave, u_diff, gv, "difference");
+  
   // done
   return 0;
  }
@@ -249,7 +281,7 @@ void save(const DGF &udgf, const U &u, const GV &gv, const std::string filename)
   // {
     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-    vtkwriter.write(filename,Dune::VTK::ascii);
+    vtkwriter.write(filename,Dune::VTK::appendedraw);
   // }
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
