@@ -355,9 +355,9 @@ public:
 	typename J_ref::Traits::RangeType y;
 	//j.evaluate(ig, it, y, udgf, mapper, gradientContainer);
 	
-	y = - sysParams.get_E_init();
-	
-        // integrate j
+	y = sysParams.get_charge_density() * ig.geometry().volume() * 2.0;
+
+	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
         for (size_type i=0; i<lfsv_s.size(); i++)
           r_s[i] += y*phi[i]*factor;

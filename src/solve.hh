@@ -103,8 +103,8 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     newton.setVerbosityLevel(1);
     newton.setReduction(1e-10);
     newton.setMinLinearReduction(1e-4);
-    newton.setMaxIterations(20);
-    newton.setLineSearchMaxIterations(10);
+    newton.setMaxIterations(40);
+    newton.setLineSearchMaxIterations(20);
     
     // <<<5c>>> Instantiate Solver for linear problem
     SLP slp(gos,u,ls,1e-10); 

@@ -2,14 +2,14 @@
 
 class SysParams {
    public:
-	SysParams(double _lambda, double _bjerrum, int _charge, double _epsilon, double _radius);	// Constructor
+	SysParams(double _lambda, double _bjerrum, double _charge_density, double _epsilon, double _radius);	// Constructor
 	double get_bjerrum();
 	int counter;
 	double get_radius();
 	double get_charge();
 	double get_epsilon();
 	double get_lambda2i();
-	double get_sigma_sphere();
+	double get_charge_density();
 	double get_E_init();
 	void add_error(double);
 	void reset_error();
@@ -30,10 +30,11 @@ class SysParams {
 	    return - 1.0 * (lambda2i * sinh(u));
 	}
 	
+	
    private:
 	double lambda;
 	double lambda2i;
-	double sigma_sphere;
+	double charge_density;
 	double E_init;
 	double bjerrum;
 	int charge;

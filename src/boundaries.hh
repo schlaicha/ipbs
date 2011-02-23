@@ -10,6 +10,10 @@
 #include "p0layout.hh"
 #endif
 
+#include "functors.hh"
+
+#include "integrateentity.hh"
+
 //#include <limits>
 //#include <cstdlib>
 
@@ -281,7 +285,7 @@ public:
   {
     
     // Get the vector of the actual intersection
-    Dune::FieldVector<ctype,dim> r = i.geometry().global(e->position());
+    Dune::FieldVector<ctype,dim> r = i.geometry().center();
     // Scale the vectors with particle's radius
     r *= sysParams.get_radius();
     // Get the unit normal vector of the surface element
@@ -295,12 +299,16 @@ public:
     typename Traits::DomainType xlocal;
     udgf.evaluate(*i.inside(),i.geometry().center(),phi_old);
     typedef typename GV::template Codim<0>::Iterator LeafIterator; // Iterator type for integrationIterator
-
+    //typedef GV::IntersectionIterator IntersectionIterator;
+    typedef typename GV::IntersectionIterator IntersectionIterator;
+    
+    CoulombFlux<ctype,dim> f;
+    
     double fluxIntegrated = 0.0;
     double fluxCoulomb = 0.0;
     
     // Integration Loop
-    
+
      for (LeafIterator integrationIterator = gv.template begin<0>();
 	  integrationIterator != gv.template end<0>(); ++integrationIterator)
      {
@@ -310,11 +318,21 @@ public:
        
        // integrating sinh over all elements but all the surface ones, where
        // the densiy of counterions is zero by definition)
-       if (integrationIterator->hasBoundaryIntersections() == false)
+       if (integrationIterator->hasBoundaryIntersections() == false || integrationIterator->geometry().center().two_norm() > 4.7)
        {
 	 udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
-	 fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) 
-	    * integrationIterator->geometry().volume() * (dist * unitNormal);
+	 switch(dim){
+	   case 3:
+	     fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) 
+	           * integrationIterator->geometry().volume() * (dist * unitNormal);
+	     break;
+	   case 2:
+	      fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm()) 
+	           * integrationIterator->geometry().volume() * (dist * unitNormal);
+	   break;
+	   default: /* TODO: put some check here and in the other swith(dim) ! */
+	   break;
+	 }
        }
       else
       // add surface charge contribution from all other surface elements but this one
@@ -325,29 +343,47 @@ public:
 	/* The formula we need is:
 	 * 	E = - \grad \Phi_prime * unitNormal * 1 /|dist|^2
 	 * For the constant case this is E_prime = E_init*/
-	
+
 	if (integrationIterator != i.inside())
-	    //fluxCoulomb += (-1.0 * (gradientContainer[mapper.map(*integrationIterator)] * r_prime) / r_prime.two_norm()
-	    //	- sysParams.get_E_init()) / (dist.two_norm() *dist.two_norm()) * integrationIterator->geometry().volume() * 4.0 * sysParams.pi;
-	    //if (sysParams.counter == 0)
-		fluxCoulomb += - 1.0 * sysParams.get_E_init() / (dist.two_norm() *dist.two_norm())
-		      * integrationIterator->geometry().volume() * 4.0 * sysParams.pi;
+	{
+	  
+	  for (IntersectionIterator ii = gv.ibegin(*integrationIterator); ii != gv.iend(*integrationIterator); ++ii)
+	  {
+	    if (ii->boundary()==true && ii->neighbor()==false)
+	    {	
+		 // INTEGRATION
+		  Dune::FieldVector<ctype,dim> r_second = ii->geometry().center();
+		  Dune::FieldVector<ctype,dim>dist2=r_second - r;
+		  fluxCoulomb += sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
+		 // double contrib = ((dist2 * unitNormal) / (dist2.two_norm()*dist2.two_norm()))*ii->geometry().volume();
+                 // fluxCoulomb+=contrib;
+		 // std::cout <<  "element measure = " <<   ii->geometry().volume() << " contrib= " << contrib << " dn= " << (dist2 * unitNormal) <<  " dd " << (dist2.two_norm()*dist2.two_norm()) <<  std::endl;
+	    }
+	  }
 	    //else
-	    //fluxCoulomb -= fluxBackupContainer[mapper.map(*integrationIterator)]
+	    //fluxCoulomb -= fluxBackupContainer[mapper.map(*integrationIterator)
 		// / (dist.two_norm() *dist.two_norm()) //* integrationIterator->geometry().volume()
 		// * 4.0 * sysParams.pi;
-      }       
+	}
+	
+      } 
+     
     }
+     
+    
     // Multply with factor
-    fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum();    
-    
-    
+    switch(dim){
+      case 3: fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0 * sysParams.pi);
+      break;
+      case 2: fluxIntegrated *= 2.*sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0 * sysParams.pi);
+      break;
+    }
     
     //std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) << std::endl;
     
     // Calculate normal flux
     //double yOld = - 1.0 * (gradu * unitNormal);
-    y = fluxCoulomb - fluxIntegrated;
+    y = sysParams.get_bjerrum()*fluxCoulomb + fluxIntegrated;
     
     //std::cout << "\tj = " << y;
     
