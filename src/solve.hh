@@ -1,97 +1,124 @@
 // solve.hh - solve the PB equation
 
-typedef GFS::LocalFunctionSpace LFSU;
-// extract some types
-typedef LFSU::Traits::FiniteElementType::
-Traits::LocalBasisType::Traits::DomainFieldType DF;
-typedef LFSU::Traits::FiniteElementType::
-Traits::LocalBasisType::Traits::RangeFieldType RF;
-typedef LFSU::Traits::FiniteElementType::
-Traits::LocalBasisType::Traits::JacobianType JacobianType;
-typedef LFSU::Traits::FiniteElementType::
-Traits::LocalBasisType::Traits::RangeType RangeType;
-typedef LFSU::Traits::SizeType size_type;
-
+#include "functors.hh"
+#include "integrateentity.hh"
 
 template <typename U>
 void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridType& grid, const M &m, const B &b, const J&j)
 {
-  
-  //LFSU lfsu(gfs);
-  //lfsu.setup(gfs);
+  //typedef GV::Traits Traits;
+  typedef double ctype;		// TODO: Find correct traits and implement correct!
   
   typedef GV::Codim<0>::Iterator ElementLeafIterator;
   typedef GV::IntersectionIterator IntersectionIterator;
-  const int dimw = 2;
   
-  // Provide a mapper for storing gradients
-  Mapper mapper (grid);
+  // Provide a mapper for storing precomputed values
+  Mapper mapper(grid);
   // allocate a vector for the data
   std::vector<double> fluxContainer(mapper.size());
-  std::vector<double> fluxBackupContainer(mapper.size());
-  //std::vector<Dune::FieldVector<RF,dim>> gradientContainer(mapper.size());
   
-  //while (sysParams.get_error() > 2E-3)
-  while(sysParams.counter < 10)
+  
+  typename Traits::RangeType value;	// store potential during integration (for calculating sinh-term)
+  
+  // Initialize functor for integrating coulomb flux
+  CoulombFlux<ctype,dim> f;
+  
+  //while (sysParams.get_error() > 1E-4)
+  while (sysParams.counter < 10)
   {
-    if (sysParams.counter == 1)
-    {	
-      // Get gradients at boundaries
-      for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
-      {      
-	/*if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7) 
-	{
-	  for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+    // Precompute fluxes
+    for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
+    {
+      double fluxIntegrated = 0.0;
+      double fluxCoulomb = 0.0;
+      
+      // construct discrete grid function for access to solution
+      const DGF udgf(gfs, u);
+      
+      for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+      {
+	if (ii->boundary()==true && it->geometry().center().two_norm() < 4.7) 
+	{	
+	  // Now we have selected the elements for which we want to evaluate the fluxes
+	  // So now loop over all elements but the surface ones and integrate sinh term
+	  
+	  // Get the vector of the actual intersection
+	  Dune::FieldVector<ctype,dim> r = ii->geometry().center();
+	  
+	  // Get the unit normal vector of the surface element
+	  Dune::FieldVector<ctype,dim> unitNormal = ii->centerUnitOuterNormal();
+	  unitNormal*=-1.0;	// turn around unit vector as it is outer normal
+	  
+	  for (ElementLeafIterator integrationIterator = gv.begin<0>(); integrationIterator!=gv.end<0>(); ++integrationIterator)
 	  {
-	    if (ii->boundary()==true)
-	    {	
-	      // Bind Local Function Space to this element  
-	      lfsu.bind(*it);
+	    if (integrationIterator->hasBoundaryIntersections() == false || integrationIterator->geometry().center().two_norm() > 4.7)
+	    {
+	      // integrating sinh over all elements but all the surface ones, where
+	      // the densiy of counterions is zero by definition)
 	      
-	      // local reference coordinate is the center of the intersection :-)
-	      Dune::FieldVector<DF,dim> local = ii->geometry().center();
+	      Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
+	      Dune::FieldVector<ctype,dim> dist = r -r_prime;
 	      
-	      // Vector container for storing the coefficients on the actual element (same as U...)
-	      GFS::VectorContainer<Real>::Type x_s(gfs,0.0);
-	      // get coefficients of this element
-	      lfsu.vread(u,x_s);
+	      // Evaluate the potential at the elements center
+	      udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
 	      
-	      // evaluate gradient of basis functions on reference element
-	      std::vector<JacobianType> js(lfsu.size());
-	      lfsu.finiteElement().localBasis().evaluateJacobian(ii->geometry().center(),js);
-	      
-	      // transform gradients from reference element to real element
-	      const Dune::FieldMatrix<DF,dimw,dim> 
-	      jac = it->geometry().jacobianInverseTransposed(ii->geometry().center());
-	      std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
-	      for (size_type i=0; i<lfsu.size(); i++)
-		jac.mv(js[i][0],gradphi[i]);
-	      
-	      // compute gradient of u
-	      Dune::FieldVector<RF,dim> gradu(0.0);
-	      for (size_type i=0; i<lfsu.size(); i++)
-		gradu.axpy(x_s[i],gradphi[i]);
+	      switch(dim){
+		case 3:
+		  fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
+		  * integrationIterator->geometry().volume() * (dist * unitNormal)
+		  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
+		  break;
+		case 2:
+		  fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
+		  * integrationIterator->geometry().volume() * (dist * unitNormal)
+		  * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
+		  break;
+		default: // TODO: put some check here and in the other swith(dim) ! 
+		  break;
+	      }
+	    }
+	    
+	    else	// we are on a surface element and do integration for coulomb flux
+	      // add surface charge contribution from all other surface elements but this one
+	      // (using standard coulomb field formula)
+	      {
+		// NOTE: For algorithm validation we use the pillowbox conribution
+		if (integrationIterator  == it)
+		  fluxCoulomb += 1.0 * sysParams.get_charge_density() *  sysParams.get_bjerrum() * 2.0 *sysParams.pi;
 		
-	      // Store gradient vector of this element for later access
-	      //gradientContainer[mapper.map(*it)] = gradu;
-	      
-	    }	    
-	  }	  
-	}*/
-	fluxContainer[mapper.map(*it)] = sysParams.get_E_init();
-	fluxBackupContainer[mapper.map(*it)] = 0.0;
+		if (integrationIterator != it && 0 ) // NOTE: This one is to be used later
+		{
+		  // loop over all boundary intersections of this surface element
+		  for (IntersectionIterator intersectionIntegrator = gv.ibegin(*integrationIterator); intersectionIntegrator != gv.iend(*integrationIterator); ++intersectionIntegrator)
+		  {
+		    if (intersectionIntegrator->boundary()==true && intersectionIntegrator->neighbor()==false)
+		      // integrate coulomb flux along this intersection
+		      fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
+		  }
+		}
+	      }
+	  }
+	}
       }
+
+      double flux = fluxCoulomb + fluxIntegrated;
+      // Do SOR step and add error
+      flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[mapper.map(*it)];
+      double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
+      sysParams.add_error(error);
+      // Store new flux
+      fluxContainer[mapper.map(*it)] = flux;
     }
+    
+    
+    
     
     std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
     // Reset error for new iteration
     sysParams.reset_error();
     
-    // construct discrete grid function for access to solution
-    const DGF udgf(gfs, u);
-    
     // <<<4>>> Make grid operator space
-    LOP lop(m,b,j, udgf, gv, mapper, fluxContainer, fluxBackupContainer);
+    LOP lop(m,b,j,fluxContainer, mapper);
     GOS gos(gfs,cc,gfs,cc,lop);
     
     // <<<5a>>> Select a linear solver backend
@@ -122,7 +149,5 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
     sysParams.counter ++;
-    fluxBackupContainer = fluxContainer;
-    //gradientBackupContainer = gradientContainer;
   }
 }

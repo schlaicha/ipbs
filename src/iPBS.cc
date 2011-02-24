@@ -154,6 +154,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
+/*
   for (int i=0; i<4 ; i++)
   {
   // get a grid view - this one is for the refinement iterator...
@@ -174,7 +175,7 @@ int main(int argc, char** argv)
   grid.postAdapt();
   std::cout << "Adaptive Refinement step " << i << " done."  << std::endl;
   }
-  
+*/  
   const GV& gv = grid.leafView();
 
   //define boundaries
