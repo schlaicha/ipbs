@@ -290,10 +290,9 @@ public:
     r *= sysParams.get_radius();
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal = i.centerUnitOuterNormal();
-    
     //Dune::FieldVector <ctype,dim> gradu = fluxContainer[mapper.map(*i.inside())];
     double& yOld = fluxBackupContainer[mapper.map(*i.inside())];
-    
+    unitNormal*=-1.0;
     typename Traits::RangeType phi_old;	// store potential at actual element for SOR step
     typename Traits::RangeType value;	// store potential during integration
     typename Traits::DomainType xlocal;
@@ -314,21 +313,22 @@ public:
      {
        Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
        r_prime *= sysParams.get_radius();	// scale all vectors with the particle's radius
-       Dune::FieldVector<ctype,dim> dist = r - r_prime;
+       Dune::FieldVector<ctype,dim> dist = r -r_prime;
        
        // integrating sinh over all elements but all the surface ones, where
        // the densiy of counterions is zero by definition)
+        
        if (integrationIterator->hasBoundaryIntersections() == false || integrationIterator->geometry().center().two_norm() > 4.7)
        {
 	 udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
 	 switch(dim){
 	   case 3:
-	     fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) 
-	           * integrationIterator->geometry().volume() * (dist * unitNormal);
+	     fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm()) *
+	           integrationIterator->geometry().volume() * (dist * unitNormal) * sysParams.get_bjerrum()*sysParams.get_lambda2i();
 	     break;
 	   case 2:
-	      fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm()) 
-	           * integrationIterator->geometry().volume() * (dist * unitNormal);
+	      fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm()) *
+	            integrationIterator->geometry().volume() * (dist * unitNormal) * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
 	   break;
 	   default: /* TODO: put some check here and in the other swith(dim) ! */
 	   break;
@@ -343,8 +343,10 @@ public:
 	/* The formula we need is:
 	 * 	E = - \grad \Phi_prime * unitNormal * 1 /|dist|^2
 	 * For the constant case this is E_prime = E_init*/
-
-	if (integrationIterator != i.inside())
+     if (integrationIterator  == i.inside()) fluxCoulomb += 1.0 * sysParams.get_charge_density() *  sysParams.get_bjerrum()
+				    * 2.0 *sysParams.pi;
+    
+	if (integrationIterator != i.inside() && 0 )
 	{
 	  
 	  for (IntersectionIterator ii = gv.ibegin(*integrationIterator); ii != gv.iend(*integrationIterator); ++ii)
@@ -352,9 +354,7 @@ public:
 	    if (ii->boundary()==true && ii->neighbor()==false)
 	    {	
 		 // INTEGRATION
-		  Dune::FieldVector<ctype,dim> r_second = ii->geometry().center();
-		  Dune::FieldVector<ctype,dim>dist2=r_second - r;
-		  fluxCoulomb += sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
+		  fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
 		 // double contrib = ((dist2 * unitNormal) / (dist2.two_norm()*dist2.two_norm()))*ii->geometry().volume();
                  // fluxCoulomb+=contrib;
 		 // std::cout <<  "element measure = " <<   ii->geometry().volume() << " contrib= " << contrib << " dn= " << (dist2 * unitNormal) <<  " dd " << (dist2.two_norm()*dist2.two_norm()) <<  std::endl;
@@ -367,26 +367,20 @@ public:
 	}
 	
       } 
-     
+  
     }
      
     
     // Multply with factor
-    switch(dim){
-      case 3: fluxIntegrated *= sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0 * sysParams.pi);
-      break;
-      case 2: fluxIntegrated *= 2.*sysParams.get_lambda2i() / sysParams.get_bjerrum() / (4.0 * sysParams.pi);
-      break;
-    }
+  
     
     //std::cout << std::endl << "An r[0] = " << r.vec_access(0) << "\tr[1] = " << r.vec_access(1) << std::endl;
     
     // Calculate normal flux
     //double yOld = - 1.0 * (gradu * unitNormal);
-    y = sysParams.get_bjerrum()*fluxCoulomb + fluxIntegrated;
+    y = fluxCoulomb + fluxIntegrated;
     
-    //std::cout << "\tj = " << y;
-    
+  //  std::cout << "\tjintegrated = " << fluxIntegrated << " jcoulomb= " <<  fluxCoulomb  << std::endl;
     // Do SOR step
     if (sysParams.counter != 0)
 	y = sysParams.get_alpha() * y + (1.0 - sysParams.get_alpha()) * yOld;

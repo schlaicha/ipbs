@@ -154,7 +154,7 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-  for (int i=0; i<0; i++)
+  for (int i=0; i<4 ; i++)
   {
   // get a grid view - this one is for the refinement iterator...
   const GV& gv_tmp = grid.leafView();
@@ -163,11 +163,11 @@ int main(int argc, char** argv)
   for (ElementLeafIterator it = gv_tmp.begin<0>(); it != gv_tmp.end<0>(); ++it)
     {
       //if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7)
-      if (it->geometry().center().two_norm() < 1.7 && i < 1) 
+      if (it->geometry().center().two_norm() < 1.7 && i < 2) 
       {
 	grid.mark(1,*it);
       }
-      if (i >= 1 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
+      if (i >= 2 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
     }
   grid.preAdapt();
   grid.adapt();
@@ -207,10 +207,8 @@ int main(int argc, char** argv)
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
   
-  // Call function exectuting the iterative procedure
-  get_solution(u, gv, gfs, cc, grid, m, b, j);
   
-    // get the Neumann solution as reference
+     // get the Neumann solution as reference
   
   // construct discrete grid function for access to solution
   U u_ref(gfs,0.0);
@@ -241,12 +239,18 @@ int main(int argc, char** argv)
   DGF udgf_refSave(gfs,u_ref);
   save(udgf_refSave, u_ref, gv, "reference");
   
+  
+  // Call function exectuting the iterative procedure
+  get_solution(u, gv, gfs, cc, grid, m, b, j);
+  
+ 
+  
   U u_diff(gfs);
   std::vector<double> tmp1, tmp2;
   u.std_copy_to(tmp1);
   u_ref.std_copy_to(tmp2);
   for (int i = 0; i < tmp1.size(); i++) {
-    tmp1[i] = tmp2[i] - tmp1[i];
+    tmp1[i] = (tmp1[i] - tmp2[i]) / tmp2[i];
   }
   u_diff.std_copy_from(tmp1);
   DGF udgf_diffSave(gfs,u_diff);

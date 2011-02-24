@@ -355,8 +355,8 @@ public:
 	typename J_ref::Traits::RangeType y;
 	//j.evaluate(ig, it, y, udgf, mapper, gradientContainer);
 	
-	y = sysParams.get_charge_density() * ig.geometry().volume() * 2.0;
-
+	y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi ;
+        std::cout << " Neumann flux " << y << std::endl ;
 	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
         for (size_type i=0; i<lfsv_s.size(); i++)
