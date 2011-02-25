@@ -23,24 +23,28 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   
-  //while (sysParams.get_error() > 1E-4)
-  while (sysParams.counter < 10)
+  while (sysParams.get_error() > 1E-3)
+  //while (sysParams.counter < 10)    
   {
+    std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
+    // Reset error for new iteration
+    sysParams.reset_error();
+  
     // Precompute fluxes
     for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
-    {
-      double fluxIntegrated = 0.0;
-      double fluxCoulomb = 0.0;
-      
-      // construct discrete grid function for access to solution
-      const DGF udgf(gfs, u);
-      
+    {                
       for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
       {
 	if (ii->boundary()==true && it->geometry().center().two_norm() < 4.7) 
-	{	
+	{	  
 	  // Now we have selected the elements for which we want to evaluate the fluxes
 	  // So now loop over all elements but the surface ones and integrate sinh term
+	  
+	  double fluxIntegrated = 0.0;
+	  double fluxCoulomb = 0.0;
+	  
+	  // construct discrete grid function for access to solution
+	  const DGF udgf(gfs, u);
 	  
 	  // Get the vector of the actual intersection
 	  Dune::FieldVector<ctype,dim> r = ii->geometry().center();
@@ -65,16 +69,16 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	      switch(dim){
 		case 3:
 		  fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
-		  * integrationIterator->geometry().volume() * (dist * unitNormal)
-		  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
+				  * integrationIterator->geometry().volume() * (dist * unitNormal)
+				  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
 		  break;
-		case 2:
-		  fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
-		  * integrationIterator->geometry().volume() * (dist * unitNormal)
-		  * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
-		  break;
-		default: // TODO: put some check here and in the other swith(dim) ! 
-		  break;
+		 case 2:
+		   fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
+				   * integrationIterator->geometry().volume() * (dist * unitNormal)
+				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
+		    break;
+		  default: // TODO: put some check here and in the other swith(dim) ! 
+		    break;
 	      }
 	    }
 	    
@@ -93,29 +97,30 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 		  {
 		    if (intersectionIntegrator->boundary()==true && intersectionIntegrator->neighbor()==false)
 		      // integrate coulomb flux along this intersection
-		      fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
+		    fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() * integrateentity(ii,f,2,r,unitNormal);
 		  }
 		}
 	      }
 	  }
+	  
+
+	  double flux = fluxCoulomb + fluxIntegrated;
+	  //std::cout << "fluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " << fluxIntegrated << "\tflux: " << flux;
+	  //if (sysParams.counter != 0)
+	  //{
+	    // Do SOR step and add error
+	    flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[mapper.map(*it)];
+	    double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
+	    sysParams.add_error(error);
+	  //}
+	  //std::cout << "\toldflux: " << fluxContainer[mapper.map(*it)] << "\tSORflux: " << flux << "\terror: "<< sysParams.get_error() << std::endl;
+	  // Store new flux
+	  fluxContainer[mapper.map(*it)] = flux;
 	}
       }
-
-      double flux = fluxCoulomb + fluxIntegrated;
-      // Do SOR step and add error
-      flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[mapper.map(*it)];
-      double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
-      sysParams.add_error(error);
-      // Store new flux
-      fluxContainer[mapper.map(*it)] = flux;
+      
     }
     
-    
-    
-    
-    std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
-    // Reset error for new iteration
-    sysParams.reset_error();
     
     // <<<4>>> Make grid operator space
     LOP lop(m,b,j,fluxContainer, mapper);

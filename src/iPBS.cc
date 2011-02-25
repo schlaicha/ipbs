@@ -246,16 +246,22 @@ int main(int argc, char** argv)
   
  
   
-  U u_diff(gfs);
-  std::vector<double> tmp1, tmp2;
+  U u_relError(gfs), u_absError(gfs);
+  std::vector<double> tmp1, tmp2, relError, absError;
   u.std_copy_to(tmp1);
   u_ref.std_copy_to(tmp2);
-  for (int i = 0; i < tmp1.size(); i++) {
-    tmp1[i] = (tmp1[i] - tmp2[i]) / tmp2[i];
+  relError.resize(tmp1.size());
+  absError.resize(tmp1.size());
+  for (unsigned int i = 0; i < tmp1.size(); i++) {
+    relError[i] = fabs((tmp1[i] - tmp2[i]) / tmp2[i]);
+    absError[i] = fabs(tmp1[i] - tmp2[i]);
   }
-  u_diff.std_copy_from(tmp1);
-  DGF udgf_diffSave(gfs,u_diff);
-  save(udgf_diffSave, u_diff, gv, "difference");
+  u_relError.std_copy_from(relError);
+  u_absError.std_copy_from(absError);
+  DGF udgf_relErrorSave(gfs,u_relError);
+  DGF udgf_absErrorSave(gfs,u_absError);
+  save(udgf_relErrorSave, u_relError, gv, "relError");
+  save(udgf_absErrorSave, u_absError, gv, "absError");
   
   // done
   return 0;
