@@ -123,7 +123,6 @@ public:
         
     // dimensions
     const int dim = IG::dimension;
-    const int dimw = IG::dimensionworld;
         
     // select quadrature rule for face
     Dune::GeometryType gtface = ig.geometryInInside().type();
