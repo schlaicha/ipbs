@@ -26,4 +26,5 @@ Circle(8) = {4, 1, 3};
 Line Loop(9) = {1, 2, 3, 4};
 Line Loop(10) = {5, 6, 7, 8};
 Plane Surface(11) = {9, 10};
-Transfinite Line {5, 8, 7, 6} = 64 Using Progression 1;
+Transfinite Line {5, 8, 7, 6} = 32 Using Progression 1;
+Transfinite Line {1, 2, 3, 4} = 16 Using Progression 1;
