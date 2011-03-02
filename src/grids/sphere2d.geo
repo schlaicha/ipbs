@@ -37,3 +37,9 @@ Physical Point(2) = {4, 7, 8, 5};
 Physical Line(0) = {1, 2, 3};
 Physical Line(1) = {5, 7, 6, 4};
 Physical Line(2) = {9, 8};
+
+// At least one physical surface (or physical volume
+// is needed by DUNE gmshreader (otherwise all elements
+// are boundaries)
+
+Physical Surface(12) = {11};
