@@ -14,6 +14,11 @@ SysParams::SysParams(double _lambda=0.1, double _bjerrum=0.1, double _charge_den
 {
 	lambda2i = 1 / (lambda * lambda);
 	totalError = 1E8;
+    // Set the systems symmetry
+    // 1 is "2D_cylinder"
+    // 2 is "2D_sphere"
+    // 3 is "3D"  - not verified!
+    symmetry = 2;
 }
 
 double SysParams::get_radius()
@@ -23,12 +28,9 @@ double SysParams::get_radius()
 
 void SysParams::add_error(double error)
 {
-	//double error = 2.0 * (inValue - oldValue) / (inValue + oldValue);
-	//std::cout << "aktueller Error: " << error;
 	if (error > totalError)
 	{
 	  totalError = error;
-	  // oldValue = inValue;
 	}
 }
 
@@ -58,11 +60,6 @@ double SysParams::get_epsilon()
 	return epsilon;
 }
 
-double SysParams::get_charge()
-{
-	return charge;
-}
-
 double SysParams::get_bjerrum()
 {
 	return bjerrum;
@@ -71,12 +68,6 @@ double SysParams::get_bjerrum()
 double SysParams::get_lambda2i()
 {
 	return lambda2i;
-}
-
-
-double SysParams::get_E_init()
-{
-	return E_init;
 }
 
 double SysParams::get_charge_density()
@@ -90,11 +81,9 @@ void SysParams::set_lambda(double value)
 	lambda2i = 1 / (lambda * lambda);
 }
 
-void SysParams::set_E_init(double value)
+int SysParams::get_symmetry()
 {
-	E_init = value;
+    return symmetry;
 }
-
-
 
 SysParams sysParams;

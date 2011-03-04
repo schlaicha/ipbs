@@ -256,13 +256,15 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 	  
-        RF f = sysParams.compute_pbeq(u, it);
+        //RF f = sysParams.compute_pbeq(u, it);
+        RF f = 0;
 	RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
+        // Integration with added term for 2d cylinder symmetry
         for (size_type i=0; i<lfsu.size(); i++)
-          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
+          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor*globalpos[1]*2.0*sysParams.pi;
       }
   }
 
@@ -311,13 +313,13 @@ public:
 	
         // evaluate flux boundary condition
 	typename J_ref::Traits::RangeType y;
-	//j.evaluate(ig, it, y, udgf, mapper, gradientContainer);
+    j.evaluate(ig, it, y);
 	
-	y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi ;
 	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
+        // Integration with added term for 2d cylinder symmetry
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor;
+          r_s[i] += y*phi[i]*factor*local[1]*2.0*sysParams.pi;
       }
   }
   

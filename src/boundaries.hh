@@ -35,7 +35,7 @@ public:
   // constructor
   Regions(const GV& gv_, const PGMap& pg_) : gv(gv_), mapper(gv), pg(pg_) {}
 
-  // evaluate the inner elementa
+  // evaluate the inner elements
   inline void evaluate (const typename Traits::ElementType& e,
                         const typename Traits::DomainType& x,
                         typename Traits::RangeType& y) const
@@ -49,7 +49,6 @@ public:
     // evaluate physical group map and set values accordingly
     switch ( physgroup_index )
     {
-      case 1  : y = 1.0;  break;
       default : y = 1.0;  break; // only one material here
     }
   }
@@ -87,15 +86,22 @@ public:
   inline void evaluate (I& i, const typename Traits::DomainType& xlocal,
                         typename Traits::RangeType& y) const
   {
-    // use with global ccordinates
-    const int dim = Traits::GridViewType::Grid::dimension;
-    typedef typename Traits::GridViewType::Grid::ctype ctype;
-    Dune::FieldVector<ctype,dim> x = i.geometry().global(xlocal);
-    
-    // outer borders should be set to Zero Dirichlet BC (Open Boundary)
-    if (x.two_norm() < 4.7)  y = 0; // Neumann in inner region
-    else
-	    y=1;
+
+    // use physical index to determine B.C.
+    // values are specified in .geo file
+    // 0 is for Dirichlet surfaces
+    // 1 for Neumann
+    // 2 for iPBS
+
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    //std::cout << "Set boundary type" << physgroup_index << " at " << i.geometry().center() << std::endl;
+    switch ( physgroup_index )
+    {
+      case 0:   y = 1.0;  break; // Set Dirichlet
+      case 1:   y = 0.0;  break; // Set Neumann
+      case 2:   y = 0.0;  break; // Set Neumann for iPBS
+      default : y = 1.0;  break; // Default is Dirichlet
+    }
     return;
   }
 
@@ -132,11 +138,7 @@ public :
                         const typename Traits::DomainType& xlocal,
                         typename Traits::RangeType& y) const
   {
-    // evaluate with global cordinates
-    const int dim = Traits::GridViewType::Grid::dimension;
-    typedef typename Traits::GridViewType::Grid::ctype ctype;
-    Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal);
-
+    // Set value for potential at outer domain boundaries
       y = 0.0;				// set domain boundary
     return;
   }
@@ -176,8 +178,21 @@ public:
 		       std::vector<double>& fluxContainer,
 		       const Mapper& mapper) const
   {
-    y = fluxContainer[mapper.map(*i.inside())];
-    //y = 0.3;
+    // use physical index to determine B.C.
+    // values are specified in .geo file
+    // 0 is for Dirichlet surfaces
+    // 1 for Neumann
+    // 2 for iPBS
+
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    switch ( physgroup_index )
+    {
+      case 1:   y = 0.0;  break; // Set Neumann
+      case 2:   // Set Neumann for iPBS
+                y = fluxContainer[mapper.map(*i.inside())];
+                break;
+      default : y = 0.0;  break;
+    }
     return;
   }
 
@@ -214,7 +229,38 @@ public:
   inline void evaluate(I& i, E& e,
                        typename Traits::RangeType& y) const
   {
-    y = 1.0;
+    // use physical index to determine B.C.
+    // values are specified in .geo file
+    // 0 is for Dirichlet surfaces
+    // 1 for Neumann
+    // 2 for iPBS
+
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    switch ( physgroup_index )
+    {
+      case 1:   y = 0.0;  break; // Set Neumann
+      case 2:   // Set Neumann for Reference
+        {
+         std::cout << "Set Neumann boundary at " << i.geometry().center() << std::endl;
+         if ( sysParams.get_symmetry()  == 1) // "2D_cylinder"
+                y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi ;
+         else if (sysParams.get_symmetry() == 2) // "2D_sphere"
+                y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+         else 
+         {
+                y = 0;
+                std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
+                        << std::endl;
+         }
+         break;
+        }
+      default : 
+         {
+                y = 0.0;  
+                std::cerr << "IPBS WARNING:\tCould not evaluate flux B.C. Will use 0." 
+                        << std::endl;
+         }
+    }
     return;
   }
   

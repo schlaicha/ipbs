@@ -10,7 +10,6 @@
 #include<vector>
 #include<string>
 
-
 // dune includes
 #include<dune/common/mpihelper.hh>
 #include<dune/common/exceptions.hh>
@@ -27,7 +26,6 @@
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 // #include<dune/pdelab/instationary/onestep.hh>   // Filenamehelper
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
-//#include<dune/pdelab/finiteelementmap/p0fem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 #include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
@@ -46,7 +44,6 @@ typedef GV::Grid::ctype Coord;
 typedef double Real;
 const int dim = GV::dimension;
 typedef Dune::PDELab::P1LocalFiniteElementMap<Coord,Real,dim> FEM;
-//typedef Dune::PDELab::P0LocalFiniteElementMap<Coord,Real,dim> FEM;
 typedef Dune::PDELab::ConformingDirichletConstraints CON;
 typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
@@ -67,7 +64,6 @@ typedef Dune::LeafMultipleCodimMultipleGeomTypeMapper<GridType, P0Layout> Mapper
 typedef Regions<GV,double,std::vector<int>> M;
 typedef BCType<GV,std::vector<int>> B;
 typedef BCExtension_init<GV,double,std::vector<int>> G_init;
-//typedef BCExtension_iterate<GV,double,std::vector<int>> G;
 typedef BoundaryFlux<GV,double,std::vector<int> > J;
 typedef BoundaryFluxRef<GV,double,std::vector<int> > J_ref;
 
@@ -91,7 +87,6 @@ typedef DGF::Traits Traits;
 #define _SYSPARAMS_H
 #include "sysparams.hh"
 #endif
-
 
 
 
@@ -154,28 +149,6 @@ int main(int argc, char** argv)
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
 
-/*
-  for (int i=0; i<4 ; i++)
-  {
-  // get a grid view - this one is for the refinement iterator...
-  const GV& gv_tmp = grid.leafView();
-  // iterate once over the surface and refine
-  typedef GV::Codim<0>::Iterator ElementLeafIterator;
-  for (ElementLeafIterator it = gv_tmp.begin<0>(); it != gv_tmp.end<0>(); ++it)
-    {
-      //if (it->hasBoundaryIntersections()==true && it->geometry().center().two_norm() < 4.7)
-      if (it->geometry().center().two_norm() < 1.7 && i < 2) 
-      {
-	grid.mark(1,*it);
-      }
-      if (i >= 2 && it->hasBoundaryIntersections() == true && it->geometry().center().two_norm() < 4.7) grid.mark(1,*it);
-    }
-  grid.preAdapt();
-  grid.adapt();
-  grid.postAdapt();
-  std::cout << "Adaptive Refinement step " << i << " done."  << std::endl;
-  }
-*/  
   const GV& gv = grid.leafView();
 
   //define boundaries

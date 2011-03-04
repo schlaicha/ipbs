@@ -22,7 +22,8 @@ Line(7) = {10, 4};
 Circle(8) = {3, 1, 6};
 Circle(9) = {6, 1, 2};
 Transfinite Line {9, 8} = 32 Using Progression 1;
-Transfinite Line {4, 6} = 4 Using Progression 1;
+Transfinite Line {4, 6} = 8 Using Progression 1;
+Transfinite Line {7, 5} = 32 Using Progression 1;
 Line Loop(10) = {2, 3, -5, -4, -9, -8, 6, 7, 1};
 Plane Surface(11) = {10};
 
@@ -31,9 +32,6 @@ Plane Surface(11) = {10};
 // 1 for Neumann
 // 2 for iPBS
 
-Physical Point(0) = {10, 4, 9, 5};
-Physical Point(1) = {2, 6, 3};
-Physical Point(2) = {4, 7, 8, 5};
 Physical Line(0) = {1, 2, 3};
 Physical Line(1) = {5, 7, 6, 4};
 Physical Line(2) = {9, 8};
