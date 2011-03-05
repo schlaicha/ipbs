@@ -32,8 +32,8 @@ public:
   // constructor parametrized by regions and boundary classes
   PBLocalOperator (const M& m_, const B& b_, const J& j_, 
 		   std::vector<double>& fluxContainer_, 
-		   const Mapper& mapper_, unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), fluxContainer(fluxContainer_), mapper(mapper_),intorder(intorder_)
+		   unsigned int intorder_=2)  // needs boundary cond. type
+    : m(m_), b(b_), j(j_), fluxContainer(fluxContainer_), intorder(intorder_)
   {}
 
   // volume integral depending on test and ansatz functions
@@ -60,8 +60,6 @@ public:
     const Dune::QuadratureRule<DF,dim>& 
       rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
 
-    //lfsu.debug();
-      
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
            it=rule.begin(); it!=rule.end(); ++it)
@@ -96,12 +94,21 @@ public:
         globalpos = eg.geometry().global(it->position());
 	  
         RF f = sysParams.compute_pbeq(u, it);
-	RF a =0; 
+    	RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
+        // choose correct metric for integration
+        RF metric;
+        switch ( sysParams.get_symmetry() )
+        {
+                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 2: metric = globalpos[1]*2.0*sysParams.pi; break;   // "2D_sphere"
+                case 3: metric = 1.0; break; // "3D"
+                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
+        }
         for (size_type i=0; i<lfsu.size(); i++)
-          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
+          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor*metric;
       }
   }
 
@@ -139,7 +146,6 @@ public:
  
         // skip rest if we are on Dirichlet boundary
         if (bctype>0) continue;
-	// skip rest if intersection is not a boundary
 
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());
@@ -149,13 +155,22 @@ public:
         lfsu_s.finiteElement().localBasis().evaluateFunction(local,phi);
 	
         // evaluate flux boundary condition
-	typename J::Traits::RangeType y;
-	j.evaluate(ig, y, fluxContainer, mapper);
+	    typename J::Traits::RangeType y;
+	    j.evaluate(ig, y, fluxContainer);
 		    
         // integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
+        // choose correct metric for integration
+        RF metric;
+        switch ( sysParams.get_symmetry() )
+        {
+                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 2: metric = local[1]*2.0*sysParams.pi; break;   // "2D_sphere"
+                case 3: metric = 1.0; break; // "3D"
+                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
+        }
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor;
+          r_s[i] += y*phi[i]*factor*metric;
       }
   }
   
@@ -164,7 +179,6 @@ private:
   const B& b;
   const J& j;
   std::vector<double>& fluxContainer;
-  const Mapper& mapper;
   unsigned int intorder;
 };
 
@@ -256,15 +270,23 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 	  
-        //RF f = sysParams.compute_pbeq(u, it);
-        RF f = 0;
-	RF a =0; 
+        RF f = sysParams.compute_pbeq(u, it);
+	    RF a =0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
-        // Integration with added term for 2d cylinder symmetry
+        // choose correct metric for integration
+        RF metric;
+        switch ( sysParams.get_symmetry() )
+        {
+                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 2: metric = globalpos[1]*2.0*sysParams.pi; break;   // "2D_sphere"
+                case 3: metric = 1.0; break; // "3D"
+                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
+        }
+        // Integration with added term for metric
         for (size_type i=0; i<lfsu.size(); i++)
-          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor*globalpos[1]*2.0*sysParams.pi;
+          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor*metric;
       }
   }
 
@@ -302,7 +324,6 @@ public:
  
         // skip rest if we are on Dirichlet boundary
         if (bctype>0) continue;
-	// skip rest if intersection is not a boundary
 
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());
@@ -312,14 +333,23 @@ public:
         lfsu_s.finiteElement().localBasis().evaluateFunction(local,phi);
 	
         // evaluate flux boundary condition
-	typename J_ref::Traits::RangeType y;
-    j.evaluate(ig, it, y);
+    	typename J_ref::Traits::RangeType y;
+        j.evaluate(ig, it, y);
 	
-	// integrate j
+	    // integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
-        // Integration with added term for 2d cylinder symmetry
+        // choose correct metric for integration
+        RF metric;
+        switch ( sysParams.get_symmetry() )
+        {
+                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 2: metric = local[1]*2.0*sysParams.pi; break;   // "2D_sphere"
+                case 3: metric = 1.0; break; // "3D"
+                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
+        }
+        // Integration with added term for metric
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor*local[1]*2.0*sysParams.pi;
+          r_s[i] += y*phi[i]*factor*metric;
       }
   }
   

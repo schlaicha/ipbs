@@ -170,13 +170,12 @@ public:
   typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   // constructor
-  BoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+  BoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_), mapper(gv) {}
 
   // evaluate flux boundary condition
   template<typename I>
   inline void evaluate(I& i, typename Traits::RangeType& y,
-		       std::vector<double>& fluxContainer,
-		       const Mapper& mapper) const
+		       std::vector<double>& fluxContainer) const
   {
     // use physical index to determine B.C.
     // values are specified in .geo file
@@ -200,8 +199,7 @@ private:
 
   const GV&    gv;
   const PGMap& pg;
-  //const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
-  //const Mapper mapper;
+  const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };
 
 
@@ -241,24 +239,27 @@ public:
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   // Set Neumann for Reference
         {
-         std::cout << "Set Neumann boundary at " << i.geometry().center() << std::endl;
-         if ( sysParams.get_symmetry()  == 1) // "2D_cylinder"
-                y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi ;
-         else if (sysParams.get_symmetry() == 2) // "2D_sphere"
-                y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-         else 
-         {
-                y = 0;
-                std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
-                        << std::endl;
-         }
-         break;
+            switch ( sysParams.get_symmetry() )
+            {
+                case 1:     {     // "2D_cylinder"
+                    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi;
+                    break;  }
+                case 2:     {     // "2D_sphere"
+                    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+                    break;  }
+                default:    {
+                    y = 0.0;
+                    std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
+                              << std::endl;
+                    break;  }
+            }
         }
+        break;
       default : 
          {
                 y = 0.0;  
                 std::cerr << "IPBS WARNING:\tCould not evaluate flux B.C. Will use 0." 
-                        << std::endl;
+                          << std::endl;
          }
     }
     return;

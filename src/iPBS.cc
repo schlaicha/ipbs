@@ -121,7 +121,6 @@ int main(int argc, char** argv)
   Cmdparam cmdparam;
   cmdparam.GridName=argv[1];
   sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
-  //sscanf(argv[3],"%f",&cmdparam.alpha_sor);
   double alpha;
   sscanf(argv[3],"%lf", &alpha);
   std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels. alpha" << alpha << std::endl;
@@ -175,18 +174,17 @@ int main(int argc, char** argv)
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
   CC cc;
   Dune::PDELab::constraints(b,gfs,cc); 
-  //std::cout << "constrained dofs=" << cc.size() 
-  //          << " of " << gfs.globalSize() << std::endl;
+  std::cout << "constrained dofs=" << cc.size() 
+            << " of " << gfs.globalSize() << std::endl;
 
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
   
+  // get the Neumann solution as reference
   
-     // get the Neumann solution as reference
-  
-  // construct discrete grid function for access to solution
   U u_ref(gfs,0.0);
-  const DGF udgf_ref(gfs, u_ref);
+  // interpolate coefficient vector
+  Dune::PDELab::interpolate(g,gfs,u_ref);
   
   LOP_ref lop_ref(m,b,j_ref);
   GOS_ref gos_ref(gfs,cc,gfs,cc,lop_ref);
@@ -213,11 +211,8 @@ int main(int argc, char** argv)
   DGF udgf_refSave(gfs,u_ref);
   save(udgf_refSave, u_ref, gv, "reference");
   
-  
   // Call function exectuting the iterative procedure
-  get_solution(u, gv, gfs, cc, grid, m, b, j);
-  
- 
+   get_solution(u, gv, gfs, cc, grid, m, b, j);
   
   U u_relError(gfs), u_absError(gfs);
   std::vector<double> tmp1, tmp2, relError, absError;

@@ -17,7 +17,6 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
   // allocate a vector for the data
   std::vector<double> fluxContainer(mapper.size());
   
-  
   typename Traits::RangeType value;	// store potential during integration (for calculating sinh-term)
   
   // Initialize functor for integrating coulomb flux
@@ -66,18 +65,25 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	      // Evaluate the potential at the elements center
 	      udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
 	      
-	      switch(dim){
-		case 3:
-		  fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
+          switch( sysParams.get_symmetry() ){
+            case 1:     // "2D_cylinder"
+		        fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
+				    * integrationIterator->geometry().volume() * (dist * unitNormal)
+				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
+            break;
+		    
+            case 2:
+                fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
+                        * eval_elliptic(dist[0],dist[1],(r*r_prime))
+                        * std::sinh(value);
+		    break;
+
+		    case 3:     // "3D"
+		        fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
 				  * integrationIterator->geometry().volume() * (dist * unitNormal)
 				  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
-		  break;
-		 case 2:
-		   fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
-				   * integrationIterator->geometry().volume() * (dist * unitNormal)
-				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
 		    break;
-		  default: // TODO: put some check here and in the other swith(dim) ! 
+		    default: // TODO: put some check here and in the other swith(dim) ! 
 		    break;
 	      }
 	    }
@@ -105,7 +111,6 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	  
 
 	  double flux = fluxCoulomb + fluxIntegrated;
-	  //std::cout << "fluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " << fluxIntegrated << "\tflux: " << flux;
 	  //if (sysParams.counter != 0)
 	  //{
 	    // Do SOR step and add error
@@ -113,7 +118,6 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	    double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
 	    sysParams.add_error(error);
 	  //}
-	  //std::cout << "\toldflux: " << fluxContainer[mapper.map(*it)] << "\tSORflux: " << flux << "\terror: "<< sysParams.get_error() << std::endl;
 	  // Store new flux
 	  fluxContainer[mapper.map(*it)] = flux;
 	}
@@ -121,9 +125,8 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
       
     }
     
-    
     // <<<4>>> Make grid operator space
-    LOP lop(m,b,j,fluxContainer, mapper);
+    LOP lop(m,b,j,fluxContainer);
     GOS gos(gfs,cc,gfs,cc,lop);
     
     // <<<5a>>> Select a linear solver backend
