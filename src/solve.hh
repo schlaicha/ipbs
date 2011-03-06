@@ -22,8 +22,8 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   
-  while (sysParams.get_error() > 1E-3)
-  //while (sysParams.counter < 10)    
+  while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
+  //while (sysParams.counter < 5)    
   {
     std::cout << std::endl << "IN ITERATION " << sysParams.counter << std::endl << std::endl;
     // Reset error for new iteration
@@ -61,7 +61,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	      
 	      Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
 	      Dune::FieldVector<ctype,dim> dist = r -r_prime;
-	      double rproduct = r.two_norm()*r_prime.two_norm();
+	      double a,b;	// Arguments for elliptic
 
 	      // Evaluate the potential at the elements center
 	      udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
@@ -70,15 +70,19 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	      case 1:     // "2D_cylinder"
 		        fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
 				    * integrationIterator->geometry().volume() * (dist * unitNormal)
-				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
+				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0;
 	      break;
 		    
 	      case 2:
+	      {
+		a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+		b = 2 * r[1] * r_prime[1];
 		fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
-                        * eval_elliptic(dist[1],dist[0],rproduct)
+                        * eval_elliptic(a,b)
                         * std::sinh(value)*integrationIterator->geometry().volume();
 		//std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
 	      break;
+	      }
 
 	      case 3:     // "3D"
 	        fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())

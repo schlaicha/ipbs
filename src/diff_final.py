@@ -4,6 +4,7 @@
 import sys
 from scipy import *
 from matplotlib.delaunay import *
+from matplotlib import colors, ticker
 import pylab as p
 
 def readfile(file):
@@ -32,20 +33,20 @@ def interpolacion(x,y,z,xi,yi):
 def plotear(xi,yi,zi):
     # mask inner circle
     interior = sqrt((xi**2) + (yi**2)) < 1.0 
-    zi[interior] = ma.empty
+    zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    levels = [1E-14,1E-12,0.4E-10,0.8E-10,1E-9,2E-9,4E-9,6E-9,8E-9,1E-8]
-    CSF = p.contourf(xi,yi,zi,levels)
-    #CSF = p.contourf(xi,yi,zi)
+    levels = [1E-10,1E-9,1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1]
+    CSF = p.contourf(xi,yi,zi,levels,norm=colors.LogNorm())
+    #CSF = p.contourf(xi,yi,zi,levels)
     CS = p.contour(xi,yi,zi)
     p.clabel(CS)
-    p.title('iPBS absolute difference')
-    p.xlabel('x-coordinate',fontsize=12)
-    p.ylabel('y-coordinate',fontsize=12)
+    p.title('IPBS vs Neumann B.C. (absolute difference)')
+    p.ylabel('radial coordinate r',fontsize=12)
+    p.xlabel('z-coordinate',fontsize=12)
     # add a vertical bar with the color values
     cbar = p.colorbar(CSF)
-    #cbar.ax.set_ylabel('Solution difference',fontsize=12)
+    cbar.ax.set_ylabel('electrostatic potential (reduced units)',fontsize=12)
     #cbar.add_lines(CS)
     p.show()
 

@@ -3,7 +3,7 @@ void save(const DGF &udgf, const U &u, const GV &gv, const std::string filename)
 
 // Evaluate elliptic integrals of the 1st kind
 
-double eval_elliptic(double dr, double dz, double rr_j);
+double eval_elliptic(double a, double b);
 
 //template <typename PositionVector>
 //double compute_pbeq(const double &u, const PositionVector &r);

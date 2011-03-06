@@ -210,7 +210,7 @@ private:
 
 // ============================================================================
 
-// function for defining radiation and Neumann boundary conditions
+// function for defining radiation and Neumann boundary conditions for reference solution!!!
 
 template<typename GV, typename RF, typename PGMap>
 class BoundaryFluxRef
@@ -247,6 +247,8 @@ public:
             switch ( sysParams.get_symmetry() )
             {
                 case 1:     {     // "2D_cylinder"
+		  // TODO: This is a temporally bugfic !!!
+		  if (i.geometry().center().vec_access(0) > -4.0)
                     y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi;
                     break;  }
                 case 2:     {     // "2D_sphere"

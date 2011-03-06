@@ -18,7 +18,7 @@ SysParams::SysParams(double _lambda=0.1, double _bjerrum=0.1, double _charge_den
     // 1 is "2D_cylinder"
     // 2 is "2D_sphere"
     // 3 is "3D"  - not verified!
-    symmetry = 1;
+    symmetry = 2;
 }
 
 double SysParams::get_radius()

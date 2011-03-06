@@ -13,11 +13,11 @@
 #define GSL_DBL_MIN        2.2250738585072014e-308
 #define GSL_DBL_MAX        1.7976931348623157e+308
 
-double eval_elliptic(double dr, double dz, double rr_j)
+double eval_elliptic(double a, double b)
 {
   // Precompute values
-  double m = 4.0 * rr_j / (dz * dz + dr * dr);    // Argument of elliptic
-  double factor = 4.0 / sqrt(dz * dz + dr * dr);
+  double m = 2 * b / (a + b) ;    // Argument of elliptic
+  double factor = 1.0 / sqrt(a + b);
   double val = 0;	// return value
   //std::cout << "m = " << std::scientific << m;
   

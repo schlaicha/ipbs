@@ -32,12 +32,12 @@ def interpolacion(x,y,z,xi,yi):
 def plotear(xi,yi,zi):
     # mask inner circle
     interior = sqrt((xi**2) + (yi**2)) < 1.0 - 1E-4
-    zi[interior] = ma.masked
+    zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    #levels = [0,1E-6, 1E-5,1E-4,1E-3]
-    #CSF = p.contourf(xi,yi,zi,levels)
-    CSF = p.contourf(xi,yi,zi)
+    #levels = [0,-0.004,-0.008,-0.012,-0.016,-0.02]
+    CSF = p.contourf(xi,yi,zi,20)
+    #CSF = p.contourf(xi,yi,zi)
     CS = p.contour(xi,yi,zi)
     p.clabel(CS)
     p.title('iPBS absolute difference')
