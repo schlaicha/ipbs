@@ -35,9 +35,9 @@ def plotear(xi,yi,zi):
     zi[interior] = ma.empty
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    #levels = [1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,5E-2,1E-2]
-    #CSF = p.contourf(xi,yi,zi,levels)
-    CSF = p.contourf(xi,yi,zi)
+    levels = [1E-14,1E-12,0.4E-10,0.8E-10,1E-9,2E-9,4E-9,6E-9,8E-9,1E-8]
+    CSF = p.contourf(xi,yi,zi,levels)
+    #CSF = p.contourf(xi,yi,zi)
     CS = p.contour(xi,yi,zi)
     p.clabel(CS)
     p.title('iPBS absolute difference')
@@ -45,8 +45,8 @@ def plotear(xi,yi,zi):
     p.ylabel('y-coordinate',fontsize=12)
     # add a vertical bar with the color values
     cbar = p.colorbar(CSF)
-    cbar.ax.set_ylabel('Solution difference',fontsize=12)
-    cbar.add_lines(CS)
+    #cbar.ax.set_ylabel('Solution difference',fontsize=12)
+    #cbar.add_lines(CS)
     p.show()
 
 def main():

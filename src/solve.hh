@@ -34,7 +34,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     {                
       for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
       {
-	if (ii->boundary()==true && it->geometry().center().two_norm() < 4.7) 
+	if (ii->boundary()==true) 
 	{	  
 	  // Now we have selected the elements for which we want to evaluate the fluxes
 	  // So now loop over all elements but the surface ones and integrate sinh term
@@ -61,41 +61,56 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	      
 	      Dune::FieldVector<ctype,dim> r_prime = integrationIterator->geometry().center();
 	      Dune::FieldVector<ctype,dim> dist = r -r_prime;
-	      
+	      double rproduct = r.two_norm()*r_prime.two_norm();
+
 	      // Evaluate the potential at the elements center
 	      udgf.evaluate(*integrationIterator,integrationIterator->geometry().center(),value);
 	      
-          switch( sysParams.get_symmetry() ){
-            case 1:     // "2D_cylinder"
+	    switch( sysParams.get_symmetry() ){
+	      case 1:     // "2D_cylinder"
 		        fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
 				    * integrationIterator->geometry().volume() * (dist * unitNormal)
 				    * sysParams.get_bjerrum()*sysParams.get_lambda2i()*2.0 ;
-            break;
+	      break;
 		    
-            case 2:
-                fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
-                        * eval_elliptic(dist[0],dist[1],(r*r_prime))
-                        * std::sinh(value);
-		    break;
+	      case 2:
+		fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
+                        * eval_elliptic(dist[1],dist[0],rproduct)
+                        * std::sinh(value)*integrationIterator->geometry().volume();
+		//std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
+	      break;
 
-		    case 3:     // "3D"
-		        fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
-				  * integrationIterator->geometry().volume() * (dist * unitNormal)
-				  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
-		    break;
-		    default: // TODO: put some check here and in the other swith(dim) ! 
-		    break;
-	      }
-	    }
+	      case 3:     // "3D"
+	        fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
+			  * integrationIterator->geometry().volume() * (dist * unitNormal)
+			  * sysParams.get_bjerrum()*sysParams.get_lambda2i();
+	      break;
+	      default: // TODO: put some check here and in the other swith(dim) ! 
+	      break;
 	    
+	  }
+	    }   
 	    else	// we are on a surface element and do integration for coulomb flux
 	      // add surface charge contribution from all other surface elements but this one
 	      // (using standard coulomb field formula)
 	      {
 		// NOTE: For algorithm validation we use the pillowbox conribution
 		if (integrationIterator  == it)
-		  fluxCoulomb += 1.0 * sysParams.get_charge_density() *  sysParams.get_bjerrum() * 2.0 *sysParams.pi;
-		
+		  switch ( sysParams.get_symmetry() )
+            {
+                case 1:     {     // "2D_cylinder"
+                    fluxCoulomb += 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+                    break;  }
+                case 2:     {     // "2D_sphere"
+		    fluxCoulomb += 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+                    break;  }
+                default:    {
+                    fluxCoulomb += 0.0;
+                    std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
+                              << std::endl;
+                    break;  }
+            }
+		// TODO Adapt to geometry !!!
 		if (integrationIterator != it && 0 ) // NOTE: This one is to be used later
 		{
 		  // loop over all boundary intersections of this surface element
@@ -111,15 +126,12 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	  
 
 	  double flux = fluxCoulomb + fluxIntegrated;
-	  //if (sysParams.counter != 0)
-	  //{
 	    // Do SOR step and add error
 	    flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[mapper.map(*it)];
 	    double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
 	    sysParams.add_error(error);
-	  //}
-	  // Store new flux
-	  fluxContainer[mapper.map(*it)] = flux;
+	    // Store new flux
+	    fluxContainer[mapper.map(*it)] = flux;
 	}
       }
       

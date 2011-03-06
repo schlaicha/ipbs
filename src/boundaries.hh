@@ -188,8 +188,13 @@ public:
     {
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   // Set Neumann for iPBS
-                y = fluxContainer[mapper.map(*i.inside())];
-                break;
+		{
+		  // TODO: This is a temporally bugfic !!!
+		  if (i.geometry().center().vec_access(0) > -4.0)
+		    y = fluxContainer[mapper.map(*i.inside())];
+		  else y = 0.0;
+		  break;
+		}
       default : y = 0.0;  break;
     }
     return;
@@ -245,7 +250,10 @@ public:
                     y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi;
                     break;  }
                 case 2:     {     // "2D_sphere"
-                    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		  // TODO: This is a temporally bugfic !!!
+		  if (i.geometry().center().vec_access(0) > -4.0)
+		    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		  else y = 0.0;
                     break;  }
                 default:    {
                     y = 0.0;
