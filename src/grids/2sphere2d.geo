@@ -7,18 +7,18 @@ world_size = 8;
 
 // Define points
 Point(0) = {0, 0, 0, 0.2}; // origin
-Point(1) = {distance, 0, 0, 1.0}; // center of right sphere
-Point(2) = {-distance, 0, 0, 1.0}; // center of left sphere
+Point(1) = {distance/2, 0, 0, 1.0}; // center of right sphere
+Point(2) = {-distance/2, 0, 0, 1.0}; // center of left sphere
 Point(3) = {-world_size, 0, 0, 0.3}; // lower left world coordinate
 Point(4) = {world_size, 0, 0, 0.3}; // lower right world coordinate
 Point(5) = {-world_size, world_size, 0, 1.0}; // upper right world coordinate
 Point(6) = {world_size, world_size, 0, 1.0}; // upper right world coordinate
-Point(7) = {distance+radius, 0, 0, 0.2}; // right boarder of right sphere
-Point(8) = {distance-radius, 0, 0, 0.2}; // left boarder of right sphere
-Point(9) = {distance, radius, 0, 0.2}; // top boarder of right sphere
-Point(10) = {-distance+radius, 0, 0, 0.2}; // right boarder of left sphere
-Point(11) = {-distance-radius, 0, 0, 0.2}; // left boarder of left sphere
-Point(12) = {-distance, radius, 0, 0.2}; // top boarder of left sphere
+Point(7) = {distance/2+radius, 0, 0, 0.2}; // right boarder of right sphere
+Point(8) = {distance/2-radius, 0, 0, 0.2}; // left boarder of right sphere
+Point(9) = {distance/2, radius, 0, 0.2}; // top boarder of right sphere
+Point(10) = {-distance/2+radius, 0, 0, 0.2}; // right boarder of left sphere
+Point(11) = {-distance/2-radius, 0, 0, 0.2}; // left boarder of left sphere
+Point(12) = {-distance/2, radius, 0, 0.2}; // top boarder of left sphere
 
 // Define lines
 Line(1) = {3, 5}; // left boerder

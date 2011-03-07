@@ -4,6 +4,7 @@ class SysParams {
    public:
 	SysParams(double _lambda, double _bjerrum, double _charge_density, double _epsilon, double _radius);	// Constructor
 	double get_bjerrum();
+	double get_sphere_pos();
 	int counter;
 	double get_radius();
 	double get_epsilon();
@@ -30,11 +31,13 @@ class SysParams {
 	double lambda2i;
 	double bjerrum;
 	double charge_density;
+	double charge;
 	double epsilon;
 	double radius;  // TODO: still needed?
 	double totalError;
     int symmetry;
 	double alpha;	// SOR parameter
+	double pos;
 };
 
 extern SysParams sysParams;

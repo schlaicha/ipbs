@@ -9,8 +9,8 @@
 
 // Constructor
 // Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
-SysParams::SysParams(double _lambda=0.1, double _bjerrum=0.1, double _charge_density=0.1, double _epsilon=80.0, double _radius=1.0)
-    :lambda(_lambda),bjerrum(_bjerrum),charge_density(_charge_density),epsilon(_epsilon),radius(_radius)
+SysParams::SysParams(double _lambda=3.0, double _bjerrum=0.024*3.0, double _charge=255, double _epsilon=80.0, double _radius=1.0)
+    :lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
 {
 	lambda2i = 1 / (lambda * lambda);
 	totalError = 1E8;
@@ -19,11 +19,18 @@ SysParams::SysParams(double _lambda=0.1, double _bjerrum=0.1, double _charge_den
     // 2 is "2D_sphere"
     // 3 is "3D"  - not verified!
     symmetry = 2;
+    pos = 1.5;
+    charge_density = charge / (4 * pi * radius * radius);
 }
 
 double SysParams::get_radius()
 {
 	return radius;
+}
+
+double SysParams::get_sphere_pos()
+{
+	return pos;
 }
 
 void SysParams::add_error(double error)

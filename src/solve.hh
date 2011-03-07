@@ -54,7 +54,7 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
 	  
 	  for (ElementLeafIterator integrationIterator = gv.begin<0>(); integrationIterator!=gv.end<0>(); ++integrationIterator)
 	  {
-	    if (integrationIterator->hasBoundaryIntersections() == false || integrationIterator->geometry().center().two_norm() > 4.7)
+	    if (integrationIterator->hasBoundaryIntersections() == false || integrationIterator->geometry().center().two_norm() > 7.8)
 	    {
 	      // integrating sinh over all elements but all the surface ones, where
 	      // the densiy of counterions is zero by definition)
@@ -174,4 +174,16 @@ void get_solution(U &u, const GV &gv, const GFS &gfs, const CC &cc, const GridTy
     std::cout << std::endl << "actual error is: " << sysParams.get_error() << std::endl << std::endl;
     sysParams.counter ++;
   }
+
+ DGF udgf_print(gfs,u);
+ // Save computed potential at z = 0 connection of 2 colloids
+ for (ElementLeafIterator it = gv.begin<0>(); it != gv.end<0>(); ++it)
+ {
+	 if (it->geometry().center().vec_access(1) < 2E-2 && fabs(it->geometry().center().vec_access(0)) < sysParams.get_sphere_pos())
+	 {
+		  udgf_print.evaluate(*it,it->geometry().center(),value);
+	 	std::cout << it->geometry().center() << " " << value << std::endl;
+	 }
+ }
+
 }
