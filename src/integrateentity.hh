@@ -32,7 +32,7 @@ double integrateentity (const Iterator& it, const Functor& f, int p,
   for (typename Dune::QuadratureRule<ct,dim>::const_iterator i=rule.begin(); /*@\label{ieh:for}@*/
 	   i!=rule.end(); ++i)
 	{
-	  Dune::FieldVector<ct,2> r_prime = it->geometry().global(i->position());
+	  Dune::FieldVector<ct,dim+1> r_prime = it->geometry().global(i->position());
 	  //std::cout << "r: " << r << "\tr_prime: " << r_prime << "\tr-r_prime " << (r-r_prime) << std::endl;
 	  double fval = f((r-r_prime),normal); /*@\label{ieh:fval}@*/
 	  double weight = i->weight();                  /*@\label{ieh:weight}@*/
