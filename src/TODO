@@ -1,18 +1,9 @@
 iPBS ToDo Notes:
 ===============
 
- - Think about physical units
- - Compare solving whole geometry with making use of symmetry
- - Test 3D
- - Maybe we can give dimensionality and boundaries as parameter, so solver is universal
-   NOTE This is by making use of the Cmd_params class!
+ - Testing
  - Improve Cmd_Params
- - Implement Iterations
-
- - Write an output routine
+ - Implement User Interface!!!
+ - Write an useful output routine
  - Implement parallel - What is in there does not work!!!
-
-far-goal:
- - Can we use dune's quadrature?
- - Understand GMSH and .msh format - Can give boundary values to programm?
-   What about the dielectric constant?
+ - Dielectric Missmatch
