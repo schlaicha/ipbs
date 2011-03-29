@@ -5,6 +5,7 @@
 *.swp
 *.vtu
 *.dat
+*.log
 Makefile
 Makefile.in
 .deps
@@ -16,6 +17,10 @@ autom4te.cache/
 depcomp
 doc/doxygen/Doxyfile
 doc/doxygen/Doxyfile.in
+doc/doxygen/doxygen-tag
+doc/doxygen/man
+doc/doxygen/latex
+doc/doxygen/html
 iPBS.pc
 install-sh
 libtool
