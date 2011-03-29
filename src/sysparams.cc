@@ -44,7 +44,6 @@ void SysParams::add_error(double error)
 void SysParams::set_alpha(double alpha_in)
 {
 	alpha=alpha_in;
-	std::cout << " SOR alpha = " << alpha;
 }
 
 double SysParams::get_alpha()

@@ -15,7 +15,6 @@ configure
 config.*
 autom4te.cache/
 depcomp
-doc/doxygen/Doxyfile
 doc/doxygen/Doxyfile.in
 doc/doxygen/doxygen-tag
 doc/doxygen/man
