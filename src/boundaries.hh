@@ -208,4 +208,73 @@ private:
 
 
 // ============================================================================
+// function for defining radiation and Neumann boundary conditions for reference solution!!!
 
+template<typename GV, typename RF, typename PGMap>
+class RefBoundaryFlux
+  : public Dune::PDELab::BoundaryGridFunctionBase<
+           Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
+           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap> >
+{
+public:
+
+  typedef Dune::PDELab::BoundaryGridFunctionTraits<
+          GV,RF,1,Dune::FieldVector<RF,1> > Traits;
+  typedef typename Traits::GridViewType::Grid::ctype ctype;
+
+  // constructor
+  RefBoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+
+  // evaluate flux boundary condition
+  template<typename I, typename E>
+  inline void evaluate(I& i, E& e,
+                       typename Traits::RangeType& y) const
+  {
+    // use physical index to determine B.C.
+    // values are specified in .geo file
+    // 0 is for Dirichlet surfaces
+    // 1 for Neumann
+    // 2 for iPBS
+
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    switch ( physgroup_index )
+    {
+      case 1:   y = 0.0;  break; // Set Neumann
+      case 2:   // Set Neumann for Reference
+        {
+            switch ( sysParams.get_symmetry() )
+            {
+                case 1:     {     // "2D_cylinder"
+		  // TODO: This is a temporally bugfic !!!
+		  if (i.geometry().center().vec_access(0) > -4.0)
+                    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi;
+                    break;  }
+                case 2:     {     // "2D_sphere"
+		  // TODO: This is a temporally bugfic !!!
+		  if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())  &&  fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
+		    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		   else y = 0.0;
+                    break;  }
+                default:    {
+                    y = 0.0;
+                    std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
+                              << std::endl;
+                    break;  }
+            }
+        }
+        break;
+      default : 
+         {
+                y = 0.0;  
+                std::cerr << "IPBS WARNING:\tCould not evaluate flux B.C. Will use 0." 
+                          << std::endl;
+         }
+    }
+    return;
+  }
+  
+  private:
+
+  const GV&    gv;
+  const PGMap& pg;
+};

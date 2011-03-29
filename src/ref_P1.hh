@@ -30,8 +30,8 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   // Class defining Dirichlet B.C.
   typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
-  // boundary fluxes
-  typedef BoundaryFlux<GV,double,std::vector<int> > J;
+  // boundary fluxes - this one is for the reference solution!
+  typedef RefBoundaryFlux<GV,double,std::vector<int> > J;
   J j(gv, boundaryIndexToEntity);
 
   // Create finite element map
@@ -60,4 +60,8 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
 
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
+
+  // <<<4>>> Select a linear solver backend
+  typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS;
+  LS ls(gfs,cc,5000,5,1);
 }
