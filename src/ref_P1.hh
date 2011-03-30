@@ -72,9 +72,17 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS;
-  LS ls(gfs,cc,5000,5,1);
+  // typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS;
+  // LS ls(gfs,cc,5000,5,1);
+  typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
+  LS ls(gfs);
+  // typedef Dune::PDELab::ISTLBackend_OVLP_CG_SSORk<GFS, CC> LS;
+  // LS ls(gfs,cc);
 
+/*  typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
+  SLP slp(gos,u,ls,1e-10);
+  slp.apply();
+*/
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
   NEWTON newton(gos,u,ls);
@@ -87,7 +95,6 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   newton.setLineSearchMaxIterations(10);
   newton.apply();
 
-  
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   DGF udgf(gfs,u);

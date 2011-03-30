@@ -41,6 +41,8 @@
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
 
+#include<dune/pdelab/stationary/linearproblem.hh>
+
 // global typedefs
 typedef double Real;
 
@@ -128,12 +130,12 @@ int main(int argc, char** argv)
   //if (helper.rank()==0)
      gmshreader.read(grid, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
 
-  grid.loadBalance();
-
   // refine grid
-  // grid.globalRefine(cmdparam.RefinementLevel);
+  grid.globalRefine(cmdparam.RefinementLevel);
   
   // get a grid view on the leaf grid
+  grid.loadBalance();
+
   typedef GridType::LeafGridView GV;
   const GV& gv = grid.leafView();
  
