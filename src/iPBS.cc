@@ -1,3 +1,11 @@
+/** \file
+
+    \brief IPBS - An Iterative Poisson Boltzmann implementation using DUNE
+
+    Here goes some explanation on what is done :-)
+    \todo { Doc Me ! }   
+*/
+
 // iPBS.cc Read a gmsh file and solve PB eq.
 
 #ifdef HAVE_CONFIG_H
@@ -10,21 +18,18 @@
 #include<vector>
 #include<string>
 
-// dune includes
+// DUNE includes
 #include<dune/common/mpihelper.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
-#include<dune/grid/io/file/gmshreader.hh>
-
+#include<dune/common/timer.hh>
 // Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
-
+#include<dune/grid/io/file/gmshreader.hh>
 // we use UG
 #include<dune/grid/uggrid.hh>
-
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-// #include<dune/pdelab/instationary/onestep.hh>   // Filenamehelper
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
@@ -35,7 +40,6 @@
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
-#include<dune/pdelab/stationary/linearproblem.hh>
 
 // global typedefs
 typedef double Real;
@@ -46,15 +50,21 @@ typedef double Real;
 #endif
 
 #include "boundaries.hh"
+#include "RefLocalOperator.hh"
 #include "ipbs_P1.hh"
 #include "ref_P1.hh"
 
-// container for commandline arguments
+/** \brief container for commandline arguments
+
+    \todo { Implement user interface }
+*/
 typedef struct {
 	double alpha_sor; 
 	int RefinementLevel;
 	std::string GridName;
 } Cmdparam;
+
+
 
 
 //===============================================================

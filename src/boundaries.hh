@@ -240,29 +240,11 @@ public:
     switch ( physgroup_index )
     {
       case 1:   y = 0.0;  break; // Set Neumann
-      case 2:   // Set Neumann for Reference
-        {
-            switch ( sysParams.get_symmetry() )
-            {
-                case 1:     {     // "2D_cylinder"
-		  // TODO: This is a temporally bugfic !!!
-		  if (i.geometry().center().vec_access(0) > -4.0)
-                    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum() * 2 * sysParams.pi;
-                    break;  }
-                case 2:     {     // "2D_sphere"
-		  // TODO: This is a temporally bugfic !!!
-		  if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())  &&  fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
-		    y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-		   else y = 0.0;
-                    break;  }
-                default:    {
-                    y = 0.0;
-                    std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
-                              << std::endl;
-                    break;  }
-            }
-        }
-        break;
+      case 2:   {// Set Neumann for Reference
+      		if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())
+		 && fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
+		y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		break;}
       default : 
          {
                 y = 0.0;  

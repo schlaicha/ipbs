@@ -17,14 +17,7 @@ class SysParams {
 	static const double pi = 3.14159265358979323846;
 	double get_alpha();
 	void set_alpha(double);
-    int get_symmetry();
-	
-    // TODO: Change this!
-	template <typename Iterator>
-	double compute_pbeq(const double &u, const Iterator &it)
-	{
-	    return - 1.0 * (lambda2i * sinh(u));
-	}
+   	int get_symmetry();
 	
    private:
 	double lambda;
@@ -35,7 +28,7 @@ class SysParams {
 	double epsilon;
 	double radius;  // TODO: still needed?
 	double totalError;
-    int symmetry;
+	int symmetry;
 	double alpha;	// SOR parameter
 	double pos;
 };

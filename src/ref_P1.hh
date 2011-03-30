@@ -15,6 +15,9 @@ template<class GV>
 void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
              std::vector<int>& boundaryIndexToEntity)
 {
+  // We want to know the total calulation time
+  Dune::Timer timer;
+
   // some typedef
   const int dim = GV::dimension;
   typedef typename GV::Grid::ctype ctype;
@@ -61,7 +64,36 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
 
-  // <<<4>>> Select a linear solver backend
+  // <<<4>>> Make Grid Operator Space
+  typedef RefLocalOperator<M,B,J> LOP;
+  LOP lop(m,b,j);
+  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+  GOS gos(gfs,cc,gfs,cc,lop);
+
+  // <<<5a>>> Select a linear solver backend
   typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS;
   LS ls(gfs,cc,5000,5,1);
+
+  // <<<5b>>> Solve nonlinear problem
+  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
+  NEWTON newton(gos,u,ls);
+  newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
+  newton.setReassembleThreshold(0.0);
+  newton.setVerbosityLevel(4);
+  newton.setReduction(1e-10);
+  newton.setMinLinearReduction(1e-4);
+  newton.setMaxIterations(25);
+  newton.setLineSearchMaxIterations(10);
+  newton.apply();
+
+  
+  // <<<6>>> graphical output
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+  DGF udgf(gfs,u);
+  Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
+  vtkwriter.write("reference",Dune::VTK::appendedraw);
+  
+  std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }
