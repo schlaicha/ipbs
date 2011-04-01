@@ -11,15 +11,19 @@
 */
 
 template<class GV>
-void ipbs_P1(GV& gv, std::vector<int>& elementIndexToEntity,
-             std::vector<int>& boundaryIndexToEntity)
+void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
+             const std::vector<int>& boundaryIndexToEntity)
 {
+  // We want to know the total calulation time
+  // Dune::Timer timer;
+
   // some typedef
   const int dim = GV::dimension;
   typedef typename GV::Grid::ctype ctype;
 
   // <<<1>>> Setup the problem from mesh file
 
+  // NOTE only flux b.c. are iterated, so rest is instantiated only once
   // inner region
   typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
@@ -29,9 +33,6 @@ void ipbs_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   // Class defining Dirichlet B.C.
   typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
-  // boundary fluxes
-  typedef BoundaryFlux<GV,double,std::vector<int> > J;
-  J j(gv, boundaryIndexToEntity);
 
   // Create finite element map
   typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
@@ -59,4 +60,44 @@ void ipbs_P1(GV& gv, std::vector<int>& elementIndexToEntity,
 
   // interpolate coefficient vector
   Dune::PDELab::interpolate(g,gfs,u);
+
+  // --- here the iterative loop starts! ---
+  
+  // boundary fluxes - this one is for the reference solution!
+  typedef RefBoundaryFlux<GV,double,std::vector<int> > J;
+  J j(gv, boundaryIndexToEntity);
+
+  // <<<4>>> Make Grid Operator Space
+  typedef RefLocalOperator<M,B,J> LOP;
+  LOP lop(m,b,j);
+  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+  GOS gos(gfs,cc,gfs,cc,lop);
+
+  // <<<5a>>> Select a linear solver backend
+  typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
+  LS ls(gfs);
+
+  // <<<5b>>> Solve nonlinear problem
+  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
+  NEWTON newton(gos,u,ls);
+  newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
+  newton.setReassembleThreshold(0.0);
+  newton.setVerbosityLevel(1);
+  newton.setReduction(1e-10);
+  newton.setMinLinearReduction(1e-4);
+  newton.setMaxIterations(25);
+  newton.setLineSearchMaxIterations(10);
+  newton.apply();
+
+  // --- here the iterative loop ends! ---
+
+  // <<<6>>> graphical output
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+  DGF udgf(gfs,u);
+  Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
+  vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
+  
+  // std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }

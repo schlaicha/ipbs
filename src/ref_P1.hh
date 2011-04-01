@@ -12,8 +12,8 @@
 */
 
 template<class GV>
-void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
-             std::vector<int>& boundaryIndexToEntity)
+void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
+             const std::vector<int>& boundaryIndexToEntity)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -88,7 +88,7 @@ void ref_P1(GV& gv, std::vector<int>& elementIndexToEntity,
   NEWTON newton(gos,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setReassembleThreshold(0.0);
-  newton.setVerbosityLevel(4);
+  newton.setVerbosityLevel(1);
   newton.setReduction(1e-10);
   newton.setMinLinearReduction(1e-4);
   newton.setMaxIterations(25);
