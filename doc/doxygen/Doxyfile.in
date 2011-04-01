@@ -3,8 +3,8 @@
 ##################################################################################
 # Project Details:
 
-PROJECT_NAME           = iPBS
-PROJECT_NUMBER         = 0.1
+PROJECT_NAME           = @DUNE_MOD_NAME@
+PROJECT_NUMBER         = @DUNE_MOD_VERSION@
 
 ##################################################################################
 # What to parse
@@ -29,7 +29,7 @@ SEARCH_INCLUDES        = NO # don't warn about missing stl-headers etc.
 # definition is used. Otherwise one should specify the include paths that
 # are normally passed to the compiler using the -I flag.
 
-STRIP_FROM_INC_PATH    = /scratch/schlaich/dune-2.1/iPBS
+STRIP_FROM_INC_PATH    = @abs_top_srcdir@
 
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES
@@ -57,8 +57,8 @@ FULL_PATH_NAMES        = NO
 # (but less readable) file names. This can be useful is your file systems
 # doesn't support long names like on DOS, Mac, or CD-ROM.
 
-#SHORT_NAMES            = NO
-SHORT_NAMES            = YES
+@DUNEWEB_TRUE@SHORT_NAMES            = NO
+@DUNEWEB_FALSE@SHORT_NAMES            = YES
 
 # If you use STL classes (i.e. std::string, std::vector, etc.) but do not want
 # to include (a tag file for) the STL sources as input, then you should
@@ -144,7 +144,7 @@ PREDEFINED             = DOXYGEN \
                          _DEBUG_ALLOCATOR_H:=1 \
                          "DUNE_DEPRECATED:=/** \deprecated */"
 
-HAVE_DOT               = YES
+@DOT_TRUE@HAVE_DOT               = YES
 
 # If set to YES, the inheritance and collaboration graphs will show the
 # relations between templates and their instances.
@@ -169,15 +169,15 @@ DOT_CLEANUP            = NO
 # each generated HTML page. If it is left blank doxygen will generate a 
 # standard header.
 
-#HTML_HEADER            = doxy-header.html
-HTML_HEADER            =
+@DUNEWEB_TRUE@HTML_HEADER            = doxy-header.html
+@DUNEWEB_FALSE@HTML_HEADER            =
 
 # The HTML_FOOTER tag can be used to specify a personal HTML footer for 
 # each generated HTML page. If it is left blank doxygen will generate a 
 # standard footer.
 
-#HTML_FOOTER            = doxy-footer.html
-HTML_FOOTER            =
+@DUNEWEB_TRUE@HTML_FOOTER            = doxy-footer.html
+@DUNEWEB_FALSE@HTML_FOOTER            =
 
 ##########################  DOXYGEN DOXYSTYLE
 EXTRACT_ALL            = YES
@@ -219,26 +219,25 @@ LAYOUT_FILE            =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                 += ../../dune/
-INPUT                 += ../../src/
+INPUT                 += @top_srcdir@/src/
 # see e.g. dune-grid for the examples of mainpage and modules
-# INPUT                 += ./mainpage #                          ./modules
+# INPUT                 += @srcdir@/mainpage #                          @srcdir@/modules
 
 # The EXCLUDE tag can be used to specify files and/or directories that should
 # excluded from the INPUT source files. This way you can easily exclude a
 # subdirectory from a directory tree whose root is specified with the INPUT tag.
 
-# EXCLUDE               += ../../dune/iPBS/test
+# EXCLUDE               += @top_srcdir@/dune/iPBS/test
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
 # the \include command).
 
-#EXAMPLE_PATH          += ../../src
+# EXAMPLE_PATH          += @top_srcdir@/src
 
 # The IMAGE_PATH tag can be used to specify one or more files or
 # directories that contain image that are included in the documentation (see
 # the \image command).
 
-# IMAGE_PATH            += ../../dune/iPBS/pics
+# IMAGE_PATH            += @top_srcdir@/dune/iPBS/pics
 
