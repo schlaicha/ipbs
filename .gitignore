@@ -4,6 +4,7 @@
 *~
 *.swp
 *.vtu
+*.pvtu
 *.dat
 *.log
 Makefile

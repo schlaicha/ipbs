@@ -1,14 +1,16 @@
 #ifndef DUNE_INTEGRATE_ENTITY_HH
 #define DUNE_INTEGRATE_ENTITY_HH
 
-#include<dune/common/exceptions.hh>
-#include<dune/grid/common/quadraturerules.hh>
+/** \brief compute integral of function over entity with given order
 
-//! compute integral of function over entity with given order
+    This function is designed for the integration of the \f$\frac{1}{r-r'}\f$ term
+    \todo dimension is hardcoded - needs templatization!
+**/
+
 template<class Iterator, class Functor>
 double integrateentity (const Iterator& it, const Functor& f, int p,
-			const Dune::FieldVector<double,dim>& r,
-			const Dune::FieldVector<double,dim>& normal)
+			const Dune::FieldVector<double,2>& r,
+			const Dune::FieldVector<double,2>& normal)
 {
   // dimension of the entity 
   const int dim = Iterator::Intersection::mydimension;

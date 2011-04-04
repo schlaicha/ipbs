@@ -6,8 +6,6 @@
     \todo { Doc Me ! }   
 */
 
-// iPBS.cc Read a gmsh file and solve PB eq.
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -23,6 +21,10 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
+// Multiple Geometry Multiple Codim Mapper
+#include <dune/grid/common/mcmgmapper.hh>
+// quadrature
+#include<dune/grid/common/quadraturerules.hh>
 // Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
 #include<dune/grid/io/file/gmshreader.hh>
@@ -51,8 +53,13 @@ typedef double Real;
 #include "sysparams.hh"
 #endif
 
+#include "functors.hh"
+#include "integrateentity.hh"
+#include "eval_elliptic.hh"
 #include "boundaries.hh"
+#include "ipbs_boundary.hh"
 #include "RefLocalOperator.hh"
+#include "PBLocalOperator.hh"
 #include "ipbs_P1.hh"
 #include "ref_P1.hh"
 

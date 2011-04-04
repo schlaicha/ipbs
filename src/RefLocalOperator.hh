@@ -29,8 +29,8 @@ public:
   enum { doAlphaBoundary = true };                                // assemble boundary
 
   // constructor parametrized by regions and boundary classes
-  RefLocalOperator (const M& m_, const B& b_, const J& j_, unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), intorder(intorder_)
+  RefLocalOperator (const M& m_, const B& b_, const J& j_, unsigned int intorder_=2) 
+    : m(m_), b(b_), j(j_), intorder(intorder_)  // needs boundary cond. type
   {}
 
   // volume integral depending on test and ansatz functions
@@ -91,7 +91,7 @@ public:
         // evaluate parameters; 
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
-	
+
 	// Parameters describing the PDE
 	RF f = -1.0 * sysParams.get_lambda2i() * sinh(u);
 	RF a = 0.0; 

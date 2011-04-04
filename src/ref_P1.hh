@@ -88,7 +88,7 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   NEWTON newton(gos,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setReassembleThreshold(0.0);
-  newton.setVerbosityLevel(1);
+  newton.setVerbosityLevel(0);
   newton.setReduction(1e-10);
   newton.setMinLinearReduction(1e-4);
   newton.setMaxIterations(25);
@@ -101,6 +101,11 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
   vtkwriter.write("reference",Dune::VTK::appendedraw);
+
+  // Gnuplot output
+  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  gnuplotwriter.addVertexData(u,"solution");
+  gnuplotwriter.write("reference.dat"); 
   
   std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }

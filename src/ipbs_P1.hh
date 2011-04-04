@@ -59,36 +59,67 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   //             << " of " << gfs.globalSize() << std::endl;
 
   // interpolate coefficient vector
+  // this has to be done only during intitialization as we don't change dirichlet b.c.
   Dune::PDELab::interpolate(g,gfs,u);
+
+  // Provide a mapper for storing precomputed values
+  typedef Dune::MultipleCodimMultipleGeomTypeMapper<GV, P0Layout> Mapper;
+  Mapper mapper(gv);
+  // allocate a vector for the data
+  std::vector<double> fluxContainer(mapper.size());
 
   // --- here the iterative loop starts! ---
   
-  // boundary fluxes - this one is for the reference solution!
-  typedef RefBoundaryFlux<GV,double,std::vector<int> > J;
-  J j(gv, boundaryIndexToEntity);
+  while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
+  // while (sysParams.counter < 3)
+  {	  
+    // construct a discrete grid function for access to solution
+    typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+    const DGF udgf(gfs, u);
 
-  // <<<4>>> Make Grid Operator Space
-  typedef RefLocalOperator<M,B,J> LOP;
-  LOP lop(m,b,j);
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
-  GOS gos(gfs,cc,gfs,cc,lop);
+    // call the function precomputing the boundary flux values
+    ipbs_boundary(gv,udgf, mapper, fluxContainer);
 
-  // <<<5a>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
-  LS ls(gfs);
+    // boundary fluxes - this one is for the reference solution!
+    typedef BoundaryFlux<GV,double,std::vector<int> > J;
+    J j(gv, boundaryIndexToEntity);
 
-  // <<<5b>>> Solve nonlinear problem
-  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
-  NEWTON newton(gos,u,ls);
-  newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
-  newton.setReassembleThreshold(0.0);
-  newton.setVerbosityLevel(1);
-  newton.setReduction(1e-10);
-  newton.setMinLinearReduction(1e-4);
-  newton.setMaxIterations(25);
-  newton.setLineSearchMaxIterations(10);
-  newton.apply();
+    // <<<4>>> Make Grid Operator Space
+    typedef PBLocalOperator<M,B,J> LOP;
+    LOP lop(m,b,j, fluxContainer);
+    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+    GOS gos(gfs,cc,gfs,cc,lop);
+
+    // <<<5a>>> Select a linear solver backend
+    typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
+    LS ls(gfs);
+
+    // <<<5b>>> Solve nonlinear problem
+    typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
+    NEWTON newton(gos,u,ls);
+    newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
+    newton.setReassembleThreshold(0.0);
+    newton.setVerbosityLevel(0);
+    newton.setReduction(1e-10);
+    newton.setMinLinearReduction(1e-4);
+    newton.setMaxIterations(25);
+    newton.setLineSearchMaxIterations(10);
+    newton.apply();
+
+    // save snapshots of each iteration step
+    std::stringstream out;
+    out << "step_" << sysParams.counter;
+    std::string filename = out.str();
+    DGF udgf_snapshot(gfs,u);
+    Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+    vtkwriter.write(filename,Dune::VTK::appendedraw);
+    // Gnuplot output
+    Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+    gnuplotwriter.addVertexData(u,"solution");
+    gnuplotwriter.write(filename + ".dat"); 
+  }
 
   // --- here the iterative loop ends! ---
 
@@ -98,6 +129,11 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
   vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
+
+  // Gnuplot output
+  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  gnuplotwriter.addVertexData(u,"solution");
+  gnuplotwriter.write("ipbs_solution.dat"); 
   
   // std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }
