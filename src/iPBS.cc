@@ -57,6 +57,7 @@ typedef double Real;
 #include "integrateentity.hh"
 #include "eval_elliptic.hh"
 #include "boundaries.hh"
+#include "gradient.hh"
 #include "ipbs_boundary.hh"
 #include "RefLocalOperator.hh"
 #include "PBLocalOperator.hh"
