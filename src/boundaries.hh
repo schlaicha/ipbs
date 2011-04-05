@@ -243,7 +243,17 @@ public:
       case 2:   {// Set Neumann for Reference
       		if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())
 		 && fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
-		y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		{
+		  switch (sysParams.get_symmetry() )
+		  {
+		    case 1:  y = 1.0 * sysParams.get_charge_density()
+		               * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+			     break;
+		    case 2:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		             break;
+		    default: y=0.0; std::cerr << "Switches won't work that way!" << std::endl;
+		  }
+		}
 		break;}
       default : 
          {

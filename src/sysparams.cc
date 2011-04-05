@@ -20,9 +20,10 @@ SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, double _charge=55,
     // 3 is "3D"  - not verified!
     
     // This is the individual setup for THIS system!
-    symmetry = 2;
+    symmetry = 1;
     pos = 0;
-    charge_density = charge / (4 * pi * radius * radius);
+    //charge_density = charge / (4 * pi * radius * radius);
+    charge_density = 0.1;
 }
 
 double SysParams::get_radius()

@@ -66,9 +66,10 @@ void ipbs_boundary(const GV& gv, const DGF& udgf, const Mapper& mapper,
 	     {
                fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
 	                      * integrationIterator->geometry().volume() * (dist * unitNormal)
-			      * sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0;
-	       break;
-	     }
+                              / sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0/4.0/sysParams.pi;
+             }
+	     break;
+	     
 
 	     case 2:
 	     {
@@ -78,16 +79,16 @@ void ipbs_boundary(const GV& gv, const DGF& udgf, const Mapper& mapper,
                               * eval_elliptic(a,b)
                               * std::sinh(value)*integrationIterator->geometry().volume();
 	       //std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
-	       break;
 	     }
+	     break;
 
 	     case 3:	// "3D"
 	     {
 	       fluxIntegrated += std::sinh(value) / (dist.two_norm() *dist.two_norm() * dist.two_norm())
                               * integrationIterator->geometry().volume() * (dist * unitNormal)
                               * sysParams.get_bjerrum()*sysParams.get_lambda2i();
-               break;
 	     }
+             break;
 	     
 	     //default: // TODO: put some check here and in the other swith(dim) ! 
 	   }
@@ -105,21 +106,20 @@ void ipbs_boundary(const GV& gv, const DGF& udgf, const Mapper& mapper,
 		{	
                   fluxCoulomb += 1.0 * sysParams.get_charge_density()
 		              * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
-                  break;
 		}
+                break;
 
                 case 2: // "2D_sphere"
 		{    
                   fluxCoulomb += 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-                  break;
                 }
+                break;
 
                 default:
 		{
                   fluxCoulomb += 0.0;
                   std::cerr << "IPBS WARNING:\tNo Symmetry specified (in flux evaluation). Will use 0." 
                             << std::endl;
-                  break;
 		}
 	      }
 

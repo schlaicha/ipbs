@@ -2,8 +2,9 @@ iPBS ToDo Notes:
 ===============
 
  - Testing
- - Improve Cmd_Params
+ - Improve Cmd_Params -> use dune interface concept as seen in tutorial
  - Implement User Interface!!!
- - Write an useful output routine
- - Implement parallel - What is in there does not work!!!
+ - Write an useful output routine for forces (see tyagi)
+ - Implement parallel evaluation of boundary iteration
  - Dielectric Missmatch
+ - 3D is either completely missing or wrong !!!
