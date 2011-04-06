@@ -32,6 +32,7 @@
 #include<dune/grid/io/file/gmshreader.hh>
 // we use UG
 #include<dune/grid/uggrid.hh>
+#include<dune/grid/uggrid/uggridfactory.hh>
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
@@ -131,30 +132,35 @@ int main(int argc, char** argv)
   
   
   // <<<1>>> Setup the problem from mesh file
-  const int dimgrid = 2;
-  typedef Dune::UGGrid<dimgrid> GridType;         // 2d mesh
-
-  // instanciate ug grid object
-  GridType grid;
-
+  const int dimgrid = 2;         // 2d mesh
+  
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
-
-  // read a gmsh file
-  Dune::GmshReader<GridType> gmshreader;
-  //if (helper.rank()==0)
-     gmshreader.read(cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
+  
+  typedef Dune::UGGrid<dimgrid> GridType;
+  Dune::GridFactory<GridType> factory;
+  
+  //if(helper.rank() == 0)
+  //{
+    // read a gmsh file
+    Dune::GmshReader<GridType> gmshreader;
+    gmshreader.read(factory, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
+  //}
+  
+  // create the grid
+  GridType* grid = factory.createGrid();
 
   // refine grid
-  grid.globalRefine(cmdparam.RefinementLevel);
+  grid->globalRefine(cmdparam.RefinementLevel);
   
-  // get a grid view on the leaf grid
-  grid.loadBalance();
+  grid->loadBalance();
 
+  // get a grid view on the leaf grid
   typedef GridType::LeafGridView GV;
-  const GV& gv = grid.leafView();
+  const GV& gv = grid->leafView();
  
+  // Call problem drivers
   ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   
