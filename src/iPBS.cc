@@ -21,6 +21,8 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
+#include<dune/common/parametertree.hh>
+#include<dune/common/parametertreeparser.hh>
 // Multiple Geometry Multiple Codim Mapper
 #include <dune/grid/common/mcmgmapper.hh>
 // quadrature
@@ -96,6 +98,12 @@ int main(int argc, char** argv)
     }
   }
 
+  // Parse configuration file.
+  std::string config_file(argv[1]);
+  Dune::ParameterTree configuration;
+  Dune::ParameterTreeParser parser;
+
+
   // check arguments
   if (argc!=4)
   {
@@ -136,7 +144,7 @@ int main(int argc, char** argv)
   // read a gmsh file
   Dune::GmshReader<GridType> gmshreader;
   //if (helper.rank()==0)
-     gmshreader.read(grid, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
+     gmshreader.read(cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
 
   // refine grid
   grid.globalRefine(cmdparam.RefinementLevel);
