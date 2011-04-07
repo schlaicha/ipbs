@@ -18,6 +18,7 @@
 
 // DUNE includes
 #include<dune/common/mpihelper.hh>
+#include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
@@ -140,32 +141,72 @@ int main(int argc, char** argv)
   
   typedef Dune::UGGrid<dimgrid> GridType;
   Dune::GridFactory<GridType> factory;
-  
-  //if(helper.rank() == 0)
-  //{
+
+ 
+  if(helper.rank() == 0)
+  {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
     gmshreader.read(factory, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
-  //}
-  
-  // create the grid
-  GridType* grid = factory.createGrid();
+  }
 
-  // refine grid
-  grid->globalRefine(cmdparam.RefinementLevel);
-  
-  grid->loadBalance();
+  // Setup Dune Collective Communication
+  Dune::CollectiveCommunication<MPI_Comm> collCom(MPI_COMM_WORLD);
 
-  // get a grid view on the leaf grid
-  typedef GridType::LeafGridView GV;
-  const GV& gv = grid->leafView();
+  // Communicate boundary vector
+  int size = boundaryIndexToEntity.size();
+  collCom.broadcast (&size, 1, 0);
+  int* boundaryIndexToEntity_carray = (int*) malloc(size*sizeof(int));
+  std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
+  if (helper.rank() == 0 ) {
+    for (int i =0; i<size; i++)
+      boundaryIndexToEntity_carray[i]=boundaryIndexToEntity[i];
+  }
+  collCom.broadcast(boundaryIndexToEntity_carray,size,0);
+  std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
+  if (helper.rank() != 0) {
+    for (int i =0; i<size; i++)
+      boundaryIndexToEntity.push_back(boundaryIndexToEntity_carray[i]);
+    std::cout << "vector was created " << "on node " << helper.rank() << "\n";
+ }
+ free(boundaryIndexToEntity_carray);
+
+ // Communicate element vector
+ size = elementIndexToEntity.size();
+ collCom.broadcast (&size, 1, 0);
+ int* elementIndexToEntity_carray = (int*) malloc(size*sizeof(int));
+ std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
+ if (helper.rank() == 0 ) {
+   for (int i =0; i<size; i++)
+     elementIndexToEntity_carray[i]=elementIndexToEntity[i];
+ }
+ collCom.broadcast(elementIndexToEntity_carray,size,0);
+ std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
+ if (helper.rank() != 0) {
+   for (int i =0; i<size; i++)
+    elementIndexToEntity.push_back(elementIndexToEntity_carray[i]);
+    std::cout << "vector was created " << "on node " << helper.rank() << "\n";
+ } 
+ free(elementIndexToEntity_carray);
+  
+ // create the grid
+ GridType* grid = factory.createGrid();
+
+ // refine grid
+ grid->globalRefine(cmdparam.RefinementLevel);
  
-  // Call problem drivers
-  ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
-  ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ grid->loadBalance();
+
+ // get a grid view on the leaf grid
+ typedef GridType::LeafGridView GV;
+ const GV& gv = grid->leafView();
+
+ // Call problem drivers
+ ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ // ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   
-  // done
-  return 0;
+ // done
+ return 0;
  }
  catch (Dune::Exception &e){
   std::cerr << "Dune reported error: " << e << std::endl;

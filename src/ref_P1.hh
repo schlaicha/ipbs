@@ -56,8 +56,8 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
   typedef typename GFS::template ConstraintsContainer<Real>::Type CC;
   CC cc;
+
   Dune::PDELab::constraints(b,gfs,cc); 
-  // if (helper.rank==0)
   //   std::cout << "constrained dofs=" << cc.size() 
   //             << " of " << gfs.globalSize() << std::endl;
 
@@ -79,10 +79,6 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   // typedef Dune::PDELab::ISTLBackend_OVLP_CG_SSORk<GFS, CC> LS;
   // LS ls(gfs,cc);
 
-/*  typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
-  SLP slp(gos,u,ls,1e-10);
-  slp.apply();
-*/
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
   NEWTON newton(gos,u,ls);
@@ -106,6 +102,7 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
   gnuplotwriter.write("reference.dat"); 
-  
+
+
   std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }
