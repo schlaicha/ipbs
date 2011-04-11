@@ -1,0 +1,10 @@
+/** \mainpage Documentation for the IPBS project
+
+\section intro Introduction
+
+Welcome to the %IPBS documentation pages. This documentation has been
+generated using Doxygen, a free source code documentation system for
+documenting C/C++ code.
+
+A lot more will follow...
+*/
