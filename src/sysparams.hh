@@ -1,25 +1,41 @@
-#include<math.h>
+/** \file
+    \brief A class containing all information for the systems setup.
+    \todo Doc me!
+*/
+
+#include <string>
 
 class SysParams {
-   public:
-	SysParams(double _lambda, double _bjerrum, double _charge_density, double _epsilon, double _radius);	// Constructor
-	double get_bjerrum();
-	double get_sphere_pos();
+ public:
+	SysParams();	// We now only need a default constructor
+
 	int counter;
-	double get_radius();
+	static const double pi = 3.14159265358979323846;
+  
+  // Return parameters needed during runtime
+	double get_bjerrum();
+  double get_radius();
 	double get_epsilon();
 	double get_lambda2i();
 	double get_charge_density();
-	void add_error(double);
-	void reset_error();
+	double get_sphere_pos();
 	double get_error();
-	void set_lambda (double value);
-	static const double pi = 3.14159265358979323846;
 	double get_alpha();
+ 	int get_symmetry();
+  int get_refinement();
+  std::string get_meshfile();
+
+  // Functions setting the private members
+  void add_error(double);
+	void reset_error();
+	void set_lambda (double value);
+	void set_bjerrum (double value);
 	void set_alpha(double);
-   	int get_symmetry();
+  void set_meshfile(std::string filename);
+  void set_refinement(int level);
+  void set_radius(double value);
 	
-   private:
+  private:
 	double lambda;
 	double lambda2i;
 	double bjerrum;
@@ -31,6 +47,10 @@ class SysParams {
 	int symmetry;
 	double alpha;	// SOR parameter
 	double pos;
+  std::string meshfile;
+  int refinement;
 };
 
+// Global access to this class via global instance
+// TODO is there a better way for parallelization?
 extern SysParams sysParams;

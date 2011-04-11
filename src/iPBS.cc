@@ -22,8 +22,6 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
-#include<dune/common/parametertree.hh>
-#include<dune/common/parametertreeparser.hh>
 // Multiple Geometry Multiple Codim Mapper
 #include <dune/grid/common/mcmgmapper.hh>
 // quadrature
@@ -47,8 +45,6 @@
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
 
-#include<dune/pdelab/stationary/linearproblem.hh>
-
 // global typedefs
 typedef double Real;
 
@@ -57,6 +53,7 @@ typedef double Real;
 #include "sysparams.hh"
 #endif
 
+#include "parser.hh"
 #include "functors.hh"
 #include "integrateentity.hh"
 #include "eval_elliptic.hh"
@@ -67,18 +64,6 @@ typedef double Real;
 #include "PBLocalOperator.hh"
 #include "ipbs_P1.hh"
 #include "ref_P1.hh"
-
-/** \brief container for commandline arguments
-
-    \todo { Implement user interface }
-*/
-typedef struct {
-	double alpha_sor; 
-	int RefinementLevel;
-	std::string GridName;
-} Cmdparam;
-
-
 
 
 //===============================================================
@@ -99,33 +84,21 @@ int main(int argc, char** argv)
        std::cout << "parallel run on " << helper.size() << " process(es)" << std::endl;
     }
   }
-
-  // Parse configuration file.
-  std::string config_file(argv[1]);
-  Dune::ParameterTree configuration;
-  Dune::ParameterTreeParser parser;
-
-
+  
   // check arguments
-  if (argc!=4)
+  if (argc!=2)
   {
     if (helper.rank()==0)
     {
-	std::cout << "usage: ./iPBS <meshfile> <refinement level> <SOR Parameter>" << std::endl;
+	std::cout << "usage: ./iPBS <configuration file>" << std::endl;
 	return 1;
     }
   }
-
-  // Read in comandline arguments
-  Cmdparam cmdparam;
-  cmdparam.GridName=argv[1];
-  sscanf(argv[2],"%d",&cmdparam.RefinementLevel);
-  double alpha;
-  sscanf(argv[3],"%lf", &alpha);
-  if(helper.rank()==0)
-    std::cout << "Using " << cmdparam.RefinementLevel << " refinement levels. alpha = " << alpha << std::endl;
-  sysParams.set_alpha(alpha);
   
+  // Parse configuration file.
+  std::string config_file(argv[1]);
+  parser(config_file);
+
   
 //===============================================================
 // Setup problem
@@ -147,7 +120,7 @@ int main(int argc, char** argv)
   {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
-    gmshreader.read(factory, cmdparam.GridName, boundaryIndexToEntity, elementIndexToEntity, true, false);
+    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, false);
   }
 
   // Setup Dune Collective Communication
@@ -193,7 +166,9 @@ int main(int argc, char** argv)
  GridType* grid = factory.createGrid();
 
  // refine grid
- grid->globalRefine(cmdparam.RefinementLevel);
+ if(helper.rank()==0)
+   std::cout << "Using " << sysParams.get_refinement() << " refinement levels." << std::endl;
+ grid->globalRefine(sysParams.get_refinement());
  
  grid->loadBalance();
 
@@ -203,7 +178,7 @@ int main(int argc, char** argv)
 
  // Call problem drivers
  ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
- // ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   
  // done
  return 0;

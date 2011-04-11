@@ -1,6 +1,6 @@
 /** \brief Compute the gradient of the potential at the actual element
 
-    This is needed in the evaluation of \f$\grad \frac{sinh\Phi}{|r - r^\prime|}\f$
+    This is needed in the evaluation of \f$\nabla \frac{sinh\Phi}{|r - r^\prime|}\f$
     \todo fix dimensions as template parameter
 **/
 

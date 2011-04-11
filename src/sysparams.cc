@@ -3,16 +3,17 @@
 #include "sysparams.hh"
 #endif
 
-#include <iostream>
-
 // Implementation of SysParams functionality
 
 // Constructor
 // Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
-SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, double _charge=55, double _epsilon=80.0, double _radius=1.0)
-    :lambda(_lambda),bjerrum(_bjerrum),charge(_charge),epsilon(_epsilon),radius(_radius)
+// SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, 
+//                      double _charge=55, double _epsilon=80.0, 
+//                      double _radius=1.0)
+//                     :lambda(_lambda),bjerrum(_bjerrum),charge(_charge),
+//                      epsilon(_epsilon),radius(_radius)
+SysParams::SysParams()
 {
-	lambda2i = 1 / (lambda * lambda);
 	totalError = 1E8;
     // Set the systems symmetry
     // 1 is "2D_cylinder"
@@ -24,6 +25,16 @@ SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, double _charge=55,
     pos = 0;
     //charge_density = charge / (4 * pi * radius * radius);
     charge_density = 0.1;
+}
+
+void SysParams::set_bjerrum(double value)
+{
+  bjerrum = value;
+}
+
+void SysParams::set_radius(double value)
+{
+  radius = value;
 }
 
 double SysParams::get_radius()
@@ -93,6 +104,26 @@ void SysParams::set_lambda(double value)
 int SysParams::get_symmetry()
 {
     return symmetry;
+}
+
+void SysParams::set_meshfile(std::string filename)
+{
+  meshfile = filename;
+}
+
+std::string SysParams::get_meshfile()
+{
+  return meshfile;
+}
+
+void SysParams::set_refinement(int level)
+{
+  refinement = level;
+}
+
+int SysParams::get_refinement()
+{
+  return refinement;
 }
 
 SysParams sysParams;
