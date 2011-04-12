@@ -68,10 +68,10 @@ private:
  * 0 means Neumann
  * 1 means Dirichlet
  */
-template<typename GV, typename PGMap>
+template<typename GV, typename PGMap, typename Factory>
 class BCType : public Dune::PDELab::BoundaryGridFunctionBase<
         Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,
-        Dune::FieldVector<int,1> >,BCType<GV,PGMap> >
+        Dune::FieldVector<int,1> >,BCType<GV,PGMap,Factory> >
 {
 public:
 
@@ -79,7 +79,8 @@ public:
           GV,int,1,Dune::FieldVector<int,1> > Traits;
 
   //! construct from grid view
-  BCType (const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+  BCType (const GV& gv_, const PGMap& pg_, const Factory& factory_)
+          : gv(gv_), pg(pg_), factory(factory_) {}
 
   //! return bc type at point on intersection
   template<typename I>
@@ -93,8 +94,9 @@ public:
     // 1 for Neumann
     // 2 for iPBS
 
-    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    //std::cout << "Set boundary type" << physgroup_index << " at " << i.geometry().center() << std::endl;
+    // int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    int physgroup_index = pg[factory.insertionIndex(i.intersection())];
+    std::cout << "Set boundary type" << physgroup_index << " at " << i.geometry().center() << std::endl;
     switch ( physgroup_index )
     {
       case 0:   y = 1.0;  break; // Set Dirichlet
@@ -112,6 +114,7 @@ private:
 
   const GV&    gv;
   const PGMap& pg;
+  const Factory& factory;
 };
 
 // ============================================================================
@@ -210,11 +213,11 @@ private:
 // ============================================================================
 // function for defining radiation and Neumann boundary conditions for reference solution!!!
 
-template<typename GV, typename RF, typename PGMap>
+template<typename GV, typename RF, typename PGMap, typename Factory>
 class RefBoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap> >
+           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap, Factory> >
 {
 public:
 
@@ -223,7 +226,9 @@ public:
   typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   // constructor
-  RefBoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+  RefBoundaryFlux(const GV& gv_, const PGMap& pg_, 
+                  const Factory& factory_) 
+                  : gv(gv_), pg(pg_), factory(factory_) {}
 
   // evaluate flux boundary condition
   template<typename I, typename E>
@@ -236,13 +241,14 @@ public:
     // 1 for Neumann
     // 2 for iPBS
 
-    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    // int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    int physgroup_index = pg[factory.insertionIndex(i.intersection())];
     switch ( physgroup_index )
     {
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   {// Set Neumann for Reference
-      		if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())
-		 && fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
+//      		if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())
+//		 && fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
 		{
 		  switch (sysParams.get_symmetry() )
 		  {
@@ -269,4 +275,5 @@ public:
 
   const GV&    gv;
   const PGMap& pg;
+  const Factory& factory;
 };

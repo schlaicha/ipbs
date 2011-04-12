@@ -11,9 +11,10 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-template<class GV>
+template<class GV, typename Factory>
 void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity)
+             const std::vector<int>& boundaryIndexToEntity,
+             const Factory& factory)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -28,14 +29,14 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
   // boundary conditioon type
-  typedef BCType<GV,std::vector<int>> B;
-  B b(gv, boundaryIndexToEntity);
+  typedef BCType<GV,std::vector<int>, Factory> B;
+  B b(gv, boundaryIndexToEntity, factory);
   // Class defining Dirichlet B.C.
   typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
   // boundary fluxes - this one is for the reference solution!
-  typedef RefBoundaryFlux<GV,double,std::vector<int> > J;
-  J j(gv, boundaryIndexToEntity);
+  typedef RefBoundaryFlux<GV,double,std::vector<int>, Factory> J;
+  J j(gv, boundaryIndexToEntity, factory);
 
   // Create finite element map
   typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
@@ -74,10 +75,10 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   // <<<5a>>> Select a linear solver backend
   // typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<GFS,CC> LS;
   // LS ls(gfs,cc,5000,5,1);
-  typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
-  LS ls(gfs);
-  // typedef Dune::PDELab::ISTLBackend_OVLP_CG_SSORk<GFS, CC> LS;
-  // LS ls(gfs,cc);
+  // typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
+  // LS ls(gfs);
+  typedef Dune::PDELab::ISTLBackend_OVLP_CG_SSORk<GFS, CC> LS;
+  LS ls(gfs,cc);
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;

@@ -21,9 +21,9 @@ Line(6) = {3, 10};
 Line(7) = {10, 4};
 Circle(8) = {3, 1, 6};
 Circle(9) = {6, 1, 2};
-Transfinite Line {9, 8} = 32 Using Progression 1;
-Transfinite Line {4, 6} = 8 Using Progression 1;
-Transfinite Line {7, 5} = 32 Using Progression 1;
+Transfinite Line {9, 8} = 8 Using Progression 1;
+// Transfinite Line {4, 6} = 8 Using Progression 1;
+Transfinite Line {7, 5} = 8 Using Progression 1;
 Line Loop(10) = {2, 3, -5, -4, -9, -8, 6, 7, 1};
 Plane Surface(11) = {10};
 

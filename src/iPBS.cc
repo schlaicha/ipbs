@@ -32,6 +32,9 @@
 // we use UG
 #include<dune/grid/uggrid.hh>
 #include<dune/grid/uggrid/uggridfactory.hh>
+// we use ALUGrid
+#include <dune/grid/alugrid/2d/alugrid.hh>
+#include <dune/grid/alugrid/2d/alu2dgridfactory.hh>
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
@@ -62,7 +65,7 @@ typedef double Real;
 #include "ipbs_boundary.hh"
 #include "RefLocalOperator.hh"
 #include "PBLocalOperator.hh"
-#include "ipbs_P1.hh"
+// #include "ipbs_P1.hh"
 #include "ref_P1.hh"
 
 
@@ -112,7 +115,8 @@ int main(int argc, char** argv)
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
   
-  typedef Dune::UGGrid<dimgrid> GridType;
+  // typedef Dune::UGGrid<dimgrid> GridType;
+  typedef Dune::ALUSimplexGrid<dimgrid,2> GridType;
   Dune::GridFactory<GridType> factory;
 
  
@@ -166,19 +170,19 @@ int main(int argc, char** argv)
  GridType* grid = factory.createGrid();
 
  // refine grid
- if(helper.rank()==0)
-   std::cout << "Using " << sysParams.get_refinement() << " refinement levels." << std::endl;
- grid->globalRefine(sysParams.get_refinement());
+ // if(helper.rank()==0)
+ //   std::cout << "Using " << sysParams.get_refinement() << " refinement levels." << std::endl;
+ // grid->globalRefine(sysParams.get_refinement());
  
- grid->loadBalance();
+ // grid->loadBalance();
 
  // get a grid view on the leaf grid
  typedef GridType::LeafGridView GV;
  const GV& gv = grid->leafView();
 
  // Call problem drivers
- ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
- ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity, factory);
+// ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   
  // done
  return 0;
