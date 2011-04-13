@@ -68,10 +68,10 @@ private:
  * 0 means Neumann
  * 1 means Dirichlet
  */
-template<typename GV, typename PGMap, typename Factory>
+template<typename GV, typename PGMap>
 class BCType : public Dune::PDELab::BoundaryGridFunctionBase<
         Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,
-        Dune::FieldVector<int,1> >,BCType<GV,PGMap,Factory> >
+        Dune::FieldVector<int,1> >,BCType<GV,PGMap> >
 {
 public:
 
@@ -79,8 +79,7 @@ public:
           GV,int,1,Dune::FieldVector<int,1> > Traits;
 
   //! construct from grid view
-  BCType (const GV& gv_, const PGMap& pg_, const Factory& factory_)
-          : gv(gv_), pg(pg_), factory(factory_) {}
+  BCType (const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
 
   //! return bc type at point on intersection
   template<typename I>
@@ -94,9 +93,8 @@ public:
     // 1 for Neumann
     // 2 for iPBS
 
-    // int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    int physgroup_index = pg[factory.insertionIndex(i.intersection())];
-    std::cout << "Set boundary type" << physgroup_index << " at " << i.geometry().center() << std::endl;
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    //std::cout << "Set boundary type" << physgroup_index << " at " << i.geometry().center() << std::endl;
     switch ( physgroup_index )
     {
       case 0:   y = 1.0;  break; // Set Dirichlet
@@ -114,7 +112,6 @@ private:
 
   const GV&    gv;
   const PGMap& pg;
-  const Factory& factory;
 };
 
 // ============================================================================
@@ -190,14 +187,10 @@ public:
     {
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   // Set Neumann for iPBS
-		{
-		  // TODO: This is a temporally bugfic !!!
-		  if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())  &&  fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
-		    y = fluxContainer[mapper.map(*i.inside())];
-		   else y = 0.0;
-		  break;
-		}
-      default : y = 0.0;  break;
+		  {
+		    y = fluxContainer[mapper.map(*i.inside())]; break;
+		  }
+      default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
     }
     return;
   }
@@ -213,11 +206,11 @@ private:
 // ============================================================================
 // function for defining radiation and Neumann boundary conditions for reference solution!!!
 
-template<typename GV, typename RF, typename PGMap, typename Factory>
+template<typename GV, typename RF, typename PGMap>
 class RefBoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap, Factory> >
+           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap> >
 {
 public:
 
@@ -226,9 +219,7 @@ public:
   typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   // constructor
-  RefBoundaryFlux(const GV& gv_, const PGMap& pg_, 
-                  const Factory& factory_) 
-                  : gv(gv_), pg(pg_), factory(factory_) {}
+  RefBoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
 
   // evaluate flux boundary condition
   template<typename I, typename E>
@@ -241,15 +232,11 @@ public:
     // 1 for Neumann
     // 2 for iPBS
 
-    // int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    int physgroup_index = pg[factory.insertionIndex(i.intersection())];
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     switch ( physgroup_index )
     {
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   {// Set Neumann for Reference
-//      		if (fabs(i.geometry().center().vec_access(0)) < (sysParams.get_sphere_pos() + sysParams.get_radius())
-//		 && fabs(i.geometry().center().vec_access(0)) > (sysParams.get_sphere_pos() - sysParams.get_radius()))
-		{
 		  switch (sysParams.get_symmetry() )
 		  {
 		    case 1:  y = 1.0 * sysParams.get_charge_density()
@@ -257,16 +244,10 @@ public:
 			     break;
 		    case 2:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
 		             break;
-		    default: y=0.0; std::cerr << "Switches won't work that way!" << std::endl;
+        default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
 		  }
-		}
 		break;}
-      default : 
-         {
-                y = 0.0;  
-                std::cerr << "IPBS WARNING:\tCould not evaluate flux B.C. Will use 0." 
-                          << std::endl;
-         }
+      default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
     }
     return;
   }
@@ -275,5 +256,4 @@ public:
 
   const GV&    gv;
   const PGMap& pg;
-  const Factory& factory;
 };
