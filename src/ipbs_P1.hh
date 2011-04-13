@@ -1,6 +1,4 @@
-/**\file Do the IPBS procedure
- *
- * \brief Driver for solving the IPBS problem using P1 piecewise linear Lagrange elements
+/** \brief Driver for solving the IPBS problem using P1 piecewise linear Lagrange elements
 
     Dirichlet boundary conditions are used for domain (outer) boundaries, Neumann b.c. on
     symmetry axis and IPBS Neumann b.c. where we want the IPBS iterative procedure.
@@ -12,9 +10,10 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-template<class GV>
+template<class GV, class ColCom>
 void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity)
+             const std::vector<int>& boundaryIndexToEntity,
+             const ColCom& colCom)
 {
   // We want to know the total calulation time
   // Dune::Timer timer;
@@ -41,12 +40,15 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   FEM fem;
 
   // <<<2>>> Make grid function space
-  typedef Dune::PDELab::OverlappingConformingDirichletConstraints CON;
+  typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
   CON con;
   // Define ISTL Vector backend - template argument is the blocksize!
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem,con);
+
+  // Compute Ghost Elements
+  con.compute_ghosts(gfs);
 
   // Create coefficient vector (with zero values)
   typedef typename GFS::template VectorContainer<Real>::Type U;
@@ -64,6 +66,37 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   // this has to be done only during intitialization as we don't change dirichlet b.c.
   Dune::PDELab::interpolate(g,gfs,u);
 
+  std::cout << "Hello I'm rank " << colCom.rank() << " of " << colCom.size() <<
+    " and I have " << gv.size(0) << " codim<0> leaf elements of which " << 
+    gv.grid().numBoundarySegments() << " are boundaries." << std::endl;
+
+  int elemCounter = 0;
+  int boundCounter = 0;
+  typedef typename GV::template Codim<0>::template Partition
+          <Dune::Interior_Partition>::Iterator LeafIterator;
+  typedef typename GV::IntersectionIterator IntersectionIterator;
+  for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+            	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+  {
+    elemCounter++;
+    if(it->hasBoundaryIntersections() == true)
+    {
+      for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+      {
+        if(ii->boundary() == true)
+        {
+          boundCounter++;
+          std::cout << "Boundary Center " << ii->geometry().center() << " on rank "
+            << colCom.rank() << std::endl;
+        }
+      }
+    }
+  }
+  std::cout << "counted " << elemCounter << " Elements on process " << colCom.rank() 
+   << " and " << boundCounter << " Boundaries on process " << colCom.rank() << std::endl;
+
+
+/*  
   // Provide a mapper for storing precomputed values
   typedef Dune::MultipleCodimMultipleGeomTypeMapper<GV, P0Layout> Mapper;
   Mapper mapper(gv);
@@ -125,6 +158,8 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
 
   // --- here the iterative loop ends! ---
 
+*/
+
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   DGF udgf(gfs,u);
@@ -138,4 +173,5 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   gnuplotwriter.write("ipbs_solution.dat"); 
   
   // std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
+  
 }
