@@ -10,26 +10,26 @@
 #include "config.h"
 #endif
 
-//! std includes
+// std includes
 #include<math.h>
 #include<iostream>
 #include<vector>
 #include<string>
 
-//! DUNE includes
+// DUNE includes
 #include<dune/common/mpihelper.hh>
 #include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
-//! Multiple Geometry Multiple Codim Mapper
+// Multiple Geometry Multiple Codim Mapper
 #include <dune/grid/common/mcmgmapper.hh>
-//! quadrature
+// quadrature
 #include<dune/grid/common/quadraturerules.hh>
-//! Input/Output
+// Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
 #include<dune/grid/io/file/gmshreader.hh>
-//! we use UG
+// we use UG
 #include<dune/grid/uggrid.hh>
 #include<dune/grid/uggrid/uggridfactory.hh>
 // pdelab includes
@@ -45,7 +45,9 @@
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
 
-//! global typedefs
+#include <dune/grid/common/gridenums.hh>
+
+// global typedefs
 typedef double Real;
 
 #ifndef _SYSPARAMS_H
@@ -120,11 +122,11 @@ int main(int argc, char** argv)
   {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
-    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
+    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, false);
   }
 
   // Setup Dune Collective Communication
-  Dune::CollectiveCommunication<MPI_Comm> collCom(MPI_COMM_WORLD);
+  Dune::CollectiveCommunication<MPI_Comm> collCom(helper.getCommunicator());
 
   // Communicate boundary vector
   int size = boundaryIndexToEntity.size();
@@ -177,8 +179,8 @@ int main(int argc, char** argv)
  const GV& gv = grid->leafView();
 
  // Call problem drivers
- ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
- ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+// ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
   
  // done
  return 0;
