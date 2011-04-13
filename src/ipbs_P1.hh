@@ -1,4 +1,6 @@
-/** \brief Driver for solving the IPBS problem using P1 piecewise linear Lagrange elements
+/**\file Do the IPBS procedure
+ *
+ * \brief Driver for solving the IPBS problem using P1 piecewise linear Lagrange elements
 
     Dirichlet boundary conditions are used for domain (outer) boundaries, Neumann b.c. on
     symmetry axis and IPBS Neumann b.c. where we want the IPBS iterative procedure.

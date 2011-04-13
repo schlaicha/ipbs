@@ -10,31 +10,28 @@
 #include "config.h"
 #endif
 
-// std includes
+//! std includes
 #include<math.h>
 #include<iostream>
 #include<vector>
 #include<string>
 
-// DUNE includes
+//! DUNE includes
 #include<dune/common/mpihelper.hh>
 #include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
-// Multiple Geometry Multiple Codim Mapper
+//! Multiple Geometry Multiple Codim Mapper
 #include <dune/grid/common/mcmgmapper.hh>
-// quadrature
+//! quadrature
 #include<dune/grid/common/quadraturerules.hh>
-// Input/Output
+//! Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
 #include<dune/grid/io/file/gmshreader.hh>
-// we use UG
+//! we use UG
 #include<dune/grid/uggrid.hh>
 #include<dune/grid/uggrid/uggridfactory.hh>
-// we use ALUGrid
-#include <dune/grid/alugrid/2d/alugrid.hh>
-#include <dune/grid/alugrid/2d/alu2dgridfactory.hh>
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
@@ -48,7 +45,7 @@
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
 
-// global typedefs
+//! global typedefs
 typedef double Real;
 
 #ifndef _SYSPARAMS_H
@@ -65,7 +62,7 @@ typedef double Real;
 #include "ipbs_boundary.hh"
 #include "RefLocalOperator.hh"
 #include "PBLocalOperator.hh"
-// #include "ipbs_P1.hh"
+#include "ipbs_P1.hh"
 #include "ref_P1.hh"
 
 
@@ -115,8 +112,7 @@ int main(int argc, char** argv)
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
   
-  // typedef Dune::UGGrid<dimgrid> GridType;
-  typedef Dune::ALUSimplexGrid<dimgrid,2> GridType;
+  typedef Dune::UGGrid<dimgrid> GridType;
   Dune::GridFactory<GridType> factory;
 
  
@@ -124,7 +120,7 @@ int main(int argc, char** argv)
   {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
-    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, false);
+    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
   }
 
   // Setup Dune Collective Communication
@@ -170,19 +166,19 @@ int main(int argc, char** argv)
  GridType* grid = factory.createGrid();
 
  // refine grid
- // if(helper.rank()==0)
- //   std::cout << "Using " << sysParams.get_refinement() << " refinement levels." << std::endl;
- // grid->globalRefine(sysParams.get_refinement());
+ if(helper.rank()==0)
+   std::cout << "Using " << sysParams.get_refinement() << " refinement levels." << std::endl;
+ grid->globalRefine(sysParams.get_refinement());
  
- // grid->loadBalance();
+ grid->loadBalance();
 
  // get a grid view on the leaf grid
  typedef GridType::LeafGridView GV;
  const GV& gv = grid->leafView();
 
  // Call problem drivers
- ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity, factory);
-// ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
   
  // done
  return 0;

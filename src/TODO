@@ -2,8 +2,6 @@ iPBS ToDo Notes:
 ===============
 
  - Testing
- - Improve Cmd_Params -> use dune interface concept as seen in tutorial
- - Implement User Interface!!!
  - Write an useful output routine for forces (see tyagi)
  - Implement parallel evaluation of boundary iteration
  - Dielectric Missmatch

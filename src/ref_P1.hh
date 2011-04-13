@@ -11,10 +11,9 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-template<class GV, typename Factory>
+template<class GV>
 void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity,
-             const Factory& factory)
+             const std::vector<int>& boundaryIndexToEntity)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -29,14 +28,14 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   typedef Regions<GV,double,std::vector<int>> M;
   M m(gv, elementIndexToEntity);
   // boundary conditioon type
-  typedef BCType<GV,std::vector<int>, Factory> B;
-  B b(gv, boundaryIndexToEntity, factory);
+  typedef BCType<GV,std::vector<int> > B;
+  B b(gv, boundaryIndexToEntity);
   // Class defining Dirichlet B.C.
   typedef BCExtension<GV,double,std::vector<int>> G;
   G g(gv, boundaryIndexToEntity);
   // boundary fluxes - this one is for the reference solution!
-  typedef RefBoundaryFlux<GV,double,std::vector<int>, Factory> J;
-  J j(gv, boundaryIndexToEntity, factory);
+  typedef RefBoundaryFlux<GV,double,std::vector<int> > J;
+  J j(gv, boundaryIndexToEntity);
 
   // Create finite element map
   typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
