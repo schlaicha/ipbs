@@ -23,6 +23,7 @@ class SysParams {
 	double get_alpha();
  	int get_symmetry();
   int get_refinement();
+  int get_verbose();
   std::string get_meshfile();
 
   // Functions setting the private members
@@ -34,6 +35,7 @@ class SysParams {
   void set_meshfile(std::string filename);
   void set_refinement(int level);
   void set_radius(double value);
+  void set_verbose(int value);
 	
   private:
 	double lambda;
@@ -49,6 +51,7 @@ class SysParams {
 	double pos;
   std::string meshfile;
   int refinement;
+  int verbose;
 };
 
 // Global access to this class via global instance

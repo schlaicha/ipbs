@@ -27,6 +27,16 @@ SysParams::SysParams()
     charge_density = 0.1;
 }
 
+void SysParams::set_verbose(int value)
+{
+  verbose = value;
+}
+
+int SysParams::get_verbose()
+{
+  return verbose;
+}
+
 void SysParams::set_bjerrum(double value)
 {
   bjerrum = value;
