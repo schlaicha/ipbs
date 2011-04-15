@@ -31,9 +31,8 @@ public:
 
   // constructor parametrized by regions and boundary classes
   PBLocalOperator (const M& m_, const B& b_, const J& j_, 
-		   std::vector<double>& fluxContainer_, 
 		   unsigned int intorder_=2)  // needs boundary cond. type
-    : m(m_), b(b_), j(j_), fluxContainer(fluxContainer_), intorder(intorder_)
+    : m(m_), b(b_), j(j_), intorder(intorder_)
   {}
 
   // volume integral depending on test and ansatz functions
@@ -159,7 +158,7 @@ public:
 	
         // evaluate flux boundary condition
 	typename J::Traits::RangeType y;
-	j.evaluate(ig, y, fluxContainer);
+	j.evaluate(ig, y);
 	
 	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
@@ -183,7 +182,6 @@ private:
   const M& m;
   const B& b;
   const J& j;
-  std::vector<double>& fluxContainer;
   unsigned int intorder;
 };
 

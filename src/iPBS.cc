@@ -129,6 +129,9 @@ int main(int argc, char** argv)
     gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, false);
   }
 
+  // for (int i=0;i<elementIndexToEntity.size();i++)
+  //   std::cout << boundaryIndexToEntity[i] << std::endl;
+
   // Setup Dune Collective Communication
   Dune::CollectiveCommunication<MPI_Comm> collCom(helper.getCommunicator());
 
@@ -136,17 +139,20 @@ int main(int argc, char** argv)
   int size = boundaryIndexToEntity.size();
   collCom.broadcast (&size, 1, 0);
   int* boundaryIndexToEntity_carray = (int*) malloc(size*sizeof(int));
-  std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
+  if (sysParams.get_verbose() > 4)
+    std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
   if (helper.rank() == 0 ) {
     for (int i =0; i<size; i++)
       boundaryIndexToEntity_carray[i]=boundaryIndexToEntity[i];
   }
   collCom.broadcast(boundaryIndexToEntity_carray,size,0);
-  std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
+  if (sysParams.get_verbose() > 4)
+    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
   if (helper.rank() != 0) {
     for (int i =0; i<size; i++)
       boundaryIndexToEntity.push_back(boundaryIndexToEntity_carray[i]);
-    std::cout << "vector was created " << "on node " << helper.rank() << "\n";
+    if (sysParams.get_verbose() > 4)
+      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
  }
  free(boundaryIndexToEntity_carray);
 
@@ -154,17 +160,20 @@ int main(int argc, char** argv)
  size = elementIndexToEntity.size();
  collCom.broadcast (&size, 1, 0);
  int* elementIndexToEntity_carray = (int*) malloc(size*sizeof(int));
- std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
+ if (sysParams.get_verbose() > 4)
+   std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
  if (helper.rank() == 0 ) {
    for (int i =0; i<size; i++)
      elementIndexToEntity_carray[i]=elementIndexToEntity[i];
  }
  collCom.broadcast(elementIndexToEntity_carray,size,0);
- std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
+ if (sysParams.get_verbose() > 4)
+    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
  if (helper.rank() != 0) {
    for (int i =0; i<size; i++)
     elementIndexToEntity.push_back(elementIndexToEntity_carray[i]);
-    std::cout << "vector was created " << "on node " << helper.rank() << "\n";
+    if (sysParams.get_verbose() > 4)
+      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
  } 
  free(elementIndexToEntity_carray);
   

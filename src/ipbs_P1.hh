@@ -82,13 +82,17 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   int ipbsCount = 0;
   // provide a mapper for storing positions of iterated boundary elements
   typedef Dune::SingleCodimSingleGeomTypeMapper<GV, 0> BoundaryElemMapper;
-  // typedef Dune::GlobalUniversalMapper<GV::Grid> BoundaryElemMapper;
   BoundaryElemMapper boundaryElemMapper(gv);
   typedef std::map<int, int> StoreMap;
+  typedef std::vector<int> StoreMapInverse;
   StoreMap storeMap;
+  StoreMapInverse storeMapInverse;
 
   // provide a vector storing the positions, will be resized automatically
-  std::vector<Dune::FieldVector<double,2> > boundaryElemPositions;
+  std::vector<Dune::FieldVector<double,dim> > boundaryElemPositions;
+  // provide a vector storing the normals, will be resized automatically
+  std::vector<Dune::FieldVector<double,dim> > boundaryElemNormals;
+
   typedef typename GV::template Codim<0>::template Partition
           <Dune::Interior_Partition>::Iterator LeafIterator;
   typedef typename GV::IntersectionIterator IntersectionIterator;
@@ -111,7 +115,10 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
             ipbsCount ++;
             // insert elements using insert function
             storeMap.insert(std::pair<int, int>(ipbsCount, boundaryElemMapper.map(*it)));
+            storeMapInverse.push_back(boundaryElemMapper.map(*it));
             boundaryElemPositions.push_back(ii->geometry().center());
+            // remember that the normals point outwards, i.e. when using them we'll have to turn around
+            boundaryElemNormals.push_back(ii->centerUnitOuterNormal());
           }
         }
       }
@@ -170,41 +177,57 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   {
     for (int i=0; i<length_on_processor.size(); i++)
       countBoundElems += length_on_processor[i];
-    std::cout << "Master node is now aware that we want to sent " << countBoundElems
-      << " boundary elements." << std::endl;
+    if (sysParams.get_verbose() > 3)
+      std::cout << "Master node is now aware that we want to sent " << countBoundElems
+        << " boundary elements." << std::endl;
   }
   colCom.broadcast(&countBoundElems,1,0);   // Communicate to all processes how many boundary elements exist
 
   // now master process receives all positions from other processes
   // first every processor creates an array of its position vectors
   double* my_positions = (double*) malloc(dim*boundaryElemPositions.size()*sizeof(double));
+  double* my_normals = (double*) malloc(dim*boundaryElemPositions.size()*sizeof(double));
   for (int i = 0; i<boundaryElemPositions.size(); i++){
     for (int j = 0; j<dim; j++)
+    {
       my_positions[i*dim+j] = boundaryElemPositions.at(i).vec_access(j);
+      my_normals[i*dim+j] = boundaryElemPositions.at(i).vec_access(j);
+    }
   }
   
-  for (int i = 0; i<storeMap.size(); i++){
-    for (int j = 0; j<dim; j+=2)
-      std::cout << my_positions[i*dim+j] << my_positions[i*dim+j+1] << std::endl;
+  if (sysParams.get_verbose() > 4)
+    for (int i = 0; i<storeMap.size(); i++){
+      for (int j = 0; j<dim; j+=2)
+        std::cout << my_positions[i*dim+j] << my_positions[i*dim+j+1] << std::endl;
   }
 
   int indexcounter;   // Count how many positions we already got
   double* all_positions = (double*) malloc(dim*countBoundElems*sizeof(double)); // allocate on all processors
+  double* all_normals = (double*) malloc(dim*countBoundElems*sizeof(double)); // allocate on all processors
   if( colCom.rank() !=0)  // other nodes send their positions to master node
-    MPI_Send(my_positions,dim*boundaryElemPositions.size(),MPI_DOUBLE,0,colCom.rank(),MPI_COMM_WORLD);
+    MPI_Send(my_positions,dim*boundaryElemPositions.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD); // pos sent on slot 0
+    MPI_Send(my_normals,dim*boundaryElemPositions.size(),MPI_DOUBLE,0,1,MPI_COMM_WORLD); // normals sent on slot 1
   if (colCom.rank() == 0) {
     // Write positions of master node
     for (int i = 0; i<boundaryElemPositions.size(); i++){
       for (int j = 0; j<dim; j++)
+      {
         all_positions[i*dim+j] = boundaryElemPositions[i][j];
+        all_normals[i*dim+j] = boundaryElemNormals[i][j];
+      }
     }
+    
     indexcounter = dim*length_on_processor[0];
+    
     if (sysParams.get_verbose() == 5)
       std::cout << "After performing processor 0 indexcounter is: " << indexcounter << std::endl;
+    
     // get positions from other nodes
     for (int i = 1; i < colCom.size(); i++) {
-      std::cout << "Length on processor " << i << " is " << length_on_processor[i] << std::endl;
-      MPI_Recv(&all_positions[indexcounter],dim*length_on_processor[i],MPI_DOUBLE,i,i,MPI_COMM_WORLD,&status);
+      if (sysParams.get_verbose() > 3)
+        std::cout << "Length on processor " << i << " is " << length_on_processor[i] << std::endl;
+      MPI_Recv(&all_positions[indexcounter],dim*length_on_processor[i],MPI_DOUBLE,i,0,MPI_COMM_WORLD,&status);
+      MPI_Recv(&all_normals[indexcounter],dim*length_on_processor[i],MPI_DOUBLE,i,1,MPI_COMM_WORLD,&status);
       indexcounter += dim*length_on_processor[i];
     }
     
@@ -212,39 +235,69 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
       std::cout << "full iterative boundary elements vectors:" << std::endl;
     for (int i = 0; i<countBoundElems; i++){
       for (int j = 0; j<dim; j+=2)
-        std::cout << all_positions[i*dim+j] << all_positions[i*dim+j+1] << std::endl;
+        if (sysParams.get_verbose() > 3)
+          std::cout << all_positions[i*dim+j] << all_positions[i*dim+j+1] << std::endl;
     }
   }
 
   // deploy the iterative boundary positions on all processors
   colCom.broadcast(all_positions,countBoundElems*dim,0); // communicate array
+  colCom.broadcast(all_normals,countBoundElems*dim,0); // communicate array
 
   // ================================================================== 
   // Now every processor knows the iterative boundary elements, i.e. we can start computing
 
   // allocate a vector for the data whose size is according to the number of iterative boundary elements
-  std::vector<double> fluxContainer(countBoundElems);
+  // std::vector<double> fluxContainer(countBoundElems);
+  double* fluxContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
 
-/*  
+  // ================================================================== 
+  
   // --- here the iterative loop starts! ---
   
-  while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
-  // while (sysParams.counter < 3)
+  // while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
+  while (sysParams.counter < 3)
   {	  
     // construct a discrete grid function for access to solution
     typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
     const DGF udgf(gfs, u);
 
-    // call the function precomputing the boundary flux values
-    ipbs_boundary(gv,udgf, mapper, fluxContainer);
+    // Reset error for new iteration
+    sysParams.reset_error();
 
-    // boundary fluxes - this one is for the reference solution!
-    typedef BoundaryFlux<GV,double,std::vector<int> > J;
-    J j(gv, boundaryIndexToEntity);
+    // call the function precomputing the boundary flux values
+    ipbs_boundary(gv,udgf, all_positions, all_normals, fluxContainer, countBoundElems, boundaryIndexToEntity);
+    if (colCom.rank()==0)
+      std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
+        << sysParams.get_error() << std::endl << std::endl;
+
+    // now each processor has computed the values, i.e. we must ALL_REDUCE
+    colCom.sum(fluxContainer,countBoundElems);
+
+    int offset;
+    // determine the offset for each processor to access its fluxes
+    if(colCom.rank()==0)
+    {
+      offset = 0;
+      for (int i=1;i<length_on_processor.size();i++)
+      {
+        offset += length_on_processor[i];
+        MPI_Send(&offset,1,MPI_INT,i,0,MPI_COMM_WORLD);
+      }
+    }
+    if (colCom.rank()!=0)
+      MPI_Recv(&offset,1,MPI_INT,0,0,MPI_COMM_WORLD,&status);
+    
+    // TODO Now the boundary flux for a given element can be obtained by using
+    // storeMapInverse[mapper.map(*it)+offset] where offset is given for each procesor
+
+    // instanciate boundary fluxes
+    typedef BoundaryFlux<GV,double,std::vector<int>, StoreMap> J;
+    J j(gv, boundaryIndexToEntity, fluxContainer,storeMap);
 
     // <<<4>>> Make Grid Operator Space
     typedef PBLocalOperator<M,B,J> LOP;
-    LOP lop(m,b,j, fluxContainer);
+    LOP lop(m,b,j);
     typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
     typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
     GOS gos(gfs,cc,gfs,cc,lop);
@@ -277,11 +330,12 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     Dune::GnuplotWriter<GV> gnuplotwriter(gv);
     gnuplotwriter.addVertexData(u,"solution");
     gnuplotwriter.write(filename + ".dat"); 
+
+    sysParams.counter ++;
   }
 
   // --- here the iterative loop ends! ---
 
-*/
 
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;

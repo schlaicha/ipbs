@@ -157,11 +157,11 @@ private :
 
 //! \brief class defining radiation and Neumann boundary conditions
 
-template<typename GV, typename RF, typename PGMap>
+template<typename GV, typename RF, typename PGMap, typename StoreMap>
 class BoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap> >
+           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap,StoreMap> >
 {
 public:
 
@@ -170,12 +170,13 @@ public:
   typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   //! constructor
-  BoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_), mapper(gv) {}
+  BoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
+      const StoreMap storeMap_) : gv(gv_), pg(pg_), storeMap(storeMap_), mapper(gv)
+  {fluxContainer = fluxValues;}
 
   //! evaluate flux boundary condition
   template<typename I>
-  inline void evaluate(I& i, typename Traits::RangeType& y,
-		       std::vector<double>& fluxContainer) const
+  inline void evaluate(I& i, typename Traits::RangeType& y) const
   {
     /** use physical index to determine B.C.
     *   values are specified in .geo file
@@ -188,7 +189,7 @@ public:
     {
       case 1:   y = 0.0;  break; // Set Neumann for symmetry
       case 2:   // Set Neumann for iPBS
-		  {
+      {
 		    y = fluxContainer[mapper.map(*i.inside())]; break;
 		  }
       //! /todo missing check
@@ -201,6 +202,8 @@ private:
 
   const GV&    gv;
   const PGMap& pg;
+  const double* fluxContainer;
+  const StoreMap storeMap;
   const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };
 
