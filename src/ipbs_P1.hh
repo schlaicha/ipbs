@@ -114,7 +114,7 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
                 << colCom.rank() << std::endl;
             ipbsCount ++;
             // insert elements using insert function
-            storeMap.insert(std::pair<int, int>(ipbsCount, boundaryElemMapper.map(*it)));
+            storeMap.insert(std::pair<int, int>(boundaryElemMapper.map(*it),ipbsCount));
             storeMapInverse.push_back(boundaryElemMapper.map(*it));
             boundaryElemPositions.push_back(ii->geometry().center());
             // remember that the normals point outwards, i.e. when using them we'll have to turn around
@@ -142,13 +142,14 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     std::cout << "Store Map looks like:" << std::endl;
     for(int i = 0; i < storeMap.size(); ++i)
     {
-      std::cout << storeMap[i] << std::endl;
+      std::cout << storeMapInverse[i] << "\t" << storeMap.find(storeMapInverse[i])->second << std::endl;
     }
   }
 
   // storeMap now contains the local indices of iterative boundary elements
   // and boundaryElemPositions the position vectors on each processor
-  // ================================================================== 
+  // ==================================================================
+
   // Now communicate the boundary positions
   
   // master process receives length of vectors on each processor
@@ -183,6 +184,53 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   }
   colCom.broadcast(&countBoundElems,1,0);   // Communicate to all processes how many boundary elements exist
 
+  // ================================================================== 
+  // get a global store map
+  StoreMap globalStoreMap;
+  if(colCom.rank() == 0)
+  {
+    globalStoreMap = storeMap; // On rank 0 we don't have an offset
+    // Now receive the indices from the other processors
+    for (int i=1; i<colCom.rank(); i++)
+    {
+      int* index = (int*) malloc(length_on_processor[i]*sizeof(int));
+      MPI_Recv(index,length_on_processor[i],MPI_INT,i,2,MPI_COMM_WORLD,&status); // send indices on slot 2
+      for (int j=0; j<length_on_processor[i]; j++)
+        globalStoreMap.insert(std::pair<int, int>(j+length_on_processor[i-1], index[j]));
+      free(index);
+    }
+  }
+  if (colCom.rank()!=0)
+  {
+    // Create an array containing the index and sent to master
+    int* index = (int*) malloc(storeMap.size()*sizeof(int));
+    for(int i=0; i<storeMap.size(); i++)
+      index[i] = storeMap.find(i)->second;
+    //  std::cout << "StoreMapInverse: " << storeMapInverse[i] << std::endl;
+    MPI_Send(index, storeMap.size(), MPI_INT, 0, 2, MPI_COMM_WORLD);
+    free(index);
+  }
+
+  // Now send the globalStoreMap
+  if (colCom.rank()==0)
+  {
+    int* index = (int*) malloc(globalStoreMap.size()*sizeof(int));
+    for(int i=0; i<globalStoreMap.size(); i++)
+      index[i] = globalStoreMap.find(i)->second;
+    for (int i=1; i<colCom.size(); i++)
+      MPI_Send(index, globalStoreMap.size(), MPI_INT, i, 3, MPI_COMM_WORLD);
+    free(index);
+  }
+  if (colCom.rank()!= 0)
+  {
+    int* index = (int*) malloc(countBoundElems*sizeof(int));
+    MPI_Recv(index,countBoundElems,MPI_INT,0,3,MPI_COMM_WORLD,&status); // recieve global indices on slot 3
+    for(int i=0; i<countBoundElems; i++)
+      globalStoreMap.insert(std::pair<int, int>(i, index[i]));
+    free(index);
+  }
+
+  // ================================================================== 
   // now master process receives all positions from other processes
   // first every processor creates an array of its position vectors
   double* my_positions = (double*) malloc(dim*boundaryElemPositions.size()*sizeof(double));
@@ -196,9 +244,12 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   }
   
   if (sysParams.get_verbose() > 4)
+  {
+    std::cout << "On rank " << colCom.rank() << " positions are:" << std::endl;
     for (int i = 0; i<storeMap.size(); i++){
       for (int j = 0; j<dim; j+=2)
         std::cout << my_positions[i*dim+j] << my_positions[i*dim+j+1] << std::endl;
+    }
   }
 
   int indexcounter;   // Count how many positions we already got
@@ -236,7 +287,7 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     for (int i = 0; i<countBoundElems; i++){
       for (int j = 0; j<dim; j+=2)
         if (sysParams.get_verbose() > 3)
-          std::cout << all_positions[i*dim+j] << all_positions[i*dim+j+1] << std::endl;
+          std::cout << all_positions[i*dim+j] << "\t" << all_positions[i*dim+j+1] << std::endl;
     }
   }
 
@@ -255,8 +306,8 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   
   // --- here the iterative loop starts! ---
   
-  // while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
-  while (sysParams.counter < 3)
+  while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
+  // while (sysParams.counter < 3)
   {	  
     // construct a discrete grid function for access to solution
     typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
@@ -271,6 +322,11 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
       std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
         << sysParams.get_error() << std::endl << std::endl;
 
+    std::cout << "Before summing fluxes on rank " << colCom.rank() << ":" << std::endl;
+    for (int i = 0; i<countBoundElems; i++)
+      std::cout << i << "\t" << fluxContainer[i] << std::endl;
+
+
     // now each processor has computed the values, i.e. we must ALL_REDUCE
     colCom.sum(fluxContainer,countBoundElems);
 
@@ -279,10 +335,11 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     if(colCom.rank()==0)
     {
       offset = 0;
+      int sendOffset = 0;
       for (int i=1;i<length_on_processor.size();i++)
       {
-        offset += length_on_processor[i];
-        MPI_Send(&offset,1,MPI_INT,i,0,MPI_COMM_WORLD);
+        sendOffset += length_on_processor[i];
+        MPI_Send(&sendOffset,1,MPI_INT,i,0,MPI_COMM_WORLD);
       }
     }
     if (colCom.rank()!=0)
@@ -291,9 +348,13 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     // TODO Now the boundary flux for a given element can be obtained by using
     // storeMapInverse[mapper.map(*it)+offset] where offset is given for each procesor
 
+    std::cout << "fluxes on rank " << colCom.rank() << ":" << std::endl;
+    for (int i = 0; i<globalStoreMap.size(); i++)
+      std::cout << i << "\t" << fluxContainer[i] << std::endl;
+
     // instanciate boundary fluxes
     typedef BoundaryFlux<GV,double,std::vector<int>, StoreMap> J;
-    J j(gv, boundaryIndexToEntity, fluxContainer,storeMap);
+    J j(gv, boundaryIndexToEntity, fluxContainer,globalStoreMap,offset);
 
     // <<<4>>> Make Grid Operator Space
     typedef PBLocalOperator<M,B,J> LOP;

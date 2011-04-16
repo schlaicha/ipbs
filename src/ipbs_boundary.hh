@@ -20,12 +20,12 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 
   
   // // show me the distributed vectors
-  // for(int i = 0; i < fluxContainer.size(); i++)
+  // for(int i = 0; i < countBoundElems; i++)
   // {
   //   std::cout << positions[i*dim] << "\t" << positions[i*dim+1] << std::endl;
   // }
   // // show me the distributed vectors
-  // for(int i = 0; i < fluxContainer.size(); i++)
+  // for(int i = 0; i < countBoundElems; i++)
   // {
   //   std::cout << normals[i*dim] << "\t" << normals[i*dim+1] << std::endl;
   // }
@@ -105,12 +105,19 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 	      // (using standard coulomb field formula)
         // NOTE: For algorithm validation we use the pillowbox conribution
 
+        // TODO either make sure you only use the pillow box or use correct
+        // interation (1/dist-term and volume)
+
         switch ( sysParams.get_symmetry() )
           {
             case 1:	// "2D_cylinder"
               {
-                fluxCoulomb += 1.0 * sysParams.get_charge_density()
-                  * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+                 //fluxCoulomb += 1.0 * sysParams.get_charge_density()
+                 //  * sysParams.get_bjerrum() * 2.0 * sysParams.pi
+                 //  / countBoundElems;
+                 fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
+                  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm());
+
               }
               break;
             case 2: // "2D_sphere"

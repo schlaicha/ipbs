@@ -171,7 +171,8 @@ public:
 
   //! constructor
   BoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
-      const StoreMap storeMap_) : gv(gv_), pg(pg_), storeMap(storeMap_), mapper(gv)
+      StoreMap storeMap_, const int offset_) : gv(gv_), pg(pg_), storeMap(storeMap_),
+      offset(offset_), mapper(gv)
   {fluxContainer = fluxValues;}
 
   //! evaluate flux boundary condition
@@ -190,7 +191,10 @@ public:
       case 1:   y = 0.0;  break; // Set Neumann for symmetry
       case 2:   // Set Neumann for iPBS
       {
-		    y = fluxContainer[mapper.map(*i.inside())]; break;
+        int mappedIndex = storeMap.find(mapper.map(*i.inside()))->second + offset;
+		    y = fluxContainer[mappedIndex]; 
+ //       std::cout << "At element " << mapper.map(*i.inside()) << " stored at pos " << storeMap.find(mapper.map(*i.inside()))->second+offset << " y= " << y << std::endl;
+        break;
 		  }
       //! /todo missing check
       default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
@@ -203,7 +207,8 @@ private:
   const GV&    gv;
   const PGMap& pg;
   const double* fluxContainer;
-  const StoreMap storeMap;
+  StoreMap storeMap;
+  const int offset;
   const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };
 

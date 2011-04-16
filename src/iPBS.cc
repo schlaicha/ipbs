@@ -126,7 +126,7 @@ int main(int argc, char** argv)
   {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
-    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, false);
+    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
   }
 
   // for (int i=0;i<elementIndexToEntity.size();i++)
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
  const GV& gv = grid->leafView();
 
  // Call problem drivers
-// ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
+ ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity);
  ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
   
  // done
