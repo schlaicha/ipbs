@@ -301,6 +301,8 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   // allocate a vector for the data whose size is according to the number of iterative boundary elements
   // std::vector<double> fluxContainer(countBoundElems);
   double* fluxContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
+  for(int i=0; i<countBoundElems; i++)
+    fluxContainer[i] = 0.0;
 
   // ================================================================== 
   
@@ -328,7 +330,7 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
 
 
     // now each processor has computed the values, i.e. we must ALL_REDUCE
-    colCom.sum(fluxContainer,countBoundElems);
+    //colCom.sum(fluxContainer,countBoundElems);
 
     int offset;
     // determine the offset for each processor to access its fluxes

@@ -75,7 +75,7 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_BCGS_AMG_SSOR<GFS> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
   LS ls(gfs);
 
   // <<<5b>>> Solve nonlinear problem

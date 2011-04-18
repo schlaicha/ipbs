@@ -225,14 +225,6 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
            }
 	 }
        }	 
-
-       double flux = fluxCoulomb + fluxIntegrated;
-       // Do SOR step and add error
-       flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[mapper.map(*it)];
-       double error = fabs(2.0*(flux-fluxContainer[mapper.map(*it)])/(flux+fluxContainer[mapper.map(*it)]));
-       sysParams.add_error(error);
-       // Store new flux
-       fluxContainer[mapper.map(*it)] = flux;
      }
    }
  }
