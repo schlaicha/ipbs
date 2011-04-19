@@ -36,6 +36,8 @@ class SysParams {
   void set_refinement(int level);
   void set_radius(double value);
   void set_verbose(int value);
+	void set_charge_density (double value);
+	void set_symmetry (int value);
 	
   private:
 	double lambda;

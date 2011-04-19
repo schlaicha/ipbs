@@ -20,11 +20,17 @@ SysParams::SysParams()
     // 2 is "2D_sphere"
     // 3 is "3D"  - not verified!
     
-    // This is the individual setup for THIS system!
-    symmetry = 1;
-    pos = 0;
     //charge_density = charge / (4 * pi * radius * radius);
-    charge_density = 0.1;
+}
+
+void SysParams::set_symmetry(int value)
+{
+  symmetry = value;
+}
+
+void SysParams::set_charge_density(double value)
+{
+  charge_density = value;
 }
 
 void SysParams::set_verbose(int value)

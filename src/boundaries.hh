@@ -157,11 +157,11 @@ private :
 
 //! \brief class defining radiation and Neumann boundary conditions
 
-template<typename GV, typename RF, typename PGMap, typename StoreMap>
+template<typename GV, typename RF, typename PGMap, typename IndexLookupMap>
 class BoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap,StoreMap> >
+           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap, IndexLookupMap> >
 {
 public:
 
@@ -171,8 +171,8 @@ public:
 
   //! constructor
   BoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
-      StoreMap storeMap_, const int offset_) : gv(gv_), pg(pg_), storeMap(storeMap_),
-      offset(offset_), mapper(gv)
+      const IndexLookupMap& indexLookupMap_, const int offset_) : gv(gv_), pg(pg_),
+      indexLookupMap(indexLookupMap_), offset(offset_), mapper(gv)
   {fluxContainer = fluxValues;}
 
   //! evaluate flux boundary condition
@@ -191,9 +191,10 @@ public:
       case 1:   y = 0.0;  break; // Set Neumann for symmetry
       case 2:   // Set Neumann for iPBS
       {
-        int mappedIndex = storeMap.find(mapper.map(*i.inside()))->second + offset;
+        //int mappedIndex = globalIpbsIndices[mapper.map(*i.inside())] + offset;
+        int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
 		    y = fluxContainer[mappedIndex]; 
- //       std::cout << "At element " << mapper.map(*i.inside()) << " stored at pos " << storeMap.find(mapper.map(*i.inside()))->second+offset << " y= " << y << std::endl;
+//        std::cout << "At element " << mapper.map(*i.inside()) << " stored at pos " <<indexLookupMap.find(mapper.map(*i.inside()))->second + offset << " y= " << y << std::endl;
         break;
 		  }
       //! /todo missing check
@@ -207,7 +208,7 @@ private:
   const GV&    gv;
   const PGMap& pg;
   const double* fluxContainer;
-  StoreMap storeMap;
+  const IndexLookupMap& indexLookupMap;
   const int offset;
   const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };

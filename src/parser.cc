@@ -45,4 +45,6 @@ void parser(std::string config_file)
   sysParams.set_lambda(configuration.get<double>("system.lambda",lambda));
   sysParams.set_radius(configuration.get<double>("system.radius",radius));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
+  sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
+  sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
 }

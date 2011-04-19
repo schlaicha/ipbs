@@ -4,11 +4,12 @@
     \todo { Doc Me ! }   
 */
 
-template <class GV, class DGF>
+template <class GV, class DGF, typename IndexLookupMap, typename BoundaryElemMapper>
 void ipbs_boundary(const GV& gv, const DGF& udgf,
       const double positions[], const double normals[],
 			double fluxContainer[], const int &countBoundElems,
-      const std::vector<int>& boundaryIndexToEntity)
+      const std::vector<int>& boundaryIndexToEntity,
+      const IndexLookupMap& indexLookupMap, const BoundaryElemMapper& boundaryElemMapper)
 {
   // some typedef
   const int dim = GV::dimension;
@@ -19,32 +20,19 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                                   						// (for calculating sinh-term)
 
   
-  // // show me the distributed vectors
-  // for(int i = 0; i < countBoundElems; i++)
-  // {
-  //   std::cout << positions[i*dim] << "\t" << positions[i*dim+1] << std::endl;
-  // }
-  // // show me the distributed vectors
-  // for(int i = 0; i < countBoundElems; i++)
-  // {
-  //   std::cout << normals[i*dim] << "\t" << normals[i*dim+1] << std::endl;
-  // }
-
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   
   // Precompute fluxes
   for(int i = 0; i < countBoundElems; i++)
   {
-    int testcounter = 0;
-
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal;
-    Dune::FieldVector<ctype,dim> r_prime;  // vector of iterative surface boundary center
+    Dune::FieldVector<ctype,dim> r;  // vector of iterative surface boundary center
     for(int j=0; j<dim; j++)
     {
         unitNormal[j] = normals[i*dim+j];
-        r_prime[j] = positions[i*dim+j];
+        r.vec_access(j) = positions[i*dim+j];
     }
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
    
@@ -58,7 +46,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // and sum up their flux contributions
 	  
       // Get the position vector of the this element's center
-      Dune::FieldVector<ctype,dim> r = it->geometry().center();
+      Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
       Dune::FieldVector<ctype,dim> dist = r - r_prime;
 	  
       // integrate sinh over all elements but all the surface ones, where
@@ -74,12 +62,14 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // ================================================================== 
       // Integral over all elements but the surface ones
       // ================================================================== 
-     
-      if (isIPBS_Elem == false)
+      
+      bool isItself = (indexLookupMap.find(boundaryElemMapper.map(*it))->second == i);
+      if (isIPBS_Elem == false && isItself == false)
       {
         // Evaluate the potential at the elements center
 	      RT value;
         udgf.evaluate(*it,it->geometry().center(),value);
+        double a, b;  // parameters for elliptic
 
         // integration depends on symmetry
         switch( sysParams.get_symmetry() )
@@ -91,6 +81,17 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                 / sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0/4.0/sysParams.pi;
             }
             break;
+          case 2:
+	          {
+              a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+	            b = 2 * r[1] * r_prime[1];
+	            fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
+                              * eval_elliptic(a,b)
+                              * std::sinh(value)*it->geometry().volume();
+	            //std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
+	          }
+	          break;
+
         }
 
       }
@@ -112,11 +113,12 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           {
             case 1:	// "2D_cylinder"
               {
-                 //fluxCoulomb += 1.0 * sysParams.get_charge_density()
-                 //  * sysParams.get_bjerrum() * 2.0 * sysParams.pi
-                 //  / countBoundElems;
+                 // fluxCoulomb += 1.0 * sysParams.get_charge_density()
+                 // * sysParams.get_bjerrum() * 2.0 * sysParams.pi
+                 // / countBoundElems;
                  fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
-                  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm());
+                  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
+                  * it ->geometry().volume();
 
               }
               break;
@@ -133,6 +135,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // Integral over surface elements
     // ================================================================== 
     double flux = fluxCoulomb + fluxIntegrated;
+    std::cout << "fluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " << fluxIntegrated << "\tflux: " << flux << std::endl;
     // Do SOR step and add error
     flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[i];
     double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
