@@ -212,7 +212,6 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
       for (int j = 0; j<dim; j+=2)
         std::cout << my_positions[i*dim+j] << my_positions[i*dim+j+1] << std::endl;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     std::cout << "On rank " << colCom.rank() << " normals are:" << std::endl;
     for (unsigned int i = 0; i<boundaryElemNormals.size(); i++){
       for (int j = 0; j<dim; j+=2)
@@ -223,9 +222,11 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   int indexcounter;   // Count how many positions we already got
   double* all_positions = (double*) malloc(dim*countBoundElems*sizeof(double)); // allocate on all processors
   double* all_normals = (double*) malloc(dim*countBoundElems*sizeof(double)); // allocate on all processors
-  if( colCom.rank() !=0)  // other nodes send their positions to master node
+  if( colCom.rank() !=0) // other nodes send their positions to master node
+  {
     MPI_Send(my_positions,dim*boundaryElemPositions.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD); // pos sent on slot 0
     MPI_Send(my_normals,dim*boundaryElemPositions.size(),MPI_DOUBLE,0,1,MPI_COMM_WORLD); // normals sent on slot 1
+  }
   if (colCom.rank() == 0)
   {
     // Write positions of master node
@@ -293,8 +294,7 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   
   // --- here the iterative loop starts! ---
   
-  while (sysParams.get_error() > 1E-3 && sysParams.counter < 11)
-  // while (sysParams.counter < 3)
+  while (sysParams.get_error() > sysParams.get_tolerance() && sysParams.counter < 15)
   {	  
     // construct a discrete grid function for access to solution
     typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
@@ -309,16 +309,18 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     if (colCom.rank()==0)
       std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
         << sysParams.get_error() << std::endl << std::endl;
-
+    MPI_Barrier(MPI_COMM_WORLD);
     if (sysParams.get_verbose() > 2)
     {
       std::cout << "Before summing fluxes on rank " << colCom.rank() << ":" << std::endl;
       for (unsigned int i = 0; i<countBoundElems; i++)
         std::cout << i << "\t" << fluxContainer[i] << std::endl;
     }
-
+  
+    MPI_Barrier(MPI_COMM_WORLD);
     // now each processor has computed the values, i.e. we must ALL_REDUCE
-    colCom.sum(fluxContainer,countBoundElems);
+    // colCom.sum(fluxContainer,countBoundElems);
+    MPI_Allreduce(MPI_IN_PLACE, fluxContainer, countBoundElems, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     int offset;
     // determine the offset for each processor to access its fluxes

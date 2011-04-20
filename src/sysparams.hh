@@ -21,6 +21,8 @@ class SysParams {
 	double get_sphere_pos();
 	double get_error();
 	double get_alpha();
+	double get_r2i();
+	double get_tolerance();
  	int get_symmetry();
   int get_refinement();
   int get_verbose();
@@ -35,6 +37,7 @@ class SysParams {
   void set_meshfile(std::string filename);
   void set_refinement(int level);
   void set_radius(double value);
+  void set_tolerance(double value);
   void set_verbose(int value);
 	void set_charge_density (double value);
 	void set_symmetry (int value);
@@ -46,8 +49,10 @@ class SysParams {
 	double charge_density;
 	double charge;
 	double epsilon;
-	double radius;  // TODO: still needed?
-	double totalError;
+	double radius; 
+  double r2i;
+  double tolerance;
+  double totalError;
 	int symmetry;
 	double alpha;	// SOR parameter
 	double pos;

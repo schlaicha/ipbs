@@ -31,19 +31,20 @@ void parser(std::string config_file)
   sysParams.set_meshfile(configuration.get<std::string>("mesh.filename"));
 
   // default values
-  static const double alpha_sor = 0.7;
-  static const int level = 0;
-  static const int verbose = 4;
-  static const double lambda = 1.0;
-  static const double bjerrum = 0.7;
-  static const double radius = 1.0;
+  const double alpha_sor = 0.7;
+  const int level = 0;
+  const int verbose = 4;
+  const double lambda = 1.0;
+  const double bjerrum = 0.7;
+  const double radius = 1.0;
 
   // Parse other options
-  sysParams.set_alpha(configuration.get<double>("solver.alpha_sor",alpha_sor));
+  sysParams.set_alpha(configuration.get<double>("solver.alpha_sor"));
   sysParams.set_refinement(configuration.get<int>("mesh.global_refinement_level",level));
   sysParams.set_bjerrum(configuration.get<double>("system.bjerrum",bjerrum));
   sysParams.set_lambda(configuration.get<double>("system.lambda",lambda));
   sysParams.set_radius(configuration.get<double>("system.radius",radius));
+  sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
   sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
   sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));

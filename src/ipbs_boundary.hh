@@ -24,7 +24,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   CoulombFlux<ctype,dim> f;
   
   // Precompute fluxes
-  for(int i = 0; i < countBoundElems; i++)
+  // for(int i = 0; i < countBoundElems; i++)
+  for(int i = countBoundElems - 1; i >= 0; i--)
   {
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal;
@@ -113,12 +114,11 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           {
             case 1:	// "2D_cylinder"
               {
-                 // fluxCoulomb += 1.0 * sysParams.get_charge_density()
-                 // * sysParams.get_bjerrum() * 2.0 * sysParams.pi
-                 // / countBoundElems;
-                 fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
-                  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
-                  * it ->geometry().volume();
+                 fluxCoulomb = 1.0 * sysParams.get_charge_density()
+		               * sysParams.get_bjerrum() * 2.0 * sysParams.pi / 2.0;
+                 // fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
+                 // * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
+                 // * it ->geometry().volume();
 
               }
               break;

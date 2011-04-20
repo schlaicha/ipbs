@@ -7,25 +7,28 @@
 
 // Constructor
 // Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
-// SysParams::SysParams(double _lambda=1.0, double _bjerrum=0.7, 
-//                      double _charge=55, double _epsilon=80.0, 
-//                      double _radius=1.0)
-//                     :lambda(_lambda),bjerrum(_bjerrum),charge(_charge),
-//                      epsilon(_epsilon),radius(_radius)
 SysParams::SysParams()
 {
 	totalError = 1E8;
-    // Set the systems symmetry
-    // 1 is "2D_cylinder"
-    // 2 is "2D_sphere"
-    // 3 is "3D"  - not verified!
-    
-    //charge_density = charge / (4 * pi * radius * radius);
+}
+
+double SysParams::get_r2i()
+{
+  return r2i;
 }
 
 void SysParams::set_symmetry(int value)
 {
+  // Set the systems symmetry
+  // 1 is "2D_cylinder"
+  // 2 is "2D_sphere"
+  // 3 is "3D"  - not verified!
   symmetry = value;
+}
+
+void SysParams::set_tolerance(double value)
+{
+  tolerance = value;
 }
 
 void SysParams::set_charge_density(double value)
@@ -51,6 +54,7 @@ void SysParams::set_bjerrum(double value)
 void SysParams::set_radius(double value)
 {
   radius = value;
+  r2i = 1.0 / (radius * radius);
 }
 
 double SysParams::get_radius()
@@ -104,6 +108,11 @@ double SysParams::get_bjerrum()
 double SysParams::get_lambda2i()
 {
 	return lambda2i;
+}
+
+double SysParams::get_tolerance()
+{
+	return tolerance;
 }
 
 double SysParams::get_charge_density()

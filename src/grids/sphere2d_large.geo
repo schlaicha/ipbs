@@ -1,0 +1,25 @@
+// Gmsh project created on Wed Apr 20 18:00:08 2011
+radius=5;
+Point(1) = {0, 0, 0, 0};
+Point(2) = {radius, 0, 0, 0};
+Point(3) = {0, radius, 0, 0};
+Point(5) = {-radius, 0, 0, 0};
+Point(6) = {-100, 100, 0, 0};
+Point(7) = {100, 100, 0, 0};
+Point(8) = {100, 0, 0, 0};
+Point(9) = {-100, 0, 0, 0};
+Line(1) = {5, 9};
+Line(2) = {6, 9};
+Line(3) = {6, 7};
+Line(4) = {7, 8};
+Line(5) = {8, 2};
+Circle(6) = {2, 1, 3};
+Circle(7) = {3, 1, 5};
+Line Loop(8) = {3, 4, 5, 6, 7, 1, -2};
+Plane Surface(9) = {8};
+Physical Line(0) = {2, 3, 4};
+Physical Line(1) = {5, 1};
+Physical Line(2) = {6, 7};
+Physical Surface(13) = {9};
+Transfinite Line {6, 7} = 64 Using Progression 1;
+Transfinite Line {5, 1} = 32 Using Progression 1;
