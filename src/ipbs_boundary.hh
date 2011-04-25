@@ -86,9 +86,9 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 	          {
               a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
 	            b = 2 * r[1] * r_prime[1];
-	            fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
-                              * eval_elliptic(a,b)
-                              * std::sinh(value)*it->geometry().volume();
+	            // fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
+              //                * eval_elliptic(a,b)
+              //                * std::sinh(value)*it->geometry().volume();
 	            //std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
 	          }
 	          break;
@@ -100,7 +100,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // ================================================================== 
       // Integral over surface elements
       // ================================================================== 
-      else if (isIPBS_Elem == true)
+      else if (isIPBS_Elem == true && isItself == false)
       {
         // we are on a surface element and do integration for coulomb flux
 	      // add surface charge contribution from all other surface elements but this one
@@ -114,17 +114,20 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           {
             case 1:	// "2D_cylinder"
               {
-                 fluxCoulomb = 1.0 * sysParams.get_charge_density()
-		               * sysParams.get_bjerrum() * 2.0 * sysParams.pi / 2.0;
-                 // fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
-                 // * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
-                 // * it ->geometry().volume();
+                // Pillow box contribution
+                fluxCoulomb = 1.0 * sysParams.get_charge_density()
+		             * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+                // Integrated version
+                // fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
+                //  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
+                //  * it ->geometry().volume();
 
               }
               break;
             case 2: // "2D_sphere"
               {
-                fluxCoulomb += 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+                // Pillow Box contribution
+                fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
               }
             break;
           }

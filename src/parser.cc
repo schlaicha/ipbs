@@ -38,14 +38,24 @@ void parser(std::string config_file)
   const double bjerrum = 0.7;
   const double radius = 1.0;
 
+  // set the symmetry of the system
+  sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
+  
   // Parse other options
-  sysParams.set_alpha(configuration.get<double>("solver.alpha_sor"));
+  sysParams.set_alpha(configuration.get<double>("solver.alpha_sor",alpha_sor));
   sysParams.set_refinement(configuration.get<int>("mesh.global_refinement_level",level));
   sysParams.set_bjerrum(configuration.get<double>("system.bjerrum",bjerrum));
   sysParams.set_lambda(configuration.get<double>("system.lambda",lambda));
   sysParams.set_radius(configuration.get<double>("system.radius",radius));
   sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
-  sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
-  sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
+
+  if (sysParams.get_symmetry() == 1)
+    sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
+  else 
+  {
+    double charge_density = configuration.get<double>("system.charge") / (4.0 * sysParams.pi
+        * sysParams.get_radius() * sysParams.get_radius());
+    sysParams.set_charge_density(charge_density);
+  }
 }
