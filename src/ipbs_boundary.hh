@@ -53,12 +53,21 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // integrate sinh over all elements but all the surface ones, where
       // the densiy of counterions is zero by definition
       bool isIPBS_Elem = false;
+      double dA = 0.0;
+      double a, b;  // parameters for elliptic
+      Dune::FieldVector<ctype,dim> dist2;
+      Dune::FieldVector<ctype,dim> r_prime2;
       typedef typename GV::IntersectionIterator IntersectionIterator;
       // check that we are not on an IPBS surface element
       if(it->hasBoundaryIntersections() == true)
       for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
         if(ii->boundary() == true && boundaryIndexToEntity[ii->boundarySegmentIndex()] == 2)
+        {
           isIPBS_Elem = true;
+          dA = ii->geometry().volume();
+          r_prime2 = ii->geometry().center();
+          dist2 = r - r_prime2;
+        }
 
       // ================================================================== 
       // Integral over all elements but the surface ones
@@ -70,25 +79,25 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         // Evaluate the potential at the elements center
 	      RT value;
         udgf.evaluate(*it,it->geometry().center(),value);
-        double a, b;  // parameters for elliptic
 
         // integration depends on symmetry
         switch( sysParams.get_symmetry() )
         {
           case 1: // "2D_cylinder"
             {
-              fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
-                * it->geometry().volume() * (dist * unitNormal)
-                / sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0/4.0/sysParams.pi;
+              //fluxIntegrated += std::sinh(value) / (dist.two_norm() * dist.two_norm())
+              //  * it->geometry().volume() * (dist * unitNormal)
+              //  / sysParams.get_bjerrum()*sysParams.get_lambda2i()*1.0/4.0/sysParams.pi;
             }
             break;
           case 2:
 	          {
               a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
 	            b = 2 * r[1] * r_prime[1];
-	            // fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
-              //                * eval_elliptic(a,b)
-              //                * std::sinh(value)*it->geometry().volume();
+	            fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
+                              * eval_elliptic(a,b)
+                              * std::sinh(value)*it->geometry().volume()
+                        / 2.53705882; // MAGIC
 	            //std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
 	          }
 	          break;
@@ -114,20 +123,30 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           {
             case 1:	// "2D_cylinder"
               {
-                // Pillow box contribution
-                fluxCoulomb = 1.0 * sysParams.get_charge_density()
-		             * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
-                // Integrated version
-                // fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
-                //  * (dist*unitNormal) / (dist.two_norm() * dist.two_norm())
-                //  * it ->geometry().volume();
-
+                // Pillow box contribution - for testing ...
+                // fluxCoulomb = 1.0 * sysParams.get_charge_density()
+		            // * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+                // Integrated Coulomb flux - TODO: this is not working properly!
+                fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
+                   * (dist2*unitNormal) / (dist2.two_norm() * dist2.two_norm())
+                   *  dA;              
               }
               break;
+
             case 2: // "2D_sphere"
               {
-                // Pillow Box contribution
-                fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+                // Pillow Box contribution - for testing ...
+                // fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+
+                // Integrated Coulomb flux
+                a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+	              b = 2.0 * r[1] * r_prime[1];
+                fluxCoulomb += 1.0 *sysParams.get_bjerrum() * sysParams.get_charge_density()
+                  * eval_elliptic(a,b) * dA
+                  * sysParams.get_radius() // metric factor for surface elem
+                        * sqrt(1-(r_prime2[0]*r_prime2[0])*sysParams.get_r2i())
+                        / 2.53705882 // MAGIC
+                  / 2.0 /sysParams.pi;
               }
             break;
           }
@@ -138,7 +157,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // Integral over surface elements
     // ================================================================== 
     double flux = fluxCoulomb + fluxIntegrated;
-    std::cout << "fluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " << fluxIntegrated << "\tflux: " << flux << std::endl;
+//    std::cout << "fluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " << fluxIntegrated << "\tflux: " << flux; 
     // Do SOR step and add error
     flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[i];
     double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
