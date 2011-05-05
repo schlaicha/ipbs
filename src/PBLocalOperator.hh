@@ -92,25 +92,16 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 
-	// Parameters describing the PDE
-	RF f = -1.0 * sysParams.get_lambda2i() * sinh(u);
-	RF a = 0.0; 
+      	// Parameters describing the PDE
+	      RF f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+      	RF a = 0.0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
 
-        // choose correct metric for integration (depending on symmetry)
-        RF metric;
-        switch ( sysParams.get_symmetry() )
-        {
-                case 1: metric = 1.0; break; // "2D_cylinder"
-                case 2: metric = sysParams.get_radius()*2.0*sysParams.pi; break;   // "2D_sphere"
-                case 3: metric = 1.0; break; // "3D"
-                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
-        }
-        // Integration with added term for metric
+       // Integration with added term for metric
         for (size_type i=0; i<lfsu.size(); i++)
-          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor*metric;
+          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
       }
   }
 
@@ -157,26 +148,14 @@ public:
         lfsu_s.finiteElement().localBasis().evaluateFunction(local,phi);
 	
         // evaluate flux boundary condition
-	typename J::Traits::RangeType y;
-	j.evaluate(ig, y);
+	      typename J::Traits::RangeType y;
+      	j.evaluate(ig, y);
 	
-	// integrate j
+      	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
-
-        // choose correct metric for integration (depending on symmetry)
-        RF metric;
-        switch ( sysParams.get_symmetry() )
-        {
-                case 1: metric = 1.0; break; // "2D_cylinder"
-                case 2: metric = sysParams.get_radius()*2.0*sysParams.pi
-                        * sqrt(1-(local[0]*local[0])*sysParams.get_r2i());
-                        break;   // "2D_sphere"
-                case 3: metric = 1.0; break; // "3D"
-                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
-        }
         // Integration with added term for metric
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor*metric;
+          r_s[i] += y*phi[i]*factor;
       }
   }
   
