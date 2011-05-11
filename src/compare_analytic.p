@@ -17,7 +17,7 @@ set xr [5:15]
 set yr [1e-5:]
 set log y
 f(x)=a*exp(-x)/x
-fit f(x) 'reference.dat' u (sqrt($1*$1+$2*$2)):(-$3) via a
+fit f(x) 'data_backup.dat' u (sqrt($1*$1+$2*$2)):(-$4) via a
 set pointsize 1
 
-plot "reference.dat" u (sqrt($1*$1+$2*$2)):(-$3) title 'finite element solution' pt 7, f(x) title 'debye hueckel fit' ls 3 lw 2
+plot "data_backup.dat" u (sqrt($1*$1+$2*$2)):(-$4) title 'finite element solution' pt 7, f(x) title 'debye hueckel fit' ls 3 lw 2

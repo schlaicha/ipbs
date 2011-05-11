@@ -31,6 +31,7 @@ class SysParams {
   // Functions setting the private members
   void add_error(double);
 	void reset_error();
+  void reset_error(double error);
 	void set_lambda (double value);
 	void set_bjerrum (double value);
 	void set_alpha(double);

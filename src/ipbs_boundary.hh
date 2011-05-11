@@ -41,6 +41,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
    
     double fluxIntegrated = 0.0;
     double fluxCoulomb = 0.0;
+    Dune::FieldVector<ctype,dim> E_field(0);
 	   
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
             	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
@@ -76,7 +77,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // ================================================================== 
       
       bool isItself = (indexLookupMap.find(boundaryElemMapper.map(*it))->second == i);
-      if (isIPBS_Elem == false && isItself == false)
+      //if (isIPBS_Elem == false && isItself == false)
+      if (isIPBS_Elem == false)
       {
         // Evaluate the potential at the elements center
 	      RT value;
@@ -94,14 +96,27 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
             break;
           case 2:
 	          {
-              //a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
-	            //b = 2 * r[1] * r_prime[1];
-	            //fluxIntegrated += sysParams.get_lambda2i()/(4.0*sysParams.pi)
-              //                * eval_elliptic(a,b)
-              //                * std::sinh(value)*it->geometry().volume()
-              //          / 2.53705882; // MAGIC
-	            //std::cout << "fluxIntegrated: " << fluxIntegrated << std::endl; 
-	          }
+              // Calculate the integrated sinh term
+              a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+	            b = 2.0 * r[1] * r_prime[1];
+              k = sqrt(2.0*b/(a+b));
+              
+              E_field[0] = 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_SINGLE)
+                           / sqrt((a-b)*(a-b)*(a-b))
+                           * dist[0];
+              E_field[1] = 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_SINGLE)
+                           / sqrt((a-b)*(a-b)*(a-b)) * r[1]
+                           + 4.0*sqrt((a-b)/(a+b)) * (a * gsl_sf_ellint_Kcomp(k, GSL_PREC_SINGLE)
+                                                    - a * gsl_sf_ellint_Ecomp(k, GSL_PREC_SINGLE)
+                                                    - b * gsl_sf_ellint_Kcomp(k, GSL_PREC_SINGLE))
+                           / sqrt((a-b)*(a-b)*(a-b)) / b * r_prime[1]; 
+                
+              double tmpFlux = E_field * unitNormal;
+              tmpFlux *= sinh(value) / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+                      * sysParams.get_lambda2i() * it->geometry().volume()
+                      / 2.0 / sysParams.pi * r_prime[1];
+              fluxIntegrated += tmpFlux;
+            }
 	          break;
 
         }
@@ -111,7 +126,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // ================================================================== 
       // Integral over surface elements
       // ================================================================== 
-      else if (isIPBS_Elem == true && isItself == false)
+      // else if (isIPBS_Elem == true && isItself == false)
+      else if (isIPBS_Elem == true && fabs(dist2.two_norm()) != 0)
       {
         // we are on a surface element and do integration for coulomb flux
 	      // add surface charge contribution from all other surface elements but this one
@@ -146,43 +162,39 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 	              b = 2.0 * r[1] * r_prime2[1];
                 k = sqrt(2.0*b/(a+b));
 
-                //std::cout << "a: " << a << " b: " << b << " K: " << k << std::endl;
+                E_field[0] = 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_SINGLE)
+                              / sqrt((a-b)*(a-b)*(a-b))
+                              * dist2[0];
+                E_field[1] = 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_SINGLE)
+                              / sqrt((a-b)*(a-b)*(a-b)) * r[1]
+                            + 4.0*sqrt((a-b)/(a+b)) * (a * gsl_sf_ellint_Kcomp(k, GSL_PREC_SINGLE)
+                                                      - a * gsl_sf_ellint_Ecomp(k, GSL_PREC_SINGLE)
+                                                      - b * gsl_sf_ellint_Kcomp(k, GSL_PREC_SINGLE))
+                              / sqrt((a-b)*(a-b)*(a-b)) / b * r_prime2[1]; 
                 
-                // Contribution from int(1/(a-b*cos(\phi))^(3/2))
-                fluxCoulomb += 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_APPROX)
-                                / sqrt((a-b)*(a-b)*(a-b))
-                                *(-(dist2[0]*unitNormal[0]) + (r[1]*unitNormal[1]));
-                // Contribution from int(cos(\phi)/(a-b*cos(\phi))^(3/2))
-                fluxCoulomb+= 4.0*sqrt((a-b)/(a+b)) * 
-                    (a * gsl_sf_ellint_Kcomp(k, GSL_PREC_APPROX)
-                   - a * gsl_sf_ellint_Ecomp(k, GSL_PREC_APPROX)
-                   - b * gsl_sf_ellint_Kcomp(k, GSL_PREC_APPROX))
-                   / sqrt((a-b)*(a-b)*(a-b)) / b 
-                   * r_prime2[1] * unitNormal[1]; 
-
-                // Multiply with prefactors
-                fluxCoulomb *= sysParams.get_bjerrum() * sysParams.get_charge_density() * dA;
-                        //* sysParams.get_radius() // metric factor for surface elem
-                        //* sqrt(1-(r_prime2[0]*r_prime2[0])*sysParams.get_r2i());
+                double tmpFlux = E_field * unitNormal;
+                tmpFlux *= sysParams.get_bjerrum() * sysParams.get_charge_density()
+                              * dA / 2.0 / sysParams.pi * r_prime2[1];
+                fluxCoulomb += tmpFlux;
                 
-                //std::cout << "At r = " << r << " added contribution from " << it->geometry().center()
-                //  <<" flux is now " << fluxCoulomb  << std::endl;               
               }
             break;
           }
       }
     }
+
       
     // ================================================================== 
     // Do SOR step
     // ================================================================== 
     double flux = fluxCoulomb + fluxIntegrated;
-    std::cout << "At r = " << r << "\tfluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " 
-      << fluxIntegrated << "\tflux: " << flux << std::endl; 
+    //std::cout << "At r = " << r << " E-Field is: " << E_field << std::endl;
+    // std::cout << "At r = " << r << " normal: " << unitNormal << "\tfluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " 
+    //  << fluxIntegrated << "\tflux: " << flux << std::endl; 
     // Do SOR step and add error
     flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[i];
-    double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
-    sysParams.add_error(error);
+    //double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
+    //sysParams.add_error(error);
     // Store new flux
     fluxContainer[i] = flux;
   }

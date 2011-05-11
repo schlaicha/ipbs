@@ -7,8 +7,8 @@ from matplotlib.delaunay import *
 import pylab as p
 
 def readfile(file):
-    x, y ,z = loadtxt(file, unpack=True) 
-    return x, y, z
+    x, y ,ref, sol, dif, rel = loadtxt(file, unpack=True) 
+    return x, y, ref, sol, dif, rel
 
 def defgrid(x,y):
     paso = 1600.
@@ -50,17 +50,16 @@ def plotear(xi,yi,zi):
     p.show()
 
 def main():
-    filename1 = sys.argv[1]
-    filename2 = sys.argv[2]
-    x1, y1, z1 = readfile(filename1)
-    x2, y2, z2 = readfile(filename2)
-    z = abs((z2 - z1))
-    xi, yi = defgrid(x1,y1)
-    zi = interpolacion(x1,y1,z,xi,yi)
+    filename = sys.argv[1]
+    x, y, ref, sol, dif, rel = readfile(filename)
+    #z = abs((ref - sol))
+    z = dif
+    xi, yi = defgrid(x,y)
+    zi = interpolacion(x,y,z,xi,yi)
     plotear(xi,yi,zi)
 
 if __name__ == "__main__":
-    if len (sys.argv) == 3:
+    if len (sys.argv) == 2:
         main ()
     else:
-        print "How to use: %s data_file1 %data_file2 " % sys.argv[0]
+        print "How to use: %s data_file" % sys.argv[0]

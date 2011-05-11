@@ -287,8 +287,13 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
 
   // allocate array for the data whose size is according to the number of iterative boundary elements
   double* fluxContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
+  // for determining the error we need to store the old fluxes
+  double* fluxContainerStored = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
   for(unsigned int i=0; i<countBoundElems; i++)
+  {
     fluxContainer[i] = 0.0;   // As we sum up fluxes we need to initialize with zero
+    fluxContainerStored[i] = 0.0;   // As we sum up fluxes we need to initialize with zero
+  }
 
   // ================================================================== 
   
@@ -306,9 +311,7 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     // call the function precomputing the boundary flux values
     ipbs_boundary(gv,udgf, all_positions, all_normals, fluxContainer, countBoundElems, boundaryIndexToEntity,
         indexLookupMap, boundaryElemMapper);
-    if (colCom.rank()==0)
-      std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
-        << sysParams.get_error() << std::endl << std::endl;
+    // make sure each processor has finished calculations before proceeding
     MPI_Barrier(MPI_COMM_WORLD);
     if (sysParams.get_verbose() > 2)
     {
@@ -317,10 +320,27 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
         std::cout << i << "\t" << fluxContainer[i] << std::endl;
     }
   
-    MPI_Barrier(MPI_COMM_WORLD);
     // now each processor has computed the values, i.e. we must ALL_REDUCE
     // colCom.sum(fluxContainer,countBoundElems);
     MPI_Allreduce(MPI_IN_PLACE, fluxContainer, countBoundElems, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    // now we are able to determine the error on each processor for its elements
+    for (unsigned int i = 0; i < countBoundElems; i++)
+    {
+      double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])/(fluxContainer[i]+fluxContainerStored[i]));
+      sysParams.add_error(error);
+    }
+    // set the error to the global maximum of errors so we have a unique stop criterion
+    double error = sysParams.get_error();
+    std::cout << "Error on rank " << colCom.rank() << ": " << error << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    colCom.max(error);
+    std::cout << "Max error: " << error << std::endl;
+    sysParams.reset_error(error);
+    // print error on rank 0
+    if (colCom.rank()==0)
+      std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
+        << sysParams.get_error() << std::endl << std::endl;
 
     int offset;
     // determine the offset for each processor to access its fluxes
@@ -379,12 +399,26 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
     vtkwriter.write(filename,Dune::VTK::appendedraw);
+    // Prepare filename for sequential Gnuplot output
+    if(colCom.size()>0)
+    {
+      std::stringstream s;
+      s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
+      s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
+      s << filename;
+      filename = s.str();
+    }
     // Gnuplot output
     Dune::GnuplotWriter<GV> gnuplotwriter(gv);
     gnuplotwriter.addVertexData(u,"solution");
     gnuplotwriter.write(filename + ".dat"); 
 
     sysParams.counter ++;
+    // copy flux array to backup one for next iteration step
+    for (unsigned int i = 0; i < countBoundElems; i++)
+    {
+      fluxContainerStored[i] = fluxContainer [i];
+    }
   }
 
   // --- here the iterative loop ends! ---
@@ -397,10 +431,21 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
   vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
 
+  // Prepare filename for sequential Gnuplot output
+  std::string filename = "ipbs_solution";
+  if(colCom.size()>0)
+  {
+    std::ostringstream s;
+    s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
+    s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
+    s << filename << ".dat";
+    filename = s.str();
+  }
+  
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write("ipbs_solution.dat"); 
+  gnuplotwriter.write(filename); 
   
   // std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
   

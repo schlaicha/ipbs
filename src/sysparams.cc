@@ -90,6 +90,11 @@ void SysParams::reset_error()
 	totalError = 0;
 }
 
+void SysParams::reset_error(double error)
+{
+  totalError = error;
+}
+
 double SysParams::get_error()
 {
 		return totalError;

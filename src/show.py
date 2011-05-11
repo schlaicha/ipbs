@@ -31,7 +31,7 @@ def interpolacion(x,y,z,xi,yi):
 
 def plotear(xi,yi,zi):
     # mask inner circle
-    interior = sqrt((xi**2) + (yi**2)) < 1.0 - 1E-4
+    interior = sqrt((xi+0)**2 + (yi+0)**2) < 5.0 - 1E-4
     zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]

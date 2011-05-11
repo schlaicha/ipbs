@@ -11,9 +11,10 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-template<class GV>
+template<class GV, class ColCom>
 void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity)
+             const std::vector<int>& boundaryIndexToEntity,
+             const ColCom& colCom)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -97,10 +98,20 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
   vtkwriter.write("reference",Dune::VTK::appendedraw);
 
+  // Prepare filename for sequential Gnuplot output
+  std::string filename = "reference";
+  if(colCom.size()>0)
+  {
+    std::ostringstream s;
+    s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
+    s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
+    s << filename << ".dat";
+    filename = s.str();
+  }
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write("reference.dat"); 
+  gnuplotwriter.write(filename); 
 
 
   std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
