@@ -4,6 +4,7 @@
 import sys
 from scipy import *
 from matplotlib.delaunay import *
+from matplotlib import colors, ticker
 import pylab as p
 
 def readfile(file):
@@ -11,7 +12,7 @@ def readfile(file):
     return x, y, ref, sol, dif, rel
 
 def defgrid(x,y):
-    paso = 1000.
+    paso = 600.
     intervalx = (x.max()-x.min())/paso
     intervaly = (y.max()-y.min())/paso
     xvalues = arange(x.min(),x.max(),intervalx)
@@ -32,28 +33,28 @@ def interpolacion(x,y,z,xi,yi):
 def plotear(xi,yi,zi):
     # mask inner circle
     interior = sqrt((xi**2) + (yi**2)) < 5.0 
-    zi[interior] = ma.empty
+    zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    #levels = [1E-5,1E-4,1E-3,5E-2,1E-2,1E-1]
-    CSF = p.contourf(xi,yi,zi,100)
-    #CSF = p.contourf(xi,yi,zi)
+    levels = [1E-10,1E-9,1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1]
+    CSF = p.contourf(xi,yi,zi,levels,norm=colors.LogNorm())
+    #CSF = p.contourf(xi,yi,zi,levels)
     CS = p.contour(xi,yi,zi)
     p.clabel(CS)
-    p.title('iPBS absolute difference')
-    p.xlabel('x-coordinate',fontsize=12)
-    p.ylabel('y-coordinate',fontsize=12)
+    p.title('IPBS vs Neumann B.C. (absolute difference)')
+    p.ylabel('radial coordinate r',fontsize=12)
+    p.xlabel('z-coordinate',fontsize=12)
     # add a vertical bar with the color values
     cbar = p.colorbar(CSF)
-    cbar.ax.set_ylabel('Solution difference',fontsize=12)
-    cbar.add_lines(CS)
+    cbar.ax.set_ylabel('electrostatic potential (reduced units)',fontsize=12)
+    #cbar.add_lines(CS)
     p.show()
 
 def main():
     filename = sys.argv[1]
     x, y, ref, sol, dif, rel = readfile(filename)
     #z = abs((ref - sol))
-    z = sol
+    z = dif
     xi, yi = defgrid(x,y)
     zi = interpolacion(x,y,z,xi,yi)
     plotear(xi,yi,zi)

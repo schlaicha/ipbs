@@ -3,7 +3,7 @@
 radius = 5;
 position = 0;  // Center position of the sphere
 box_size = 50;
-refine_length = 2;   // this is the length on symmetry axis
+refine_length = 10;   // this is the length on symmetry axis
                     // where we want better refinement
 
 // Define the geometry for 2d-sphere (iPBS)
@@ -29,10 +29,16 @@ Circle(8) = {3, 1, 6};
 Circle(9) = {6, 1, 2};
 
 // Refinement
+// refine circle
 Transfinite Line {9, 8} = 512 Using Progression 1;
-//Transfinite Line {9, 8} = 8 Using Progression 1;
-Transfinite Line {4, 6} = 64 Using Progression 1;
+// refine the piece on vertical axis
+Transfinite Line {4, 6} = 32 Using Progression 1;
+// refine rest of vertical axis
 Transfinite Line {7, 5} = 32 Using Progression 1;
+// refine horizontal lines on outer box outer box
+Transfinite Line {1, 3} = 8 Using Progression 1;
+// refine vertical line on outer box
+Transfinite Line {2, 2} = 32 Using Progression 1;
 Line Loop(10) = {2, 3, -5, -4, -9, -8, 6, 7, 1};
 Plane Surface(11) = {10};
 
