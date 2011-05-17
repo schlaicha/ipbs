@@ -11,13 +11,19 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-template<class GV, class ColCom>
-void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
+#include <dune/pdelab/adaptivity/adapt.hh>
+
+template<class GridType, class ColCom>
+void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              const ColCom& colCom)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
+
+  // get a grid view on the leaf grid
+  typedef typename GridType::LeafGridView GV;
+  const GV& gv = grid->leafView();
 
   // some typedef
   const int dim = GV::dimension;
@@ -90,6 +96,19 @@ void ref_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   newton.setMaxIterations(25);
   newton.setLineSearchMaxIterations(10);
   newton.apply();
+
+  // compute the estimated error using GradientSmoothnessOperator
+  typedef Dune::PDELab::ResidualErrorEstimation<GFS,U,Dune::PDELab::
+    GradientSmoothnessOperator,true> GradientErrorEstimator;
+  GradientErrorEstimator gradientErrorEstimator(gfs);
+  typedef Dune::PDELab::EstimationAdaptation<GridType,GFS,U,GradientErrorEstimator> 
+    EstimationAdaptor;
+  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, 0.1);
+  typedef Dune::PDELab::L2Projection<GFS,U> L2projection;
+  L2projection l2projection(2);
+  typedef typename Dune::PDELab::GridAdaptor<GridType,GFS,U,EstimationAdaptor,L2projection> GridAdaptor;
+  GridAdaptor gridAdaptor(*grid, gfs, estimationAdaptor, l2projection);
+  gridAdaptor.adapt(u);
 
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;

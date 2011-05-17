@@ -192,8 +192,8 @@ int main(int argc, char** argv)
  const GV& gv = grid->leafView();
 
  // Call problem drivers
- ref_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
- ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ // ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
   
  // done
  return 0;
