@@ -11,8 +11,6 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-#include <dune/pdelab/adaptivity/adapt.hh>
-
 template<class GridType, class ColCom>
 void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
@@ -47,6 +45,11 @@ void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Create finite element map
   typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
   FEM fem;
+
+// adaptive refinement loop
+for (int step = 0; step < 3; step++)
+{
+  std::cout << "Refinement step " << step << std::endl;
 
   // <<<2>>> Make grid function space
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
@@ -97,41 +100,44 @@ void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setLineSearchMaxIterations(10);
   newton.apply();
 
-  // compute the estimated error using GradientSmoothnessOperator
+  // compute the estimated error using GradientSmoothnessOperator and refine
   typedef Dune::PDELab::ResidualErrorEstimation<GFS,U,Dune::PDELab::
     GradientSmoothnessOperator,true> GradientErrorEstimator;
   GradientErrorEstimator gradientErrorEstimator(gfs);
   typedef Dune::PDELab::EstimationAdaptation<GridType,GFS,U,GradientErrorEstimator> 
     EstimationAdaptor;
-  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, 0.1);
+  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, 0.14);
   typedef Dune::PDELab::L2Projection<GFS,U> L2projection;
   L2projection l2projection(2);
   typedef typename Dune::PDELab::GridAdaptor<GridType,GFS,U,EstimationAdaptor,L2projection> GridAdaptor;
   GridAdaptor gridAdaptor(*grid, gfs, estimationAdaptor, l2projection);
   gridAdaptor.adapt(u);
 
+  std::string filename = "reference";
+  std::ostringstream n;
+  n << filename << "_step_" << step;
+  filename = n.str();
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   DGF udgf(gfs,u);
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-  vtkwriter.write("reference",Dune::VTK::appendedraw);
+  vtkwriter.write(filename,Dune::VTK::appendedraw);
 
   // Prepare filename for sequential Gnuplot output
-  std::string filename = "reference";
-  if(colCom.size()>0)
+  std::ostringstream s;
+  if(colCom.size()>1)
   {
-    std::ostringstream s;
     s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
     s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
-    s << filename << ".dat";
-    filename = s.str();
   }
+  s << filename << ".dat";
+  filename = s.str();
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
   gnuplotwriter.write(filename); 
-
+}
 
   std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
 }

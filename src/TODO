@@ -1,17 +1,16 @@
 iPBS ToDo Notes:
 ===============
 
+ - find out about the correct refinement strategy for iterative procedure
  - Testing
  - Write an useful output routine for forces (see tyagi)
- - Implement parallel evaluation of boundary iteration
  - Dielectric Missmatch
  - 3D is either completely missing or wrong !!!
  - parametric surface
- - automated refinement in dune
 
  other notes
  -----------
 
- - be careful with creating meshes, the result of the integration is
+ ? be careful with creating meshes, the result of the integration is
    _highly_ dependent on the refinement in the area of high exponential
    decay and the radial invariance of the mesh refinement.

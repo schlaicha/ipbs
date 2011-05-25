@@ -40,6 +40,7 @@ void parser(std::string config_file)
 
   // set the symmetry of the system
   sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
+  sysParams.set_boxLength(configuration.get<double>("mesh.boxLength",0.0));
   
   // Parse other options
   sysParams.set_alpha(configuration.get<double>("solver.alpha_sor",alpha_sor));
@@ -53,6 +54,7 @@ void parser(std::string config_file)
   if (sysParams.get_symmetry() == 1)
     sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
   else 
+    // TODO check the charge for 2d case!!!
   {
     double charge_density = configuration.get<double>("system.charge") / (4.0 * sysParams.pi
         * sysParams.get_radius() * sysParams.get_radius());

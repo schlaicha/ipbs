@@ -19,9 +19,14 @@ entries = nesteddict()
 
 # copy together the reference stuff
 for i in range(0,nprocs):
-  refFileName = "s%.4d:p%.4d:reference.dat" %(nprocs,i)
+  # remember the simplified filenames for sequential run
+  if nprocs == 1:
+    refFileName = "reference_step_0.dat"
+    solFileName = "ipbs_solution.dat"
+  else:
+    refFileName = "s%.4d:p%.4d:reference.dat" %(nprocs,i)
+    solFileName = "s%.4d:p%.4d:ipbs_solution.dat" %(nprocs,i)
   refFile = open(refFileName,"r")
-  solFileName = "s%.4d:p%.4d:ipbs_solution.dat" %(nprocs,i)
   solFile = open(solFileName,"r")
   refFile.readline()
   for line in refFile:

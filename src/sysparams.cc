@@ -26,6 +26,11 @@ void SysParams::set_symmetry(int value)
   symmetry = value;
 }
 
+void SysParams::set_boxLength(double value)
+{
+  boxLength = value;
+}
+
 void SysParams::set_tolerance(double value)
 {
   tolerance = value;
@@ -112,7 +117,7 @@ double SysParams::get_bjerrum()
 
 double SysParams::get_lambda2i()
 {
-	return lambda2i;
+  return lambda2i;
 }
 
 double SysParams::get_tolerance()
@@ -134,6 +139,11 @@ void SysParams::set_lambda(double value)
 int SysParams::get_symmetry()
 {
     return symmetry;
+}
+
+double SysParams::get_boxLength()
+{
+    return boxLength;
 }
 
 void SysParams::set_meshfile(std::string filename)

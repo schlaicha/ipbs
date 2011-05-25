@@ -12,13 +12,17 @@
 
 #include <map>
 
-template<class GV, class ColCom>
-void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
+template<class GridType, class ColCom>
+void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              const ColCom& colCom)
 {
   // We want to know the total calulation time
   // Dune::Timer timer;
+
+  // get a grid view on the leaf grid
+  typedef typename GridType::LeafGridView GV;
+  const GV& gv = grid->leafView();
 
   // some typedef
   const int dim = GV::dimension;
@@ -289,11 +293,17 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
   double* fluxContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
   // for determining the error we need to store the old fluxes
   double* fluxContainerStored = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
-  for(unsigned int i=0; i<countBoundElems; i++)
+  if (colCom.rank() == 0) 
   {
-    fluxContainer[i] = 0.0;   // As we sum up fluxes we need to initialize with zero
-    fluxContainerStored[i] = 0.0;   // As we sum up fluxes we need to initialize with zero
+    srand((unsigned)time(0));
+    for(unsigned int i=0; i<countBoundElems; i++)
+      {
+        fluxContainer[i] = 0;   // initialize with zero
+        fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.5;   // random initial b.c.
+      }
   }
+  colCom.broadcast(fluxContainerStored,countBoundElems,0); // communicate array
+  colCom.broadcast(fluxContainer,countBoundElems,0); // communicate array
 
   // ================================================================== 
   
@@ -324,19 +334,24 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
     // colCom.sum(fluxContainer,countBoundElems);
     MPI_Allreduce(MPI_IN_PLACE, fluxContainer, countBoundElems, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    // now we are able to determine the error on each processor for its elements
+    // do SOR step determine the error on each processor
     for (unsigned int i = 0; i < countBoundElems; i++)
     {
-      double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])/(fluxContainer[i]+fluxContainerStored[i]));
+      double fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+
+      fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
+                          + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];
+      double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])
+                      /(fluxContainer[i]+fluxContainerStored[i]));
       sysParams.add_error(error);
     }
     // set the error to the global maximum of errors so we have a unique stop criterion
-    double error = sysParams.get_error();
-    std::cout << "Error on rank " << colCom.rank() << ": " << error << std::endl;
+    // double error = sysParams.get_error();
+    // std::cout << "Error on rank " << colCom.rank() << ": " << error << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
-    colCom.max(error);
-    std::cout << "Max error: " << error << std::endl;
-    sysParams.reset_error(error);
+    // colCom.max(error);
+    // std::cout << "Max error: " << error << std::endl;
+    // sysParams.reset_error(error);
     // print error on rank 0
     if (colCom.rank()==0)
       std::cout << std::endl << "In iteration " << sysParams.counter <<" the relative error is: " 
@@ -393,14 +408,14 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
 
     // save snapshots of each iteration step
     std::stringstream out;
-    out << "step_" << sysParams.counter;
+    out << "ipbs_step_" << sysParams.counter;
     std::string filename = out.str();
     DGF udgf_snapshot(gfs,u);
     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
     vtkwriter.write(filename,Dune::VTK::appendedraw);
     // Prepare filename for sequential Gnuplot output
-    if(colCom.size()>0)
+    if(colCom.size()>1)
     {
       std::stringstream s;
       s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
@@ -433,14 +448,14 @@ void ipbs_P1(const GV& gv, const std::vector<int>& elementIndexToEntity,
 
   // Prepare filename for sequential Gnuplot output
   std::string filename = "ipbs_solution";
-  if(colCom.size()>0)
+  std::ostringstream s;
+  if(colCom.size()>1)
   {
-    std::ostringstream s;
     s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
     s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
-    s << filename << ".dat";
-    filename = s.str();
   }
+  s << filename << ".dat";
+  filename = s.str();
   
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);

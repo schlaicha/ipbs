@@ -30,7 +30,7 @@ Circle(9) = {6, 1, 2};
 
 // Refinement
 // refine circle
-Transfinite Line {9, 8} = 512 Using Progression 1;
+Transfinite Line {9, 8} = 32 Using Progression 1;
 // refine the piece on vertical axis
 Transfinite Line {4, 6} = 32 Using Progression 1;
 // refine rest of vertical axis

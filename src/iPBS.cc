@@ -22,6 +22,10 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
+
+// Adaptivity
+#include <dune/pdelab/adaptivity/adapt.hh>
+
 // Global Universal Mapper
 // #include <dune/grid/common/universalmapper.hh>
 // Single Geometry Single Codim Mapper
@@ -187,13 +191,13 @@ int main(int argc, char** argv)
  
  grid->loadBalance();
 
- // get a grid view on the leaf grid
- typedef GridType::LeafGridView GV;
- const GV& gv = grid->leafView();
+ // // get a grid view on the leaf grid
+ // typedef GridType::LeafGridView GV;
+ // const GV& gv = grid->leafView();
 
  // Call problem drivers
  ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
- // ipbs_P1(gv, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
   
  // done
  return 0;

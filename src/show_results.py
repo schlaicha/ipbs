@@ -40,7 +40,7 @@ def plotear(xi,yi,zi):
     #CSF = p.contourf(xi,yi,zi)
     CS = p.contour(xi,yi,zi)
     p.clabel(CS)
-    p.title('iPBS absolute difference')
+    p.title('iPBS relative error')
     p.xlabel('x-coordinate',fontsize=12)
     p.ylabel('y-coordinate',fontsize=12)
     # add a vertical bar with the color values
@@ -53,7 +53,7 @@ def main():
     filename = sys.argv[1]
     x, y, ref, sol, dif, rel = readfile(filename)
     #z = abs((ref - sol))
-    z = sol
+    z = dif
     xi, yi = defgrid(x,y)
     zi = interpolacion(x,y,z,xi,yi)
     plotear(xi,yi,zi)

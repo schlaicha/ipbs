@@ -24,6 +24,7 @@ class SysParams {
 	double get_r2i();
 	double get_tolerance();
  	int get_symmetry();
+ 	double get_boxLength();
   int get_refinement();
   int get_verbose();
   std::string get_meshfile();
@@ -42,6 +43,7 @@ class SysParams {
   void set_verbose(int value);
 	void set_charge_density (double value);
 	void set_symmetry (int value);
+	void set_boxLength (double value);
 	
   private:
 	double lambda;
@@ -55,6 +57,7 @@ class SysParams {
   double tolerance;
   double totalError;
 	int symmetry;
+	int boxLength;
 	double alpha;	// SOR parameter
 	double pos;
   std::string meshfile;

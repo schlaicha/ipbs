@@ -250,8 +250,7 @@ public:
       case 2:   {// Set Neumann for Reference
 		  switch (sysParams.get_symmetry() )
 		  {
-		    case 1:  y = 1.0 * sysParams.get_charge_density()
-		               * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
+		    case 1:  y = 1.0 * sysParams.get_charge_density() * sysParams.get_bjerrum();
 			     break;
 		    case 2:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
 		             break;
