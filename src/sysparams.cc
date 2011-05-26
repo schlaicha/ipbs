@@ -26,6 +26,26 @@ void SysParams::set_symmetry(int value)
   symmetry = value;
 }
 
+int SysParams::get_refinementSteps()
+{
+  return refinementSteps;
+}
+
+void SysParams::set_refinementSteps(int value)
+{
+  refinementSteps = value;
+}
+
+double SysParams::get_refinementFraction()
+{
+  return refinementFraction;
+}
+
+void SysParams::set_refinementFraction(double value)
+{
+  refinementFraction = value;
+}
+
 void SysParams::set_boxLength(double value)
 {
   boxLength = value;

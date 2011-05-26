@@ -86,7 +86,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         // integration depends on symmetry
         switch( sysParams.get_symmetry() )
         {
-          case 1: // "2D_cylinder"
+          case 1:   // infinite cylinder
             {
               // Calculate the integrated sinh term for infinite geometry
               if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
@@ -110,7 +110,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 
             }
             break;
-          case 2:
+          
+          case 2:   // reduced 3d symmetry
 	          {
               // Calculate the integrated sinh term for finite geometry
               a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
@@ -127,15 +128,28 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                          
               double tmpFlux = E_field * unitNormal;
               tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
-                      * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1]
-                      / (2.0 * sysParams.pi);
+                      * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
               fluxIntegrated += tmpFlux;
             }
 	          break;
 
+          case 3: // An ininite plane in 2d cartesion coordinates 
+            {
+              // Calculate the integrated sinh term for infinite geometry
+              if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
+              else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
+             
+              E_field = dist;
+              E_field /= dist.two_norm() * dist.two_norm() * 2.0 * sysParams.pi;
+                        
+              double tmpFlux = E_field * unitNormal;
+              tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum())
+                      * sysParams.get_lambda2i() * it->geometry().volume();
+              fluxIntegrated -= tmpFlux;
+            }
         }
 
-      }
+      //}
 
       // ================================================================== 
       // Integral over surface elements

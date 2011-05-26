@@ -25,6 +25,8 @@ class SysParams {
 	double get_tolerance();
  	int get_symmetry();
  	double get_boxLength();
+ 	double get_refinementFraction();
+ 	int get_refinementSteps();
   int get_refinement();
   int get_verbose();
   std::string get_meshfile();
@@ -44,6 +46,8 @@ class SysParams {
 	void set_charge_density (double value);
 	void set_symmetry (int value);
 	void set_boxLength (double value);
+	void set_refinementFraction (double value);
+	void set_refinementSteps (int value);
 	
   private:
 	double lambda;
@@ -63,6 +67,8 @@ class SysParams {
   std::string meshfile;
   int refinement;
   int verbose;
+  double refinementFraction;
+  int refinementSteps;
 };
 
 // Global access to this class via global instance

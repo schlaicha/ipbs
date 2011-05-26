@@ -254,6 +254,8 @@ public:
 			     break;
 		    case 2:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
 		             break;
+		    case 3:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+		             break;
         //! \todo missing check
         default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
 		  }

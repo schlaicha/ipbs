@@ -47,7 +47,7 @@ void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   FEM fem;
 
 // adaptive refinement loop
-for (int step = 0; step < 3; step++)
+for (int step = 0; step < sysParams.get_refinementSteps(); step++)
 {
   std::cout << "Refinement step " << step << std::endl;
 
@@ -106,7 +106,7 @@ for (int step = 0; step < 3; step++)
   GradientErrorEstimator gradientErrorEstimator(gfs);
   typedef Dune::PDELab::EstimationAdaptation<GridType,GFS,U,GradientErrorEstimator> 
     EstimationAdaptor;
-  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, 0.14);
+  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, sysParams.get_refinementFraction());
   typedef Dune::PDELab::L2Projection<GFS,U> L2projection;
   L2projection l2projection(2);
   typedef typename Dune::PDELab::GridAdaptor<GridType,GFS,U,EstimationAdaptor,L2projection> GridAdaptor;
