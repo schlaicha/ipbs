@@ -1,19 +1,17 @@
-// Gmsh project created on Mon 23 May 2011
-// Infinite cylinder for iPBS
+// Gmsh project created on Thu 26 May 2011
+// Infinite plane (Gouy-Chapman model) for iPBS
 
 // define characteristic length (mesh quality)
 lc = 0.1;
 
 // Set geometry
-outer_radius = 10;
-length = 20;
-inner_radius = 0.0;
+box_size = 20;
 
 // Setup mesh
-Point(1) = {-length/2, inner_radius, 0};
-Point(2) = {length/2, inner_radius, 0};
-Point(3) = {-length/2, outer_radius, 0};
-Point(4) = {length/2, outer_radius, 0};
+Point(1) = {-box_size/2, 0, 0};
+Point(2) = {box_size/2, 0, 0};
+Point(3) = {-box_size/2, box_size, 0};
+Point(4) = {box_size/2, box_size, 0};
 Line(1) = {1, 2};
 Line(2) = {2, 4};
 Line(3) = {1, 3};

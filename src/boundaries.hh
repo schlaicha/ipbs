@@ -233,8 +233,8 @@ public:
   RefBoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
 
   //! evaluate flux boundary condition
-  template<typename I, typename E>
-  inline void evaluate(I& i, E& e,
+  template<typename I>
+  inline void evaluate(I& i,
                        typename Traits::RangeType& y) const
   {
      /** use physical index to determine B.C.

@@ -47,7 +47,7 @@ void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   FEM fem;
 
 // adaptive refinement loop
-for (int step = 0; step < sysParams.get_refinementSteps(); step++)
+for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
 {
   std::cout << "Refinement step " << step << std::endl;
 
@@ -78,7 +78,7 @@ for (int step = 0; step < sysParams.get_refinementSteps(); step++)
   Dune::PDELab::interpolate(g,gfs,u);
 
   // <<<4>>> Make Grid Operator Space
-  typedef RefLocalOperator<M,B,J> LOP;
+  typedef PBLocalOperator<M,B,J> LOP;
   LOP lop(m,b,j);
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
@@ -100,18 +100,20 @@ for (int step = 0; step < sysParams.get_refinementSteps(); step++)
   newton.setLineSearchMaxIterations(10);
   newton.apply();
 
-  // compute the estimated error using GradientSmoothnessOperator and refine
-  typedef Dune::PDELab::ResidualErrorEstimation<GFS,U,Dune::PDELab::
-    GradientSmoothnessOperator,true> GradientErrorEstimator;
-  GradientErrorEstimator gradientErrorEstimator(gfs);
-  typedef Dune::PDELab::EstimationAdaptation<GridType,GFS,U,GradientErrorEstimator> 
-    EstimationAdaptor;
-  EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, sysParams.get_refinementFraction());
-  typedef Dune::PDELab::L2Projection<GFS,U> L2projection;
-  L2projection l2projection(2);
-  typedef typename Dune::PDELab::GridAdaptor<GridType,GFS,U,EstimationAdaptor,L2projection> GridAdaptor;
-  GridAdaptor gridAdaptor(*grid, gfs, estimationAdaptor, l2projection);
-  gridAdaptor.adapt(u);
+  if (step > 0) {
+    // compute the estimated error using GradientSmoothnessOperator and refine
+    typedef Dune::PDELab::ResidualErrorEstimation<GFS,U,Dune::PDELab::
+      GradientSmoothnessOperator,true> GradientErrorEstimator;
+    GradientErrorEstimator gradientErrorEstimator(gfs);
+    typedef Dune::PDELab::EstimationAdaptation<GridType,GFS,U,GradientErrorEstimator> 
+      EstimationAdaptor;
+    EstimationAdaptor estimationAdaptor(*grid, gfs, gradientErrorEstimator, sysParams.get_refinementFraction());
+    typedef Dune::PDELab::L2Projection<GFS,U> L2projection;
+    L2projection l2projection(2);
+    typedef typename Dune::PDELab::GridAdaptor<GridType,GFS,U,EstimationAdaptor,L2projection> GridAdaptor;
+    GridAdaptor gridAdaptor(*grid, gfs, estimationAdaptor, l2projection);
+    gridAdaptor.adapt(u);
+  }
 
   std::string filename = "reference";
   std::ostringstream n;
