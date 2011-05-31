@@ -139,8 +139,8 @@ public :
                         typename Traits::RangeType& y) const
   {
     //! Set value for potential at outer domain boundaries
-      y = 0.0;
-      return;
+    y = 0.0;
+    return;
   }
 
   //! get a reference to the grid view
@@ -248,18 +248,9 @@ public:
     {
       case 1:   y = 0.0;  break; // Set Neumann
       case 2:   {// Set Neumann for Reference
-		  switch (sysParams.get_symmetry() )
-		  {
-		    case 1:  y = 1.0 * sysParams.get_charge_density() * sysParams.get_bjerrum();
-			     break;
-		    case 2:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-		             break;
-		    case 3:  y = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-		             break;
-        //! \todo missing check
-        default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
-		  }
-		break;}
+		              y = - 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+                  break;
+                }
       //! \todo missing check
       default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
     }
