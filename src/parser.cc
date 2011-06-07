@@ -52,6 +52,7 @@ void parser(std::string config_file)
   sysParams.set_radius(configuration.get<double>("system.radius",radius));
   sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
+  sysParams.set_salt(configuration.get<int>("system.salt"));;
 
   if (sysParams.get_symmetry() == 2)
     // TODO check the charge for 2d case!!!

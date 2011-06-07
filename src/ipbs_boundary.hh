@@ -82,6 +82,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         // Evaluate the potential at the elements center
 	      RT value;
         udgf.evaluate(*it,it->geometry().center(),value);
+        // Calculate the flux through surface element caused by this element
+        double tmpFlux = 0.0;
 
         // integration depends on symmetry
         switch( sysParams.get_symmetry() )
@@ -103,10 +105,9 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                               + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
                           / sqrt((a-b)*(a-b)*(a-b)) / b;
                          
-              double tmpFlux = E_field * unitNormal;
-              tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+              tmpFlux = E_field * unitNormal;
+              tmpFlux *= 1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
                       * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-              fluxIntegrated += tmpFlux;
 
             }
             break;
@@ -126,10 +127,9 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                               + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
                           / sqrt((a-b)*(a-b)*(a-b)) / b;
                          
-              double tmpFlux = E_field * unitNormal;
-              tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+              tmpFlux = E_field * unitNormal;
+              tmpFlux *= 1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
                       * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-              fluxIntegrated += tmpFlux;
             }
 	          break;
 
@@ -142,12 +142,26 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
               E_field = dist;
               E_field /= dist.two_norm() * dist.two_norm() * 2.0 * sysParams.pi;
                         
-              double tmpFlux = E_field * unitNormal;
-              tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum())
+              tmpFlux = E_field * unitNormal;
+              // tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum())
+              tmpFlux *= -1.0 / sysParams.get_bjerrum()
                       * sysParams.get_lambda2i() * it->geometry().volume();
-              fluxIntegrated -= tmpFlux;
             }
         }
+
+        // Now get the counterion distribution and calculate flux
+        switch (sysParams.get_salt())
+        {
+          case 0:
+            tmpFlux *= std::sinh(value);
+            break;
+          case 1:
+            tmpFlux *= std::exp(value);
+            break;
+        }
+
+        // Sum up the flux through this element
+        fluxIntegrated *= tmpFlux;
 
       //}
 

@@ -92,8 +92,17 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 
+        RF f;
       	// Parameters describing the PDE
-	      RF f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+        switch (sysParams.get_salt())
+        {
+          case 0:
+            f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+            break;
+          case 1:
+            f = -1.0 * sysParams.get_lambda2i() * exp(u);
+            break;
+        }
       	RF a = 0.0; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
