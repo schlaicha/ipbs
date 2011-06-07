@@ -29,6 +29,7 @@ class SysParams {
  	int get_refinementSteps();
   int get_refinement();
   int get_verbose();
+  int get_salt();
   std::string get_meshfile();
 
   // Functions setting the private members
@@ -48,6 +49,7 @@ class SysParams {
 	void set_boxLength (double value);
 	void set_refinementFraction (double value);
 	void set_refinementSteps (int value);
+	void set_salt (int value);
 	
   private:
 	double lambda;
@@ -61,6 +63,7 @@ class SysParams {
   double tolerance;
   double totalError;
 	int symmetry;
+  int salt;
 	int boxLength;
 	double alpha;	// SOR parameter
 	double pos;

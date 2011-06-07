@@ -22,7 +22,6 @@ Line Loop(7) = {4, -2, -1, 3};
 Plane Surface(8) = {7};
 
 // Define boundaries
-Physical Line(0) = {4};
-Physical Line(1) = {3, 2};
+Physical Line(1) = {3, 4, 2};
 Physical Line(2) = {1};
-Physical Surface(12) = {8};
+Physical Surface(11) = {8};

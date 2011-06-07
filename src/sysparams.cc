@@ -12,6 +12,17 @@ SysParams::SysParams()
 	totalError = 1E8;
 }
 
+int SysParams::get_salt()
+{
+  return salt;
+}
+
+void SysParams::set_salt(int value)
+{
+  // Define if we use symmetric salt (case 0) or counterions only (case 1)
+  salt = value;
+}
+
 double SysParams::get_r2i()
 {
   return r2i;
