@@ -26,6 +26,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   CoulombFlux<ctype,dim> f;
   
   // Precompute fluxes
+  // for(int i = 0; i < countBoundElems; i++)
   // for(int i = countBoundElems - 1; i >= 0; i--)
   for(int i = 0; i < countBoundElems; i++)
   {
