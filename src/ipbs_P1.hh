@@ -296,11 +296,18 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   if (colCom.rank() == 0) 
   {
     srand((unsigned)time(0));
-    for(unsigned int i=0; i<countBoundElems; i++)
-      {
-        fluxContainer[i] = 0;   // initialize with zero
-        fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.5;   // random initial b.c.
-      }
+    if (sysParams.get_salt() == 0)
+      for(unsigned int i=0; i<countBoundElems; i++)
+        {
+          fluxContainer[i] = 0;   // initialize with zero
+          fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.5;   // random initial b.c.
+        }
+    else
+      for(unsigned int i=0; i<countBoundElems; i++)
+        {
+          fluxContainer[i] = 0;
+          fluxContainerStored[i] = ((float)rand()/RAND_MAX - 1) * 0.5;
+        }
   }
   colCom.broadcast(fluxContainerStored,countBoundElems,0); // communicate array
   colCom.broadcast(fluxContainer,countBoundElems,0); // communicate array
@@ -337,7 +344,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     // do SOR step determine the error on each processor
     for (unsigned int i = 0; i < countBoundElems; i++)
     {
-      double fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
+      double fluxCoulomb = -1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
 
       fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
                           + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];

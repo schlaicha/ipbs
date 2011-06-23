@@ -193,7 +193,7 @@ public:
       {
         //int mappedIndex = globalIpbsIndices[mapper.map(*i.inside())] + offset;
         int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
-		    y = -1.0*fluxContainer[mappedIndex]; 
+		    y = fluxContainer[mappedIndex]; 
 //        std::cout << "At element " << mapper.map(*i.inside()) << " stored at pos " <<indexLookupMap.find(mapper.map(*i.inside()))->second + offset << " y= " << y << std::endl;
         break;
 		  }

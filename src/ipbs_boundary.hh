@@ -26,7 +26,6 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   CoulombFlux<ctype,dim> f;
   
   // Precompute fluxes
-  // for(int i = 0; i < countBoundElems; i++)
   // for(int i = countBoundElems - 1; i >= 0; i--)
   for(int i = 0; i < countBoundElems; i++)
   {
@@ -106,7 +105,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                           / sqrt((a-b)*(a-b)*(a-b)) / b;
                          
               tmpFlux = E_field * unitNormal;
-              tmpFlux *= 1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+              tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
                       * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
 
             }
@@ -128,7 +127,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                           / sqrt((a-b)*(a-b)*(a-b)) / b;
                          
               tmpFlux = E_field * unitNormal;
-              tmpFlux *= 1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+              tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
                       * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
             }
 	          break;
@@ -144,7 +143,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                         
               tmpFlux = E_field * unitNormal;
               // tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum())
-              tmpFlux *= 1.0 / sysParams.get_bjerrum()
+              tmpFlux *= -1.0 / sysParams.get_bjerrum()
                       * sysParams.get_lambda2i() * it->geometry().volume();
             }
         }
@@ -156,7 +155,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
             tmpFlux *= std::sinh(value);
             break;
           case 1:
-            tmpFlux *= std::exp(value);
+            tmpFlux *= std::exp(value); // Counterions have opposite sign!
             break;
         }
 
@@ -245,6 +244,10 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
     // sysParams.add_error(error);
     // Store new flux
+    
+    // Be careful in the counterion case, the solution during 0. itertion is not defined!
+    if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
+       fluxIntegrated = 0;
     fluxContainer[i] = fluxIntegrated;
     // fluxContainer[i] = fluxCoulomb + fluxIntegrated;
   }
