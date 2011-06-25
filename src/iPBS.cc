@@ -25,9 +25,6 @@
 
 // Adaptivity
 #include <dune/pdelab/adaptivity/adapt.hh>
-
-// Global Universal Mapper
-// #include <dune/grid/common/universalmapper.hh>
 // Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
 // Multiple Geometry Multiple Codim Mapper
@@ -52,7 +49,6 @@
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
-
 #include <dune/grid/common/gridenums.hh>
 
 // global typedefs
@@ -68,7 +64,9 @@ typedef double Real;
 #include "integrateentity.hh"
 #include "eval_elliptic.hh"
 #include "boundaries.hh"
-// #include "gradient.hh"
+#include "gradient.hh"
+#include "maxwelltensor.hh"
+#include "force.hh"
 #include "ipbs_boundary.hh"
 #include "PBLocalOperator.hh"
 #include "ipbs_P1.hh"

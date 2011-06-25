@@ -141,5 +141,5 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
   gnuplotwriter.write(filename); 
 }
 
-  std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
+  std::cout << "Reference total calculation time on rank " << colCom.rank() << " is " << timer.elapsed() << std::endl;
 }

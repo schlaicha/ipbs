@@ -18,7 +18,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const ColCom& colCom)
 {
   // We want to know the total calulation time
-  // Dune::Timer timer;
+  Dune::Timer timer;
 
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
@@ -468,7 +468,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
   gnuplotwriter.write(filename); 
+
+  // Calculate the forces
+  force(gv, boundaryIndexToEntity, gfs, u);
   
-  // std::cout << "Reference total calculation time=" << timer.elapsed() << std::endl;
+  std::cout << "iPBS calculation time on rank " << colCom.rank() << " is: " << timer.elapsed() << std::endl;
   
 }

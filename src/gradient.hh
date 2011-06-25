@@ -1,16 +1,14 @@
 /** \brief Compute the gradient of the potential at the actual element
 
-    This is needed in the evaluation of \f$\nabla \frac{sinh\Phi}{|r - r^\prime|}\f$
-    \todo fix dimensions as template parameter
 **/
 
 template <typename GFS, class Iterator, typename U>
-Dune::FieldVector<double,2> gradient(const GFS& gfs, const Iterator& it, const U& u)
+Dune::FieldVector<double,GFS::Traits::GridViewType::dimension>
+gradient(const GFS& gfs, const Iterator& it, const U& u)
 {
-  //const int dim = gfs.gridview().dimension;
-  //const int dimw = gfs.gridview().dimensionworld;
-  const int dim = 2;
-  const int dimw = 2;
+  const int dim = GFS::Traits::GridViewType::dimension;
+  const int dimw = GFS::Traits::GridViewType::dimensionworld;
+  //const int dimw = 2;
   
   typedef typename GFS::LocalFunctionSpace LFSU;
   typedef typename LFSU::Traits::FiniteElementType::
