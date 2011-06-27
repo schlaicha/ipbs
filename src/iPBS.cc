@@ -58,6 +58,13 @@ typedef double Real;
 #define _SYSPARAMS_H
 #include "sysparams.hh"
 #endif
+#ifndef _PARTICLE_H
+#define _PARTICLE_H
+#include "boundary.hh"
+#endif
+
+// global access to particles
+std::vector<Boundary*> boundary;
 
 #include "parser.hh"
 #include "functors.hh"
@@ -71,7 +78,6 @@ typedef double Real;
 #include "PBLocalOperator.hh"
 #include "ipbs_P1.hh"
 #include "ref_P1.hh"
-
 
 //===============================================================
 // Main programm

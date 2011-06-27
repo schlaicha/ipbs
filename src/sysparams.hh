@@ -18,10 +18,8 @@ class SysParams {
 	double get_epsilon();
 	double get_lambda2i();
 	double get_charge_density();
-	double get_sphere_pos();
 	double get_error();
 	double get_alpha();
-	double get_r2i();
 	double get_tolerance();
  	int get_symmetry();
  	double get_boxLength();
@@ -30,6 +28,7 @@ class SysParams {
   int get_refinement();
   int get_verbose();
   int get_salt();
+  int get_npart();
   std::string get_meshfile();
 
   // Functions setting the private members
@@ -41,7 +40,6 @@ class SysParams {
 	void set_alpha(double);
   void set_meshfile(std::string filename);
   void set_refinement(int level);
-  void set_radius(double value);
   void set_tolerance(double value);
   void set_verbose(int value);
 	void set_charge_density (double value);
@@ -50,6 +48,7 @@ class SysParams {
 	void set_refinementFraction (double value);
 	void set_refinementSteps (int value);
 	void set_salt (int value);
+  void set_npart (int value);
 	
   private:
 	double lambda;
@@ -58,15 +57,13 @@ class SysParams {
 	double charge_density;
 	double charge;
 	double epsilon;
-	double radius; 
-  double r2i;
   double tolerance;
   double totalError;
 	int symmetry;
+  int npart;
   int salt;
 	int boxLength;
 	double alpha;	// SOR parameter
-	double pos;
   std::string meshfile;
   int refinement;
   int verbose;

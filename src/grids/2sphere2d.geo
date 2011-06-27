@@ -1,7 +1,7 @@
 // Define setup variables
-radius = 1;
-distance = 3;
-world_size = 8;
+radius = 5;
+distance = 15;
+world_size = 20;
 
 // ========== Setuo Geometry ===========
 
@@ -55,7 +55,8 @@ Physical Line(0) = {1, 2, 3};
 // Lower boundaries, wich are set to Neumann B.C.
 Physical Line(1) = {4, 6, 7, 5};
 // Spheres which are set to IPBS B.C.
-Physical Line(2) = {8, 9, 10, 11};
+Physical Line(2) = {8, 9};
+Physical Line(3) = {10, 11};
 
 // Finally we also need a physical surface
 Physical Surface(14) = {13};

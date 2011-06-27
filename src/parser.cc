@@ -12,6 +12,10 @@
 #define _SYSPARAMS_H
 #include "sysparams.hh"
 #endif
+#ifndef _BOUNDARY_H
+#define _BOUNDARY_H
+#include "boundary.hh"
+#endif
 
 void parser(std::string config_file)
 {
@@ -36,7 +40,6 @@ void parser(std::string config_file)
   const int verbose = 4;
   const double lambda = 1.0;
   const double bjerrum = 0.7;
-  const double radius = 1.0;
 
   // set the symmetry of the system
   sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
@@ -49,18 +52,25 @@ void parser(std::string config_file)
   sysParams.set_refinementSteps(configuration.get<int>("mesh.adaptive_refinement_steps",1));
   sysParams.set_bjerrum(configuration.get<double>("system.bjerrum",bjerrum));
   sysParams.set_lambda(configuration.get<double>("system.lambda",lambda));
-  sysParams.set_radius(configuration.get<double>("system.radius",radius));
   sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
-  sysParams.set_salt(configuration.get<int>("system.salt"));;
+  sysParams.set_salt(configuration.get<int>("system.salt"));
 
-  if (sysParams.get_symmetry() == 2)
-    // TODO check the charge for 2d case!!!
+  // Create particles
+  int n_particle = configuration.get<int>("system.NPart");
+  sysParams.set_npart(n_particle);
+  extern std::vector<Boundary*> boundary;
+  for (int i = 0; i < n_particle; i++)
+    boundary.push_back(new Boundary());
+
+  for(int i = 0; i < n_particle; i++)
   {
-    double charge_density = configuration.get<double>("system.charge") / (4.0 * sysParams.pi
-        * sysParams.get_radius() * sysParams.get_radius());
-    sysParams.set_charge_density(charge_density);
+    std::string p_name = "boundary_";
+    std::ostringstream s;
+    s << p_name << i+2; // we don't need to set 0 and 1
+                        // remember that vector starts with 0, so access the boundaries with -2
+                        // TODO find a clever way!
+    p_name = s.str();
+    boundary[i]->set_charge_density(configuration.get<double>(p_name+".charge_density"));
   }
-  else 
-    sysParams.set_charge_density(configuration.get<double>("system.charge_density"));
 }

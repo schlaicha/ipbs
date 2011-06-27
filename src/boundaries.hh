@@ -94,13 +94,10 @@ public:
     *   \arg 2 for iPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    switch ( physgroup_index )
-    {
-      case 0:   y = 1.0;  break; // Set Dirichlet
-      case 1:   y = 0.0;  break; // Set Neumann
-      case 2:   y = 0.0;  break; // Set Neumann for iPBS
-      default : y = 1.0;  break; // Default is Dirichlet
-    }
+    if (physgroup_index > 0)
+      y = 0;  // All others are Neumann boundaries
+    else
+      y = 1;  // only zero is Dirichlet
     return;
   }
 
@@ -186,20 +183,12 @@ public:
     *   \arg 2 for iPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    switch ( physgroup_index )
+    if (physgroup_index > 1)
     {
-      case 1:   y = 0.0;  break; // Set Neumann for symmetry
-      case 2:   // Set Neumann for iPBS
-      {
-        //int mappedIndex = globalIpbsIndices[mapper.map(*i.inside())] + offset;
-        int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
-		    y = fluxContainer[mappedIndex]; 
-//        std::cout << "At element " << mapper.map(*i.inside()) << " stored at pos " <<indexLookupMap.find(mapper.map(*i.inside()))->second + offset << " y= " << y << std::endl;
-        break;
-		  }
-      //! /todo missing check
-      default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
+      int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
+		    y = fluxContainer[mappedIndex];
     }
+    else y = 0;
     return;
   }
 
@@ -244,16 +233,9 @@ public:
     *   \arg 2 for surface flux given by charge density */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    switch ( physgroup_index )
-    {
-      case 1:   y = 0.0;  break; // Set Neumann
-      case 2:   {// Set Neumann for Reference
-		              y = - 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-                  break;
-                }
-      //! \todo missing check
-      default : y = 0.0; std::cerr << "Boundary flux detection failed!" << std::endl; break;
-    }
+    if (physgroup_index > 1)
+      y = - 1.0 * boundary[physgroup_index-2]->get_charge_density()  * sysParams.get_bjerrum();
+    else y = 0;
     return;
   }
   

@@ -21,30 +21,35 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
           <Dune::Interior_Partition>::Iterator LeafIterator;
   typedef typename GV::IntersectionIterator IntersectionIterator;
   
-  Dune::FieldVector<Real, dim> F(0);
-
-  // loop over elements on this processor
-  for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-            	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+  
+  // Do the loop for all boundaryIDs > 1 (all colloids)
+  for (int i = 2; i < sysParams.get_npart()+2; i++)
   {
-    if(it->hasBoundaryIntersections() == true)
+    std::cout << "Calculating the force actin on particle " << i << std::endl;
+    Dune::FieldVector<Real, dim> F(0);
+    // loop over elements on this processor
+    for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+              	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
     {
-      for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+     if(it->hasBoundaryIntersections() == true)
       {
-        if(ii->boundary() == true)
+        for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
         {
-          if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == 2) // check if IPBS boundary
+          if(ii->boundary() == true)
           {
-            Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
-            normal *= -1.0;
-            Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension, 
+            if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+            {
+              Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
+              normal *= -1.0;
+              Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension, 
               GFS::Traits::GridViewType::dimension>
-                sigma = maxwelltensor(gfs, it, u);
-            sigma.umv(normal,F);
+                 sigma = maxwelltensor(gfs, it, u);
+              sigma.umv(normal,F);
+            }
           }
         }
       }
     }
+    std::cout << "Total force on particle " << i << " is: " << F << std::endl;
   }
-  std::cout << "Total force is: " << F << std::endl;
 }

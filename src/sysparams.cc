@@ -12,6 +12,16 @@ SysParams::SysParams()
 	totalError = 1E8;
 }
 
+int SysParams::get_npart()
+{
+  return npart;
+}
+
+void SysParams::set_npart(int value)
+{
+  npart = value;
+}
+
 int SysParams::get_salt()
 {
   return salt;
@@ -21,11 +31,6 @@ void SysParams::set_salt(int value)
 {
   // Define if we use symmetric salt (case 0) or counterions only (case 1)
   salt = value;
-}
-
-double SysParams::get_r2i()
-{
-  return r2i;
 }
 
 void SysParams::set_symmetry(int value)
@@ -85,22 +90,6 @@ int SysParams::get_verbose()
 void SysParams::set_bjerrum(double value)
 {
   bjerrum = value;
-}
-
-void SysParams::set_radius(double value)
-{
-  radius = value;
-  r2i = 1.0 / (radius * radius);
-}
-
-double SysParams::get_radius()
-{
-	return radius;
-}
-
-double SysParams::get_sphere_pos()
-{
-	return pos;
 }
 
 void SysParams::add_error(double error)

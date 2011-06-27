@@ -3,7 +3,7 @@ SUBDIRS =
 
 noinst_PROGRAMS = iPBS
 
-iPBS_SOURCES = iPBS.cc sysparams.cc eval_elliptic.cc parser.cc
+iPBS_SOURCES = iPBS.cc sysparams.cc eval_elliptic.cc parser.cc boundary.cc
 
 iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(DUNEMPICPPFLAGS) \
