@@ -92,7 +92,7 @@ public:
         Dune::FieldVector<RF,dim> 
         globalpos = eg.geometry().global(it->position());
 
-        RF f;
+        RF f=0.;
       	// Parameters describing the PDE
         switch (sysParams.get_salt())
         {
@@ -101,7 +101,6 @@ public:
             break;
           case 1:
             f = -1.0 * sysParams.get_lambda2i() * exp(u);
-            // std::cout << "exp(u) = " << exp(u) << " u = " << u << std::endl;
             break;
         }
       	RF a = 0.; 

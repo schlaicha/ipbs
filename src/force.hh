@@ -1,11 +1,13 @@
 /** \brief Calculate the force between colloids
- 
+
     Some more description :-)
 */
 
 /*!
    \param
 */
+
+#include <fstream>
 
 template <typename GV, typename GFS, typename U>
 void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
@@ -40,16 +42,21 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
             if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
             {
               Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
-              normal *= -1.0;
+              normal *= -1.0 * ii->geometry().volume() * ii->geometry().center()[1]
+                * 2.0 * sysParams.pi; // Surface normal
               Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension, 
-              GFS::Traits::GridViewType::dimension>
-                 sigma = maxwelltensor(gfs, it, u);
+                  GFS::Traits::GridViewType::dimension>
+                      sigma = maxwelltensor(gfs, it, u);
               sigma.umv(normal,F);
             }
           }
         }
       }
     }
-    std::cout << "Total force on particle " << i << " is: " << F << std::endl;
+
+  std::ofstream myfile;
+  myfile.open ("forces.dat", std::ios::out | std::ios::app);
+  myfile << i << " " << F << std::endl;
+  myfile.close();
   }
 }

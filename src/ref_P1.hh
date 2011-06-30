@@ -139,6 +139,9 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
   gnuplotwriter.write(filename); 
+
+  // Calculate the forces
+  force(gv, boundaryIndexToEntity, gfs, u);
 }
 
   std::cout << "Reference total calculation time on rank " << colCom.rank() << " is " << timer.elapsed() << std::endl;

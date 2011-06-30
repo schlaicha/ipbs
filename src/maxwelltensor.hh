@@ -25,6 +25,8 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++)
       res[i][j] = E[i] * E[j];
-  
+  for (int i = 0; i < dim; i++)
+    res[i][i] -= .5 * E.two_norm2();
   return res;
 }
+
