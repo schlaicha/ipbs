@@ -1,24 +1,24 @@
 // Define setup variables
 radius = 5;
 distance = 15;
-world_size = 20;
+world_size = 30;
 
 // ========== Setuo Geometry ===========
 
 // Define points
-Point(0) = {0, 0, 0, 0.2}; // origin
+Point(0) = {0, 0, 0, 0.3}; // origin
 Point(1) = {distance/2, 0, 0, 1.0}; // center of right sphere
 Point(2) = {-distance/2, 0, 0, 1.0}; // center of left sphere
 Point(3) = {-world_size, 0, 0, 0.3}; // lower left world coordinate
 Point(4) = {world_size, 0, 0, 0.3}; // lower right world coordinate
-Point(5) = {-world_size, world_size, 0, 1.0}; // upper right world coordinate
-Point(6) = {world_size, world_size, 0, 1.0}; // upper right world coordinate
-Point(7) = {distance/2+radius, 0, 0, 0.2}; // right boarder of right sphere
-Point(8) = {distance/2-radius, 0, 0, 0.2}; // left boarder of right sphere
-Point(9) = {distance/2, radius, 0, 0.2}; // top boarder of right sphere
-Point(10) = {-distance/2+radius, 0, 0, 0.2}; // right boarder of left sphere
-Point(11) = {-distance/2-radius, 0, 0, 0.2}; // left boarder of left sphere
-Point(12) = {-distance/2, radius, 0, 0.2}; // top boarder of left sphere
+Point(5) = {-world_size, world_size, 0, 2.0}; // upper right world coordinate
+Point(6) = {world_size, world_size, 0, 2.0}; // upper right world coordinate
+Point(7) = {distance/2+radius, 0, 0, 0.3}; // right boarder of right sphere
+Point(8) = {distance/2-radius, 0, 0, 0.3}; // left boarder of right sphere
+Point(9) = {distance/2, radius, 0, 0.3}; // top boarder of right sphere
+Point(10) = {-distance/2+radius, 0, 0, 0.3}; // right boarder of left sphere
+Point(11) = {-distance/2-radius, 0, 0, 0.3}; // left boarder of left sphere
+Point(12) = {-distance/2, radius, 0, 0.3}; // top boarder of left sphere
 
 // Define lines
 Line(1) = {3, 5}; // left boerder
@@ -36,17 +36,6 @@ Circle(11) = {12, 2, 11}; // left sphere (left part)
 // Define surface
 Line Loop(12) = {2, 3, 4, 8, 9, 6, 7, 10, 11, -5, 1};
 Plane Surface(13) = {12};
-
-
-// ========== Refinement ===========
-
-// Refine the line interconnecting the spheres
-Transfinite Line {7, 6} = 12 Using Progression 1;
-// Refine the spheres
-Transfinite Line {9, 8, 10, 11} = 18 Using Progression 1;
-// Refine lines from spheres to outer boundary
-Transfinite Line {4, 5} = 12 Using Progression 1;
-
 
 // ========== Physical Groups (Boundary Conditions) ===========
 

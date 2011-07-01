@@ -3,24 +3,25 @@
 // refinement is done via the characteristic length
 
 inner_radius = 5;
-position = 0;  // Center position of the sphere
+position = -20;  // Center position of the sphere
 outer_radius = 50;
 outer_refinement = 4;
-inner_refinement = 0.5;
+inner_refinement = 0.3;
 
 // Define the geometry for 2d-sphere (iPBS)
 
-Point(1) = {0, position, 0, 1.0};
-Point(2) = {0, inner_radius, 0, inner_refinement};
-Point(3) = {-inner_radius, 0, 0, inner_refinement};
-Point(4) = {inner_radius, 0, 0, inner_refinement};
+Point(0) = {0, 0, 0, 1.0};
+Point(1) = {position, 0, 0, 1.0};
+Point(2) = {position, inner_radius, 0, inner_refinement};
+Point(3) = {-inner_radius+position, 0, 0, inner_refinement};
+Point(4) = {inner_radius+position, 0, 0, inner_refinement};
 Point(5) = {-outer_radius, 0, 0, outer_refinement};
 Point(6) = {outer_radius, 0, 0, outer_refinement};
 Point(7) = {0, outer_radius, 0, outer_refinement};
 Circle(8) = {2,1,3};
 Circle(9) = {2,1,4};
-Circle(10) = {6, 1, 7};
-Circle(11) = {7, 1, 5};
+Circle(10) = {6, 0, 7};
+Circle(11) = {7, 0, 5};
 Line(12) = {4, 6};
 Line(13) = {3, 5};
 Line Loop(14) = {10, 11, -13, -8, 9, 12};
