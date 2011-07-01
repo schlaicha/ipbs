@@ -1,24 +1,26 @@
 // Define setup variables
-radius = 5;
+radius = 0.5;
 distance = @distance@;
-world_size = 30;
+world_size = 50;
+lc_sphere = 0.05;
+lc_boarder = 2.0;
 
 // ========== Setuo Geometry ===========
 
 // Define points
-Point(0) = {0, 0, 0, 0.3}; // origin
+Point(0) = {0, 0, 0, lc_sphere}; // origin
 Point(1) = {distance/2+radius, 0, 0, 1.0}; // center of right sphere
 Point(2) = {-distance/2-radius, 0, 0, 1.0}; // center of left sphere
-Point(3) = {-world_size, 0, 0, 0.3}; // lower left world coordinate
-Point(4) = {world_size, 0, 0, 0.3}; // lower right world coordinate
-Point(5) = {-world_size, world_size, 0, 2.0}; // upper right world coordinate
-Point(6) = {world_size, world_size, 0, 2.0}; // upper right world coordinate
-Point(7) = {distance/2+2*radius, 0, 0, 0.3}; // right boarder of right sphere
-Point(8) = {distance/2, 0, 0, 0.3}; // left boarder of right sphere
-Point(9) = {distance/2+radius, radius, 0, 0.3}; // top boarder of right sphere
-Point(10) = {-distance/2, 0, 0, 0.3}; // right boarder of left sphere
-Point(11) = {-distance/2-2*radius, 0, 0, 0.3}; // left boarder of left sphere
-Point(12) = {-distance/2-radius, radius, 0, 0.3}; // top boarder of left sphere
+Point(3) = {-world_size, 0, 0, lc_boarder}; // lower left world coordinate
+Point(4) = {world_size, 0, 0, lc_boarder}; // lower right world coordinate
+Point(5) = {-world_size, world_size, 0, lc_boarder}; // upper right world coordinate
+Point(6) = {world_size, world_size, 0, lc_boarder}; // upper right world coordinate
+Point(7) = {distance/2+2*radius, 0, 0, lc_sphere}; // right boarder of right sphere
+Point(8) = {distance/2, 0, 0, lc_sphere}; // left boarder of right sphere
+Point(9) = {distance/2+radius, radius, 0, lc_sphere}; // top boarder of right sphere
+Point(10) = {-distance/2, 0, 0, lc_sphere}; // right boarder of left sphere
+Point(11) = {-distance/2-2*radius, 0, 0, lc_sphere}; // left boarder of left sphere
+Point(12) = {-distance/2-radius, radius, 0, lc_sphere}; // top boarder of left sphere
 
 // Define lines
 Line(1) = {3, 5}; // left boerder

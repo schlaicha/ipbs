@@ -54,6 +54,9 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
       }
     }
 
+  // To get SI units divide by 4*PI
+  F /= 4*sysParams.pi;
+
   std::ofstream myfile;
   myfile.open ("forces.dat", std::ios::out | std::ios::app);
   myfile << i << " " << F << std::endl;
