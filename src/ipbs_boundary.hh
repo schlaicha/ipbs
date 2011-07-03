@@ -29,6 +29,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   // for(int i = countBoundElems - 1; i >= 0; i--)
   for(int i = 0; i < countBoundElems; i++)
   {
+    // std::cout << "In ipbs_boundary() and get_symmetry() is " << sysParams.get_symmetry() << std::endl;
+  
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal;
     Dune::FieldVector<ctype,dim> r;  // vector of iterative surface boundary center
@@ -249,6 +251,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
        fluxIntegrated = 0;
     fluxContainer[i] = fluxIntegrated;
+    //std::cout << "Returned flux is: " << fluxIntegrated << std::endl;
     // fluxContainer[i] = fluxCoulomb + fluxIntegrated;
   }
 }

@@ -46,7 +46,7 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
                 * 2.0 * sysParams.pi; // Surface normal
               Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension, 
                   GFS::Traits::GridViewType::dimension>
-                      sigma = maxwelltensor(gfs, it, u);
+                      sigma = maxwelltensor(gfs, it, ii, u);
               sigma.umv(normal,F);
             }
           }

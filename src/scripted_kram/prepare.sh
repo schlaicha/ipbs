@@ -22,5 +22,5 @@ for d in $dist; do
   echo "# Forces acting on particle i (z and r component):" > $dir/forces.dat
   echo "cd .." >> execute.sh
   echo "tail -n 2 $dir/forces.dat | awk '{print \"$d \" \$2 \" \" \$3}' | head -n 1 >> force.dat" >> analyze.sh
-  echo "tail -n 4 $dir/forces.dat | awk '{print \"$d \" \$2 \" \" \$3}' | tail -n 3 >> force2.dat" >> analyze.sh
+  echo "tail -n 4 $dir/forces.dat | awk '{print \"$d \" \$2 \" \" \$3}' | head -n 1 | tail -n2 >> force2.dat" >> analyze.sh
 done
