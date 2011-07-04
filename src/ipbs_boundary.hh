@@ -89,6 +89,15 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         // integration depends on symmetry
         switch( sysParams.get_symmetry() )
         {
+          case 0:   // full threedimensional solution
+            {
+              E_field = dist;
+              E_field /= dist.two_norm()*dist.two_norm();
+              tmpFlux = E_field * unitNormal;
+              tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+                      * sysParams.get_lambda2i() * it->geometry().volume();
+            }
+            break;
           case 1:   // infinite cylinder
             {
               // Calculate the integrated sinh term for infinite geometry
