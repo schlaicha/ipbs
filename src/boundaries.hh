@@ -234,7 +234,7 @@ public:
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     if (physgroup_index > 1)
-      y = - 1.0 * boundary[physgroup_index-2]->get_charge_density()  * sysParams.get_bjerrum();
+      y = 1.0 * boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
     else y = 0;
     return;
   }

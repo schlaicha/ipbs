@@ -22,7 +22,7 @@ verbose = 0
 # 0 - salt case enabled ; 1 - counterions
 salt = 0
 NPart = 2
-lambda = 10000
+lambda = 1e5
 bjerrum = 1
 
 # boundary types like specified in msh-file
@@ -31,7 +31,7 @@ bjerrum = 1
 # others are used to model colloidal particles
 
 [boundary_2]
-charge_density = 5.0
+charge_density = 5
 
 [boundary_3]
-charge_density = 5.0
+charge_density = 5

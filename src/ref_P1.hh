@@ -11,6 +11,8 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
+#include "test.hh"
+
 template<class GridType, class ColCom>
 void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
@@ -142,6 +144,8 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
 
   // Calculate the forces
   force(gv, boundaryIndexToEntity, gfs, u);
+
+  ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity);
 }
 
   std::cout << "Reference total calculation time on rank " << colCom.rank() << " is " << timer.elapsed() << std::endl;

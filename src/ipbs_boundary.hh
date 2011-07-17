@@ -20,17 +20,13 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           <Dune::Interior_Partition>::Iterator LeafIterator;
   typedef typename DGF::Traits::RangeType RT;	// store potential during integration 
                                   						// (for calculating sinh-term)
-
   
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   
   // Precompute fluxes
-  // for(int i = countBoundElems - 1; i >= 0; i--)
   for(int i = 0; i < countBoundElems; i++)
   {
-    // std::cout << "In ipbs_boundary() and get_symmetry() is " << sysParams.get_symmetry() << std::endl;
-  
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal;
     Dune::FieldVector<ctype,dim> r;  // vector of iterative surface boundary center
@@ -55,100 +51,100 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
       Dune::FieldVector<ctype,dim> dist = r - r_prime;
 	  
-      // integrate sinh over all elements but all the surface ones, where
-      // the densiy of counterions is zero by definition
-      bool isIPBS_Elem = false;
-      double dA = 0.0;
+      // integrate sinh over all volume elements 
       double a, b, k;  // parameters for elliptic
-      Dune::FieldVector<ctype,dim> dist2;
-      Dune::FieldVector<ctype,dim> r_prime2;
       typedef typename GV::IntersectionIterator IntersectionIterator;
-      // check that we are not on an IPBS surface element
-      if(it->hasBoundaryIntersections() == true)
-      for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
-        if(ii->boundary() == true && boundaryIndexToEntity[ii->boundarySegmentIndex()] == 2)
-        {
-          isIPBS_Elem = true;
-          dA = ii->geometry().volume();   // intersection area
-          r_prime2 = ii->geometry().center();   // center of the intersection
-          dist2 = r - r_prime2;   // correct distance vector
-        }
-
+      
       // ================================================================== 
-      // Integral over all elements but the surface ones
+      // Integral over all volume elements
       // ================================================================== 
       
-      // if (isIPBS_Elem == false || true ) 
-      //{
-        // Evaluate the potential at the elements center
-	      RT value;
-        udgf.evaluate(*it,it->geometry().center(),value);
-        // Calculate the flux through surface element caused by this element
-        double tmpFlux = 0.0;
+      // Evaluate the potential at the elements center
+	    RT value;
+      udgf.evaluate(*it,it->geometry().center(),value);
+      // Calculate the flux through surface element caused by this element
+      double tmpFlux, K, E;
 
-        // integration depends on symmetry
-        switch( sysParams.get_symmetry() )
-        {
-          case 1:   // infinite cylinder
-            {
-              // Calculate the integrated sinh term for infinite geometry
-              if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-              else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
-              a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
-	            b = 2.0 * r[1] * r_prime[1];
-              k = sqrt(2.0*b/(a+b));
-              
-              E_field[0] = 0.0*sqrt((a-b)/(a+b))
-                          *gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
-                           / sqrt((a-b)*(a-b)*(a-b))* dist[0];
-              E_field[1] = 4.0*sqrt((a-b)/(a+b))
-                          * ((-a * r_prime[1] + b * r[1]) * gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
-                              + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
-                          / sqrt((a-b)*(a-b)*(a-b)) / b;
-                         
-              tmpFlux = E_field * unitNormal;
-              tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
-                      * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
+      // integration depends on symmetry
+      switch( sysParams.get_symmetry() )
+      {
+        case 1:   // infinite cylinder
+          {
+            // Calculate the integrated sinh term for infinite geometry
+            if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
+            else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
+            a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+	          b = 2.0 * r[1] * r_prime[1];
+            k = sqrt(2.0*b/(a+b));
+            
+            E_field[0] = 0.0*sqrt((a-b)/(a+b))
+                        *gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
+                         / sqrt((a-b)*(a-b)*(a-b))* dist[0];
+            E_field[1] = 4.0*sqrt((a-b)/(a+b))
+                        * ((-a * r_prime[1] + b * r[1]) * gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
+                            + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
+                        / sqrt((a-b)*(a-b)*(a-b)) / b;
+                       
+            tmpFlux = E_field * unitNormal;
+            tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+                    * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
 
-            }
-            break;
-          
-          case 2:   // reduced 3d symmetry
-	          {
-              // Calculate the integrated sinh term for finite geometry
-              a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
-	            b = 2.0 * r[1] * r_prime[1];
-              k = sqrt(2.0*b/(a+b));
-              
-              E_field[0] = 0.0*sqrt((a-b)/(a+b))
-                          *gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
-                           / sqrt((a-b)*(a-b)*(a-b))* dist[0];
-              E_field[1] = 4.0*sqrt((a-b)/(a+b))
-                          * ((-a * r_prime[1] + b * r[1]) * gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
-                              + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
-                          / sqrt((a-b)*(a-b)*(a-b)) / b;
-                         
-              tmpFlux = E_field * unitNormal;
-              tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
-                      * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-            }
-	          break;
+          }
+          break;
+        
+        case 2:   // spherical reduced 3d symmetry
+	        {
+            // Calculate the integrated sinh term for finite geometry
+            //  a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
+	          //  b = 2.0 * r[1] * r_prime[1];
+            //  k = sqrt(2.0*b/(a+b));
+            
+            a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
+            b = 4.0 * r[1] * r_prime[1];
+            k = sqrt(b/a);
 
-          case 3: // An ininite plane in 2d cartesion coordinates 
-            {
-              // Calculate the integrated sinh term for infinite geometry
-              if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-              else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
-             
-              E_field = dist;
-              E_field /= dist.two_norm() * dist.two_norm() * 2.0 * sysParams.pi;
-                        
-              tmpFlux = E_field * unitNormal;
-              // tmpFlux *= std::sinh(value) / (sysParams.get_bjerrum())
-              tmpFlux *= -1.0 / sysParams.get_bjerrum()
-                      * sysParams.get_lambda2i() * it->geometry().volume();
-            }
-        }
+            E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+            K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+
+            E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
+            E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1]) / ((a-b)*sqrt(a)*b) * E
+                        + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+
+            // tmpFlux = it->geometry().volume() * r_prime[1] * sysParams.get_lambda2i() / sysParams.pi
+            //           / ((a-b) * sqrt(a+b)) * ((dist[0] * unitNormal[0] + (1+a/b) * r_prime[1] * unitNormal[1]) * E
+            //             + r_prime[1] * unitNormal[1] * (1+a/b) * K);
+           
+            //  E_field[0] = sqrt(a+b) * E / (a-b) * dist[0];
+            //  E_field[1] = sqrt(a+b) * ((-a * r_prime[1] + b * r[1]) * E
+            //                  + (a-b) * r_prime[1] * K) / (a-b) / b;
+            tmpFlux = E_field * unitNormal;
+            tmpFlux *= 4.0 / sysParams.pi * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
+
+            //  E_field[0] = 4.0*sqrt((a-b)/(a+b)) * E / sqrt((a-b)*(a-b)*(a-b))* dist[0];
+            //  E_field[1] = 4.0*sqrt((a-b)/(a+b)) * ((-a * r_prime[1] + b * r[1]) * E
+            //                  + (a-b) * r_prime[1] * K / sqrt((a-b)*(a-b)*(a-b))) / b;
+            //          
+            //  tmpFlux = E_field * unitNormal;
+            //  tmpFlux *= -1.0 / (4.0 * sysParams.pi)
+            //        * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
+          }
+	        break;
+
+        case 3: // An ininite plane in 2d cartesion coordinates 
+          {
+            // Calculate the integrated sinh term for infinite geometry
+            if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
+            else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
+           
+            E_field = dist;
+            E_field /= dist.two_norm() * dist.two_norm() * 2.0 * sysParams.pi;
+                      
+            tmpFlux = E_field * unitNormal;
+            tmpFlux *= -1.0 / sysParams.get_bjerrum()
+                    * sysParams.get_lambda2i() * it->geometry().volume();
+          }
+          break;
+      }
 
         // Now get the counterion distribution and calculate flux
         switch (sysParams.get_salt())
@@ -164,21 +160,18 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         // Sum up the flux through this element
         fluxIntegrated += tmpFlux;
 
-      //}
-
       // ================================================================== 
       // Integral over surface elements
       // ================================================================== 
-      // else if (isIPBS_Elem == true && isItself == false)
- //     else if (isIPBS_Elem == true && fabs(dist2.two_norm()) != 0)
- //     {
- //       // we are on a surface element and do integration for coulomb flux
- //       // add surface charge contribution from all other surface elements but this one
- //       // (using standard coulomb field formula)
- //       // NOTE: For algorithm validation we use the pillowbox conribution
+ 
+ 
+      // we are on a surface element and do integration for coulomb flux
+      // add surface charge contribution from all other surface elements but this one
+      // (using standard coulomb field formula)
+      // NOTE: For algorithm validation we use the pillowbox conribution
 
- //       // TODO either make sure you only use the pillow box or use correct
- //       // interation (1/dist-term and volume)
+      // TODO either make sure you only use the pillow box or use correct
+      // interation (1/dist-term and volume)
 
  //       switch ( sysParams.get_symmetry() )
  //         {

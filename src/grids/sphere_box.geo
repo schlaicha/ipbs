@@ -4,9 +4,9 @@
 
 radius = 5;
 position = 0;  // Center position of the sphere
-box_size = 50;
-outer_refinement = 4;
-inner_refinement = 0.5;
+box_size = 30;
+outer_refinement = 2;
+inner_refinement = 0.1;
 
 // Define the geometry for 2d-sphere (iPBS)
 
@@ -16,8 +16,8 @@ Point(3) = {-radius, 0, 0, inner_refinement};
 Point(4) = {radius, 0, 0, inner_refinement};
 Point(5) = {-box_size, 0, 0, outer_refinement};
 Point(6) = {box_size, 0, 0, outer_refinement};
-Point(7) = {-box_size, box_size/2, 0, outer_refinement};
-Point(8) = {box_size, box_size/2, 0, outer_refinement};
+Point(7) = {-box_size, box_size, 0, outer_refinement};
+Point(8) = {box_size, box_size, 0, outer_refinement};
 Circle(1) = {4, 1, 2};
 Circle(2) = {2, 1, 3};
 Line(3) = {4, 6};
@@ -32,8 +32,8 @@ Plane Surface(9) = {8};
 // 0 is for Dirichlet boundary elements
 // 1 for Neumann
 // 2 for iPBS
-// Physical Line(0) = {6};
-Physical Line(1) = {3,4,5,7,6};
+Physical Line(0) = {6,7,5};
+Physical Line(1) = {4};
 Physical Line(2) = {2, 1};
 
 

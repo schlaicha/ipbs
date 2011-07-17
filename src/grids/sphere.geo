@@ -3,9 +3,9 @@
 // refinement is done via the characteristic length
 
 inner_radius = 5;
-position = -20;  // Center position of the sphere
+position = 0;  // Center position of the sphere
 outer_radius = 50;
-outer_refinement = 4;
+outer_refinement = 3;
 inner_refinement = 0.3;
 
 // Define the geometry for 2d-sphere (iPBS)
@@ -33,9 +33,9 @@ Plane Surface(15) = {14};
 // 2 for iPBS
 
 Physical Line(2) = {9, 8};
-Physical Line(1) = {13, 12, 10, 11};
+Physical Line(1) = {13, 12};
 // Dirichlet on outer bpundary
-// Physical Line(0) = {10,11};
+Physical Line(0) = {10,11};
 
 // At least one physical surface (or physical volume
 // is needed by DUNE gmshreader (otherwise all elements

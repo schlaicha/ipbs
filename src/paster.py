@@ -21,7 +21,7 @@ entries = nesteddict()
 for i in range(0,nprocs):
   # remember the simplified filenames for sequential run
   if nprocs == 1:
-    refFileName = "reference_step_2.dat"
+    refFileName = "reference_step_0.dat"
     solFileName = "ipbs_solution.dat"
   else:
     refFileName = "s%.4d:p%.4d:reference_step_0.dat" %(nprocs,i)
