@@ -34,7 +34,11 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // Get the unit normal vector of the surface element
     Dune::FieldVector<ctype,dim> unitNormal, r;
     for (IntersectionIterator ii = gv.ibegin(*ipbsElems[i]); ii != gv.iend(*ipbsElems[i]); ++ii)
+<<<<<<< HEAD
       if (ii->boundary() == true)
+=======
+      if (boundaryIndexToEntity[ii->boundarySegmentIndex()] > 1)
+>>>>>>> 673864c6c53f2b3ec27e40fba8f4da16bcad04e1
       {
         unitNormal = ii->centerUnitOuterNormal();
         r = ii->geometry().center();  // vector of iterative surface boundary center
@@ -215,7 +219,11 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // Be careful in the counterion case, the solution during 0. itertion is not defined!
     // if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
     //   fluxIntegrated = 0;
+<<<<<<< HEAD
     fluxContainer[i] = fluxVolume;
+=======
+    fluxContainer[i] = fluxSurface + fluxVolume;
+>>>>>>> 673864c6c53f2b3ec27e40fba8f4da16bcad04e1
     //std::cout << "Returned flux is: " << fluxIntegrated << std::endl;
     // fluxContainer[i] = fluxCoulomb + fluxIntegrated;
   }
