@@ -57,6 +57,8 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
   // To get SI units divide by 4*PI
   F /= 4*sysParams.pi;
 
+  MPI_Allreduce(MPI_IN_PLACE, &F, dim, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+
   std::ofstream myfile;
   myfile.open ("forces.dat", std::ios::out | std::ios::app);
   myfile << i << " " << F << std::endl;

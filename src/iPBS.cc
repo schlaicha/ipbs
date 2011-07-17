@@ -119,7 +119,7 @@ int main(int argc, char** argv)
   
   
   // <<<1>>> Setup the problem from mesh file
-  const int dimgrid = 2;         // 2d mesh
+  const int dimgrid = 3;         // 2d mesh
   
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
