@@ -6,10 +6,12 @@
 
 #include <gsl/gsl_sf_ellint.h>
 
-template <class GV, class DGF, typename IndexLookupMap, typename BoundaryElemMapper>
+template <class GV, class DGF, class ElemPointer,
+         typename IndexLookupMap, typename BoundaryElemMapper>
+
 void ipbs_boundary(const GV& gv, const DGF& udgf,
-      const double positions[], const double normals[],
-			double fluxContainer[], const int &countBoundElems,
+      const std::vector<ElemPointer> ipbsElems,
+			double fluxContainer[], const int countBoundElems,
       const std::vector<int>& boundaryIndexToEntity,
       const IndexLookupMap& indexLookupMap, const BoundaryElemMapper& boundaryElemMapper)
 {
@@ -18,27 +20,30 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   typedef typename GV::Grid::ctype ctype;
   typedef typename GV::template Codim<0>::template Partition
           <Dune::Interior_Partition>::Iterator LeafIterator;
+  typedef typename GV::IntersectionIterator IntersectionIterator;
   typedef typename DGF::Traits::RangeType RT;	// store potential during integration 
                                   						// (for calculating sinh-term)
   
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   
+  std::cout << "in ipbs_boundary, countBoundElems = " << countBoundElems << std::endl;
   // Precompute fluxes
   for(int i = 0; i < countBoundElems; i++)
   {
     // Get the unit normal vector of the surface element
-    Dune::FieldVector<ctype,dim> unitNormal;
-    Dune::FieldVector<ctype,dim> r;  // vector of iterative surface boundary center
-    for(int j=0; j<dim; j++)
-    {
-        unitNormal[j] = normals[i*dim+j];
-        r.vec_access(j) = positions[i*dim+j];
-    }
+    Dune::FieldVector<ctype,dim> unitNormal, r;
+    for (IntersectionIterator ii = gv.ibegin(*ipbsElems[i]); ii != gv.iend(*ipbsElems[i]); ++ii)
+      if (ii->boundary() == true)
+      {
+        unitNormal = ii->centerUnitOuterNormal();
+        r = ii->geometry().center();  // vector of iterative surface boundary center
+      }
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
+    std::cout << "calculated r = " << r << " n = " << unitNormal << std::endl;
    
-    double fluxIntegrated = 0.0;
-    double fluxCoulomb = 0.0;
+    double fluxVolume = 0.0;
+    double fluxSurface = 0.0;
     Dune::FieldVector<ctype,dim> E_field(0);
 	   
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
@@ -50,6 +55,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // Get the position vector of the this element's center
       Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
       Dune::FieldVector<ctype,dim> dist = r - r_prime;
+      // std::cout << "In the loop :-) \t r_prime = " << r_prime << std::endl;
 	  
       // integrate sinh over all volume elements 
       double a, b, k;  // parameters for elliptic
@@ -158,92 +164,58 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         }
 
         // Sum up the flux through this element
-        fluxIntegrated += tmpFlux;
+        fluxVolume += tmpFlux;
 
       // ================================================================== 
       // Integral over surface elements
       // ================================================================== 
  
- 
-      // we are on a surface element and do integration for coulomb flux
-      // add surface charge contribution from all other surface elements but this one
-      // (using standard coulomb field formula)
-      // NOTE: For algorithm validation we use the pillowbox conribution
+      if (it != ipbsElems[i] && it->hasBoundaryIntersections() == true)
+      {
+        for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
+          {
+             if(ii->boundary() == true)
+             {
+                if (boundaryIndexToEntity[ii->boundarySegmentIndex()] > 1)
+                {
+                  r_prime = ii->geometry().center();
+                  dist = r-r_prime;
+                  
+                  // we are on a surface element and do integration for coulomb flux
+                  // add surface charge contribution from all other surface elements but this one
+                  // (using standard coulomb field formula)
 
-      // TODO either make sure you only use the pillow box or use correct
-      // interation (1/dist-term and volume)
-
- //       switch ( sysParams.get_symmetry() )
- //         {
- //           case 1:	// "2D_cylinder"
- //             {
- //               // Pillow box contribution - for testing ...
- //               fluxCoulomb = 1.0 * sysParams.get_charge_density()
- // 	             * sysParams.get_bjerrum() * 2.0 * sysParams.pi;
- //               
- //               // Integrated Coulomb flux - TODO: this is not working properly!
- //               // fluxCoulomb += 1.0 * sysParams.get_bjerrum()*sysParams.get_charge_density() 
- //               //   * (dist2*unitNormal) / (dist2.two_norm() * dist2.two_norm())
- //               //   *  dA;              
- //             }
- //             break;
-
- //           case 2: // "2D_sphere"
- //             {
- //               // Pillow Box contribution - for testing ...
- //               fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-
- //               // Calculate the integrated Coulomb flux
- //               // a = (dist2[0]*dist2[0] + r[1]*r[1] + r_prime2[1]*r_prime2[1]);
- //               // b = 2.0 * r[1] * r_prime2[1];
- //               // k = sqrt(2.0*b/(a+b));
-
- //               // E_field[0] = 4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
- //               //               / sqrt((a-b)*(a-b)*(a-b))
- //               //               * dist2[0];
- //               // E_field[1] = 4.0*sqrt((a-b)/(a+b))
- //               //             * ((-a * r_prime2[1] + b * r[1]) * gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
- //               //                 + (a-b) * r_prime2[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
- //               //             / sqrt((a-b)*(a-b)*(a-b)) / b;
-
- //               //             //  4.0*sqrt((a-b)/(a+b))*gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE)
- //               //             //   / sqrt((a-b)*(a-b)*(a-b)) * r[1]
- //               //             // + 4.0*sqrt((a-b)/(a+b)) * (a * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE)
- //               //             //                           - a * gsl_sf_ellint_Ecomp(k, GSL_PREC_DOUBLE)
- //               //             //                           - b * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
- //               //             //   / sqrt((a-b)*(a-b)*(a-b)) / b * r_prime2[1]; 
- //               // 
- //               // double tmpFlux = E_field * unitNormal;
- //               // tmpFlux *= sysParams.get_bjerrum() * sysParams.get_charge_density()
- //               //               * dA / 2.0 / sysParams.pi * r_prime2[1];
- //               // fluxCoulomb += tmpFlux;
- //               
- //               //if (it->partitionType() == Dune::GhostEntity) fluxCoulomb = 0;
- //             }
- //           break;
- //         }
- //     }
+                  switch ( sysParams.get_symmetry() )
+                  {
+                    case 2: // "spherical symmetry"
+                    {
+                      a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
+                      b = 4.0 * r[1] * r_prime[1];
+                      k = sqrt(b/a);
+                      E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+                      K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+                      E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
+                      E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                                              / ((a-b)*sqrt(a)*b) * E
+                              + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+                      tmpFlux = E_field * unitNormal;
+                      tmpFlux *=  4.0 / sysParams.pi * sysParams.get_bjerrum()
+                                        *ii->geometry().volume() * r_prime[1] * 
+                                        boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+                    }
+                    break;
+                  }
+                  fluxSurface += tmpFlux;
+              }
+            }
+          }
+      }
     }
 
-      
-    // ================================================================== 
-    // Do SOR step
-    // ================================================================== 
-    // fluxCoulomb = 1.0 * sysParams.get_charge_density()  * sysParams.get_bjerrum();
-    // double flux = fluxCoulomb + fluxIntegrated;
-    // std::cout << "At r = " << r << " E-Field is: " << E_field << std::endl;
-    // std::cout << "At r = " << r << " normal: " << unitNormal << "\tfluxCoulomb: " << fluxCoulomb << "\tfluxIntegrated: " 
-    //  << fluxIntegrated << "\tflux: " << flux << std::endl; 
-    // Do SOR step and add error
-    // flux = sysParams.get_alpha() * flux + (1.0 - sysParams.get_alpha()) * fluxContainer[i];
-    // double error = fabs(2.0*(flux-fluxContainer[i])/(flux+fluxContainer[i]));
-    // sysParams.add_error(error);
-    // Store new flux
-    
     // Be careful in the counterion case, the solution during 0. itertion is not defined!
-    if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
-       fluxIntegrated = 0;
-    fluxContainer[i] = fluxIntegrated;
+    // if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
+    //   fluxIntegrated = 0;
+    fluxContainer[i] = fluxVolume;
     //std::cout << "Returned flux is: " << fluxIntegrated << std::endl;
     // fluxContainer[i] = fluxCoulomb + fluxIntegrated;
   }
