@@ -166,11 +166,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // now master process receives all positions from other processes
   // first every processor creates an array of its position vectors
   int* my_types = (int*) malloc (ipbsType.size()*sizeof(int));
-<<<<<<< HEAD
   for (unsigned int i = 0; i<ipbsElemPointers.size(); i++){
-=======
-  for (unsigned int i = 0; i<countBoundElems; i++){
->>>>>>> 673864c6c53f2b3ec27e40fba8f4da16bcad04e1
         my_types[i] = ipbsType[i];
   }
   
@@ -183,11 +179,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   if (colCom.rank() == 0)
   {
     // Write positions of master node
-<<<<<<< HEAD
     for (unsigned int i = 0; i < ipbsElemPointers.size(); i++){
-=======
-    for (unsigned int i = 0; countBoundElems; i++){
->>>>>>> 673864c6c53f2b3ec27e40fba8f4da16bcad04e1
        all_types[i] = ipbsType[i];
     }
     // get the right offset

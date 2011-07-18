@@ -94,10 +94,14 @@ public:
     *   \arg 2 for iPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index > 0)
-      y = 0;  // All others are Neumann boundaries
+    if (physgroup_index == 0) // || physgroup_index == 2)
+      y = 1;
     else
-      y = 1;  // only zero is Dirichlet
+      y = 0;
+    // if (physgroup_index > 0)
+    //   y = 0;  // All others are Neumann boundaries
+    // else
+    //   y = 1;  // only zero is Dirichlet
     return;
   }
 
@@ -136,7 +140,13 @@ public :
                         typename Traits::RangeType& y) const
   {
     //! Set value for potential at outer domain boundaries
-    y = 0.0;
+    const int dim = Traits::GridViewType::Grid::dimension;
+    typedef typename Traits::GridViewType::Grid::ctype ctype;
+    Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
+    if (x.two_norm() < 5.2)
+      y = 1.0;
+    else
+      y = 0.0;
     return;
   }
 

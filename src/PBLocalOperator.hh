@@ -31,7 +31,7 @@ public:
 
   // constructor parametrized by regions and boundary classes
   PBLocalOperator (const M& m_, const B& b_, const J& j_, 
-		   unsigned int intorder_=2)  // needs boundary cond. type
+		   unsigned int intorder_=5)  // needs boundary cond. type
     : m(m_), b(b_), j(j_), intorder(intorder_)
   {}
 
@@ -94,23 +94,33 @@ public:
 
         RF f=0.;
       	// Parameters describing the PDE
-        switch (sysParams.get_salt())
-        {
-          case 0:
-            f = -1.0 * sysParams.get_lambda2i() * sinh(u);
-            break;
-          case 1:
-            f = -1.0 * sysParams.get_lambda2i() * exp(u);
-            break;
-        }
+        // switch (sysParams.get_salt())
+        // {
+        //   case 0:
+        //     f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+        //     break;
+        //   case 1:
+        //     f = -1.0 * sysParams.get_lambda2i() * exp(u);
+        //     break;
+        // }
       	RF a = 0.; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
         RF factor = it->weight()*eg.geometry().integrationElement(it->position());
 
-       // Integration with added term for metric
-        for (size_type i=0; i<lfsu.size(); i++)
-          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
+        // choose correct metric for integration
+        // Integration with added term for metric
+        switch ( sysParams.get_symmetry() )
+        {
+                case 2: for (size_type i=0; i<lfsu.size(); i++)
+                    //    r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1]
+                    //            - gradu[1]*phi[i] ) * factor;
+                        r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1] ) *factor;
+                        break;   // "2D_sphere"
+                default:  for (size_type i=0; i<lfsu.size(); i++)
+                          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
+                          break;
+        }
       }
   }
 
@@ -151,6 +161,7 @@ public:
 
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());
+        Dune::FieldVector<DF,dim> global = ig.geometry().global(it->position());
 
         // evaluate basis functions at integration point
         std::vector<RangeType> phi(lfsv_s.size());
@@ -162,9 +173,19 @@ public:
 	
       	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
+        // choose correct metric for integration
+        RF metric;
+        switch ( sysParams.get_symmetry() )
+        {
+                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 2: metric = 1.0*global[1]*2.0*sysParams.pi; break;   // "2D_sphere"
+                case 3: metric = 1.0; break; // "3D"
+                default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
+        }
+       
         // Integration with added term for metric
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor;
+          r_s[i] += y*phi[i]*factor*metric;
       }
   }
   
