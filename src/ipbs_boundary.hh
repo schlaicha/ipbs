@@ -44,15 +44,16 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       }
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
    
-    double fluxVolume = 0.0;
-    double fluxSurface = 0.0;
-    Dune::FieldVector<ctype,dim> E_field(0);
+    double summed_flux = 0;
 	   
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
             	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
     {
       // Now we go over all elements on this processor
       // and sum up their flux contributions
+      Dune::FieldVector<ctype,dim> E_field(0);
+      // Dune::FieldVector<ctype,dim> surfaceElem_field(0);
+      // Dune::FieldVector<ctype,dim> volumeElem_field(0);
 	  
       // Get the position vector of the this element's center
       Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
@@ -60,7 +61,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // std::cout << "In the loop :-) \t r_prime = " << r_prime << std::endl;
 	  
       // integrate sinh over all volume elements 
-      double a, b, k;  // parameters for elliptic
+      double a, b, k, K, E;  // parameters for elliptic
+      double volumeElem_flux, surfaceElem_flux, itself_flux;
       typedef typename GV::IntersectionIterator IntersectionIterator;
       
       // ================================================================== 
@@ -71,7 +73,6 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
 	    RT value;
       udgf.evaluate(*it,it->geometry().center(),value);
       // Calculate the flux through surface element caused by this element
-      double tmpFlux, K, E;
 
       // integration depends on symmetry
       switch( sysParams.get_symmetry() )
@@ -93,8 +94,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                             + (a-b) * r_prime[1] * gsl_sf_ellint_Kcomp(k, GSL_PREC_DOUBLE))
                         / sqrt((a-b)*(a-b)*(a-b)) / b;
                        
-            tmpFlux = E_field * unitNormal;
-            tmpFlux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
+            volumeElem_flux = E_field * unitNormal;
+            volumeElem_flux *= -1.0 / (sysParams.get_bjerrum() * 4.0 * sysParams.pi)
                     * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
 
           }
@@ -102,39 +103,25 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         
         case 2:   // spherical reduced 3d symmetry
 	        {
-            // Calculate the integrated sinh term for finite geometry
-            //  a = (dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1]);
-	          //  b = 2.0 * r[1] * r_prime[1];
-            //  k = sqrt(2.0*b/(a+b));
-            
             a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
             b = 4.0 * r[1] * r_prime[1];
+            // if (a > 1e-3)
+            // {
             k = sqrt(b/a);
-
             E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
             K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-
+            // }
+            // else
+            // {
+            //   E = sysParams.pi / 2.0;
+            //   K = sysParams.pi / 2.0;
+            // }
             E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-            E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1]) / ((a-b)*sqrt(a)*b) * E
-                        + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-
-            // tmpFlux = it->geometry().volume() * r_prime[1] * sysParams.get_lambda2i() / sysParams.pi
-            //           / ((a-b) * sqrt(a+b)) * ((dist[0] * unitNormal[0] + (1+a/b) * r_prime[1] * unitNormal[1]) * E
-            //             + r_prime[1] * unitNormal[1] * (1+a/b) * K);
-           
-            //  E_field[0] = sqrt(a+b) * E / (a-b) * dist[0];
-            //  E_field[1] = sqrt(a+b) * ((-a * r_prime[1] + b * r[1]) * E
-            //                  + (a-b) * r_prime[1] * K) / (a-b) / b;
-            tmpFlux = E_field * unitNormal;
-            tmpFlux *= 4.0 / sysParams.pi * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-
-            //  E_field[0] = 4.0*sqrt((a-b)/(a+b)) * E / sqrt((a-b)*(a-b)*(a-b))* dist[0];
-            //  E_field[1] = 4.0*sqrt((a-b)/(a+b)) * ((-a * r_prime[1] + b * r[1]) * E
-            //                  + (a-b) * r_prime[1] * K / sqrt((a-b)*(a-b)*(a-b))) / b;
-            //          
-            //  tmpFlux = E_field * unitNormal;
-            //  tmpFlux *= -1.0 / (4.0 * sysParams.pi)
-            //        * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
+            E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                           / ((a-b)*sqrt(a)*b) * E
+                         + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+            volumeElem_flux = E_field * unitNormal;
+            volumeElem_flux *= 1.0 / (4.0*sysParams.pi) * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
           }
 	        break;
 
@@ -147,8 +134,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
             E_field = dist;
             E_field /= dist.two_norm() * dist.two_norm() * 2.0 * sysParams.pi;
                       
-            tmpFlux = E_field * unitNormal;
-            tmpFlux *= -1.0 / sysParams.get_bjerrum()
+            volumeElem_flux = E_field * unitNormal;
+            volumeElem_flux *= 1.0 / sysParams.get_bjerrum()
                     * sysParams.get_lambda2i() * it->geometry().volume();
           }
           break;
@@ -158,21 +145,19 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         switch (sysParams.get_salt())
         {
           case 0:
-            tmpFlux *= std::sinh(value);
+            volumeElem_flux *= std::sinh(value);
             break;
           case 1:
-            tmpFlux *= std::exp(value); // Counterions have opposite sign!
+            volumeElem_flux *= std::exp(value); // Counterions have opposite sign!
             break;
         }
-
-        // Sum up the flux through this element
-        fluxVolume += tmpFlux;
+       summed_flux += volumeElem_flux;
 
       // ================================================================== 
       // Integral over surface elements
       // ================================================================== 
  
-      if (it != ipbsElems[i] && it->hasBoundaryIntersections() == true)
+      if (it->hasBoundaryIntersections() == true)
       {
         for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii)
           {
@@ -180,44 +165,58 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
              {
                 if (boundaryIndexToEntity[ii->boundarySegmentIndex()] > 1)
                 {
-                  r_prime = ii->geometry().center();
-                  dist = r-r_prime;
-                  
-                  // we are on a surface element and do integration for coulomb flux
-                  // add surface charge contribution from all other surface elements but this one
-                  // (using standard coulomb field formula)
-
-                  switch ( sysParams.get_symmetry() )
+                  if (it != ipbsElems[i])
                   {
-                    case 2: // "spherical symmetry"
+                    r_prime = ii->geometry().center();
+                    dist = r-r_prime;
+                    
+                    // we are on a surface element and do integration for coulomb flux
+                    // add surface charge contribution from all other surface elements but this one
+                    // (using standard coulomb field formula)
+
+                    switch ( sysParams.get_symmetry() )
                     {
-                      a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                      b = 4.0 * r[1] * r_prime[1];
-                      k = sqrt(b/a);
-                      E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                      K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                      E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                      E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                                              / ((a-b)*sqrt(a)*b) * E
-                              + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                      tmpFlux = E_field * unitNormal;
-                      tmpFlux *=  4.0 / sysParams.pi * sysParams.get_bjerrum()
-                                        *ii->geometry().volume() * r_prime[1] * 
-                                        boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+                      case 2: // "spherical symmetry"
+                      {
+                        a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
+                        b = 4.0 * r[1] * r_prime[1];
+                        k = sqrt(b/a);
+                        // if (a > 1e-3)
+                        // {
+                        k = sqrt(b/a);
+                        E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+                        K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+                        // }
+                        // else
+                        // {
+                        //   E = sysParams.pi / 2.0;
+                        //   K = sysParams.pi / 2.0;
+                        // }
+                        E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
+                        E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                                                / ((a-b)*sqrt(a)*b) * E
+                                + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+                        surfaceElem_flux = E_field * unitNormal;
+                        surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ii->geometry().volume() * r_prime[1] * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+                        //std::cout << "surfaceElem_flux contributes " << surfaceElem_flux;
+                      }
+                      break;
                     }
-                    break;
                   }
-                  fluxSurface += tmpFlux;
+                  else
+                  {
+                    itself_flux = 2. * sysParams.pi * sysParams.get_bjerrum() * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+                    // std::cout << "ITSELFS FLUX: " << itself_flux;
+                    summed_flux += itself_flux;
+                  }
+                  summed_flux += surfaceElem_flux;
               }
             }
           }
       }
+      // std::cout << "Hello! surfaceElem_flux is now " << surfaceElem_flux;
     }
-
-    // Be careful in the counterion case, the solution during 0. itertion is not defined!
-    // if (sysParams.counter == 0 && sysParams.get_salt() == 1) 
-    //   fluxIntegrated = 0;
-    //fluxContainer[i] = fluxSurface + fluxVolume;
-    fluxContainer[i] = fluxSurface;
+    fluxContainer[i] = summed_flux;
+    // std::cout << std::endl <<" summed_flux is " << summed_flux << std::endl;
   }
 }

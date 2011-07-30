@@ -220,7 +220,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
       for(unsigned int i=0; i<countBoundElems; i++)
         {
           fluxContainer[i] = 0;   // initialize with zero
-          fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.0;   // random initial b.c.
+          fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
         }
     else
       for(unsigned int i=0; i<countBoundElems; i++)
@@ -264,9 +264,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     // do SOR step determine the error on each processor
     for (unsigned int i = 0; i < countBoundElems; i++)
     {
-      double fluxCoulomb = boundary[all_types[i]-2]->get_charge_density()  * sysParams.get_bjerrum() * (4.0 * sysParams.pi);
+      //double fluxCoulomb = boundary[all_types[i]-2]->get_charge_density()  * sysParams.get_bjerrum() * (4.0 * sysParams.pi);
+      //fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
 
-      fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
+      fluxContainer[i] = sysParams.get_alpha() * fluxContainer[i]
                           + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];
       double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])
                       /(fluxContainer[i]+fluxContainerStored[i]));

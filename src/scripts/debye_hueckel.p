@@ -1,5 +1,5 @@
-# Gnuplot script file for plotting data in file "reference.dat"
-# and comparing it to the analytical solution
+# Gnuplot script file for comparing iPBS obtained results
+# to Debye Hueckel theory (see e.g. debye23a)
 
 set   autoscale                        # scale axes automatically
 unset log                              # remove any log-scaling
@@ -10,14 +10,14 @@ set title "iPBS solution fit to Debye-Hueckel potential" font "Helvetica,16"
 set xlabel "radial coordinate" font "Helvetica,12"
 set ylabel "potential (reduced units)" font "Helvetica,12"
 
-#set key 0.01,100
-#set label "Yield Point" at 0.003,260
-#set arrow from 0.0028,250 to 0.003,280
-set xr [5:15]
-set yr [1e-5:]
-set log y
-f(x)=a*exp(-x)/x
-fit f(x) 'reference_step_7.dat' u (sqrt($1*$1+$2*$2)):(-$3) via a
+lambda = 1.0
+kappa = 1 / lambda
+#charge = 31.416
+charge = 188.5
+bjerrum = 0.7
+radius = 5
+A = charge * bjerrum * exp(kappa*radius) / (1 + kappa*radius)
+f(x)= A * exp ( - kappa * x ) / x
 set pointsize 1
 
-plot "reference_step_7.dat" u (sqrt($1*$1+$2*$2)):(-$3) title 'finite element solution' pt 7, f(x) title 'debye hueckel fit' ls 3 lw 2
+plot [5:50] "../ipbs_step_7.dat" u (sqrt($1*$1+$2*$2)):(-$3) title 'iPBS solution' pt 5 ps 2, "../reference_step_0.dat" u (sqrt($1*$1+$2*$2)):(-$3) title 'finite element solution' pt 3 ps 1, f(x) title 'debye hueckel potential' ls 3 lw 3

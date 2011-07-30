@@ -143,9 +143,9 @@ public :
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
-    if (x.two_norm() < 5.2)
-      y = 1.0;
-    else
+    // if (x.two_norm() < 5.2)
+    //   y = 1.0;
+    // else
       y = 0.0;
     return;
   }
@@ -244,7 +244,7 @@ public:
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     if (physgroup_index > 1)
-      y = 1.0 * boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
+      y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
     else y = 0;
     return;
   }
