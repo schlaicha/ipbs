@@ -181,9 +181,9 @@ void ipbs_testField(const GV& gv, const DGF& udgf, const GFS& gfs, const U& u,
    coulomb_file << elemii->geometry().center() << " " << summed_field << std::endl;
    
    // Get the gradient for comparing the field
-   Dune::FieldVector<Real,dim> E = gradient(gfs, elemIt, u);
+   Dune::FieldVector<Real,dim> E = gradient(gfs, elemIt, u, elemii->geometry().center());
    E *= -1.0;
-   gradient_file << elemIt->geometry().center() << " " << E << std::endl;
+   gradient_file << elemii->geometry().center() << " " << E << std::endl;
   }
  }}}}
    gradient_file.close();   

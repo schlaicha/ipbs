@@ -4,11 +4,11 @@
 
 template <typename GFS, class Iterator, typename U>
 Dune::FieldVector<double,GFS::Traits::GridViewType::dimension>
-gradient(const GFS& gfs, const Iterator& it, const U& u)
+gradient(const GFS& gfs, const Iterator& it, const U& u,
+    const Dune::FieldVector<double,GFS::Traits::GridViewType::dimension>& position)
 {
   const int dim = GFS::Traits::GridViewType::dimension;
   const int dimw = GFS::Traits::GridViewType::dimensionworld;
-  //const int dimw = 2;
   
   typedef typename GFS::LocalFunctionSpace LFSU;
   typedef typename LFSU::Traits::FiniteElementType::
@@ -33,11 +33,13 @@ gradient(const GFS& gfs, const Iterator& it, const U& u)
 
   // evaluate gradient of basis functions on reference element
   std::vector<JacobianType> js(lfsu.size());
-  lfsu.finiteElement().localBasis().evaluateJacobian(it->geometry().center(),js);
+  //lfsu.finiteElement().localBasis().evaluateJacobian(it->geometry().center(),js);
+  lfsu.finiteElement().localBasis().evaluateJacobian(position,js);
 
   // transform gradients from reference element to real element
   const Dune::FieldMatrix<DF,dimw,dim>
-          jac = it->geometry().jacobianInverseTransposed(it->geometry().center());
+  //        jac = it->geometry().jacobianInverseTransposed(it->geometry().center());
+          jac = it->geometry().jacobianInverseTransposed(position);
   std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
   for (size_type i=0; i<lfsu.size(); i++)
     jac.mv(js[i][0],gradphi[i]);

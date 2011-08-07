@@ -94,7 +94,7 @@ public:
     *   \arg 2 for iPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index == 0) // || physgroup_index == 2)
+    if (physgroup_index == 0)// || physgroup_index > 1)
       y = 1;
     else
       y = 0;
@@ -143,7 +143,7 @@ public :
     const int dim = Traits::GridViewType::Grid::dimension;
     typedef typename Traits::GridViewType::Grid::ctype ctype;
     Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
-    // if (x.two_norm() < 5.2)
+    // if (x.two_norm() < 21.)
     //   y = 1.0;
     // else
       y = 0.0;

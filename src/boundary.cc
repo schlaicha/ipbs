@@ -1,8 +1,8 @@
 #include "boundary.hh"
 
-void Boundary::set_radius(double _radius)
+void Boundary::set_epsilons(double epsilonIn, double epsilonOut)
 {
-    radius = _radius;
+    factor = 2. * epsilonIn / (epsilonIn + epsilonOut) ;
 }
 
 void Boundary::set_charge_density(double _value)
@@ -13,4 +13,9 @@ void Boundary::set_charge_density(double _value)
 double Boundary::get_charge_density()
 {
     return charge_density;
+}
+
+double Boundary::get_dielectric_factor()
+{
+  return factor;
 }

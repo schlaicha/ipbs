@@ -26,6 +26,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
+  double dielectric_factor = 0;   // = 2 eps_in / (eps_in + eps_out)
   
   std::cout << "in ipbs_boundary, countBoundElems = " << countBoundElems << std::endl;
   // Precompute fluxes
@@ -40,6 +41,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         {
           unitNormal = ii->centerUnitOuterNormal();
           r = ii->geometry().center();  // vector of iterative surface boundary center
+          dielectric_factor = boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_dielectric_factor();
         }
       }
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
@@ -216,7 +218,9 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       }
       // std::cout << "Hello! surfaceElem_flux is now " << surfaceElem_flux;
     }
-    fluxContainer[i] = summed_flux;
+    // Include dielectrics! Multiply with dielectric factor...
+    double diel_flux = dielectric_factor * summed_flux;
+    fluxContainer[i] = summed_flux + diel_flux;
     // std::cout << std::endl <<" summed_flux is " << summed_flux << std::endl;
   }
 }

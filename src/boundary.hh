@@ -8,14 +8,13 @@
 class Boundary
 {
   public:
-    void set_radius(double _radius);
+    void set_epsilons(double _epsilonIn, double _epsilonOut);
     void set_charge_density(double _value);
-    
     double get_charge_density();
+    double get_dielectric_factor();
 
   private:
-    double espilon;
-    double radius;
+    double factor;
     double charge;
     double charge_density;
 };

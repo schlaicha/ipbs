@@ -18,27 +18,37 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   const int dim = GFS::Traits::GridViewType::dimension;
   
   // construct a discrete grid function for access to solution                                                                                                                                                              
-  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;                                                                                                                                                                    
-  const DGF udgf(gfs, u);  
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+  const DGF udgf(gfs, u);
   typedef typename DGF::Traits::RangeType RT;
   RT value;
   // evaluate the potential
   udgf.evaluate(*it, ii->geometry().center(), value);
 
-  // Get the E-Field (grad Phi)
-  Dune::FieldVector<Real,dim> E = gradient(gfs, it, u);
-  E *= -1.0;
+  // Get the E-Field (-grad Phi)
+  Dune::FieldVector<Real,dim> E = gradient(gfs, it, u, ii->geometry().center());
+  E *= -1.0/(4.*sysParams.pi);
 
   // Build the stress tensor
   Dune::FieldMatrix<Real, dim, dim> res;
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++)
-      res[i][j] = E[i] * E[j];
+    {
+      // if (i != j)
+        res[i][j] = -1.0 * E[i] * E[j];
+      // else
+        // res[i][j] = -0.5 * E[i] * E[j] +  1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0);
+    }
 
   // for the correct force on the particles not only electrostatic but also osmotic pressure has to be included!
   // this is in principle proportional to n_+ + n_- - 2c_s = 2 * ( cosh (phi) - 1 )
   for (int i = 0; i < dim; i++)
-    res[i][i] -= -2 * sysParams.get_lambda2i() * std::cosh(value) + .5 * E.two_norm2();
+  {
+    // std::cout << value << " " << std::cosh(value) << std::endl;
+    //value = 0; // Do not include osmotic pressure
+    res[i][i] += .5 * E.two_norm2();
+    // res[i][i] += 1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2();
+  }
   return res;
 }
 

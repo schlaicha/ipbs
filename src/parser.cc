@@ -55,6 +55,7 @@ void parser(std::string config_file)
   sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
   sysParams.set_salt(configuration.get<int>("system.salt"));
+  double epsilonOut = configuration.get<double>("system.epsilon");
 
   // Create particles
   int n_particle = configuration.get<int>("system.NPart");
@@ -72,5 +73,7 @@ void parser(std::string config_file)
                         // TODO find a clever way!
     p_name = s.str();
     boundary[i]->set_charge_density(configuration.get<double>(p_name+".charge_density"));
+    double epsilonIn = configuration.get<double>(p_name+".epsilon"); 
+    boundary[i]->set_epsilons(epsilonIn, epsilonOut);
   }
 }
