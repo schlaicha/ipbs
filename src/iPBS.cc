@@ -40,6 +40,7 @@
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
+#include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 #include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
@@ -76,8 +77,10 @@ std::vector<Boundary*> boundary;
 #include "force.hh"
 #include "ipbs_boundary.hh"
 #include "PBLocalOperator.hh"
+//#include "ipbs_ref_P1.hh"
 #include "ipbs_P1.hh"
-#include "ref_P1.hh"
+#include "ipbs_P2.hh"
+//#include "ref_P1.hh"
 
 //===============================================================
 // Main programm
@@ -202,8 +205,9 @@ int main(int argc, char** argv)
  // const GV& gv = grid->leafView();
 
  // Call problem drivers
- ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
-// ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ //ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
   
  // done
  return 0;

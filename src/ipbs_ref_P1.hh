@@ -11,12 +11,14 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-#include "test.hh"
+//#include "test.hh"
 
-template<class GridType, class ColCom>
-void ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
+template<class GridType, class ColCom, class temp>
+void ipbs_ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
-             const ColCom& colCom)
+             const ColCom& colCom, 
+//             const typename Dune::PDELab::GridFunctionSpace<typename GridType::LeafGridView,Dune::PDELab::P1LocalFiniteElementMap<double,double,2>,Dune::PDELab::NonoverlappingConformingDirichletConstraints,Dune::PDELab::ISTLVectorBackend<1> >::template VectorContainer<Real>& u
+             const temp& u_ipbs)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -117,16 +119,48 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
     gridAdaptor.adapt(u);
   }
 
-  std::string filename = "reference";
-  std::ostringstream n;
-  n << filename << "_step_" << step;
-  filename = n.str();
+  std::string filename = "ipbs_comparison";
+  //std::ostringstream n;
+  //n << filename << "_step_" << step;
+  //filename = n.str();
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   DGF udgf(gfs,u);
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-  vtkwriter.write(filename,Dune::VTK::appendedraw);
+  //vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
+  //vtkwriter.write(filename,Dune::VTK::appendedraw);
+
+  U dif(gfs,0.0);
+  U absdif(gfs,0.0);
+  dif += u;
+  dif -= u_ipbs;
+  
+  U rel(gfs,0.0);
+  rel += u;
+  rel -= u_ipbs;
+  absdif += u;
+  absdif -= u_ipbs;
+  for (int i = 0; i<rel.capacity(); i++)
+  {
+    if (u[i] != 0)
+      rel[i] /= u[i];
+    // build absolute values so we can use logarithmic scale in paraview
+    rel[i]=fabs(rel[i]);
+    absdif[i]=sqrt(absdif[i]*absdif[i]);
+  }
+  DGF reldgf(gfs,rel);
+  DGF ipbsdgf(gfs,u_ipbs);
+  DGF absdgf(gfs,absdif);
+  DGF difdgf(gfs,dif);
+  
+  vtkwriter.clear();
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(ipbsdgf,"iPBS solution"));
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"reference solution"));
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(difdgf,"solution difference"));
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(absdgf,"absolute difference"));
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(reldgf,"relative error"));
+  vtkwriter.write(filename);
+  //vtkwriter.write(filename,Dune::VTK::appendedraw);
 
   // Prepare filename for sequential Gnuplot output
   std::ostringstream s;
@@ -139,7 +173,11 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
   filename = s.str();
   // Gnuplot output
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
+  gnuplotwriter.addVertexData(u_ipbs,"iPBS solution");
+  gnuplotwriter.addVertexData(u,"reference solution");
+  gnuplotwriter.addVertexData(dif,"absolute difference");
+  gnuplotwriter.addVertexData(rel,"relative error");
+  // gnuplotwriter.write("reldiff.dat"); 
   gnuplotwriter.write(filename); 
 
   // Calculate the forces

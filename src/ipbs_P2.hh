@@ -13,7 +13,7 @@
 #include <map>
 
 template<class GridType, class ColCom>
-void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
+void ipbs_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              const ColCom& colCom)
 {
@@ -42,8 +42,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   G g(gv, boundaryIndexToEntity);
 
   // Create finite element map
-  typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
-  FEM fem;
+  // typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
+  unsigned const int elementorder = 2;
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, elementorder> FEM;
+  FEM fem(gv);
 
   // <<<2>>> Make grid function space
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
@@ -220,8 +222,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
       for(unsigned int i=0; i<countBoundElems; i++)
         {
           fluxContainer[i] = 0;   // initialize with zero
-          fluxContainerStored[i] = 0;   // initialize with zero
-          //fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
+          fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
         }
     else
       for(unsigned int i=0; i<countBoundElems; i++)
@@ -314,7 +315,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
     // <<<4>>> Make Grid Operator Space
     typedef PBLocalOperator<M,B,J> LOP;
-    LOP lop(m,b,j);
+    LOP lop(m,b,j, 4);
     typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
     typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
     GOS gos(gfs,cc,gfs,cc,lop);
@@ -330,7 +331,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     newton.setReassembleThreshold(0.0);
     newton.setVerbosityLevel(sysParams.get_verbose());
     newton.setReduction(1e-10);
-    newton.setMinLinearReduction(1e-3);
+    newton.setMinLinearReduction(1e-4);
     newton.setMaxIterations(50);
     newton.setLineSearchMaxIterations(25);
     newton.apply();
@@ -340,9 +341,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     out << "ipbs_step_" << sysParams.counter;
     std::string filename = out.str();
     DGF udgf_snapshot(gfs,u);
-    Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+    Dune::SubsamplingVTKWriter<GV> vtkwriter(gv,2);
+    // Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-    vtkwriter.write(filename,Dune::VTK::appendedraw);
+    vtkwriter.write(filename,Dune::VTKOptions::binaryappended);
     // Prepare filename for sequential Gnuplot output
     if(colCom.size()>1)
     {
@@ -353,9 +355,9 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
       filename = s.str();
     }
     // Gnuplot output
-    Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-    gnuplotwriter.addVertexData(u,"solution");
-    gnuplotwriter.write(filename + ".dat"); 
+    //Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+    //gnuplotwriter.addVertexData(u,"solution");
+    //gnuplotwriter.write(filename + ".dat"); 
 
     sysParams.counter ++;
     // copy flux array to backup one for next iteration step
@@ -371,9 +373,9 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // <<<6>>> graphical output
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   DGF udgf(gfs,u);
-  Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+  Dune::SubsamplingVTKWriter<GV> vtkwriter(gv,2);
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-  vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
+  vtkwriter.write("ipbs_solution",Dune::VTKOptions::binaryappended);
 
   // Prepare filename for sequential Gnuplot output
   std::string filename = "ipbs_solution";
@@ -387,9 +389,9 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   filename = s.str();
   
   // Gnuplot output
-  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename); 
+  //Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  //gnuplotwriter.addCellData(u,"solution");
+  //gnuplotwriter.write(filename); 
 
   // Calculate the forces
    force(gv, boundaryIndexToEntity, gfs, u);

@@ -76,6 +76,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       udgf.evaluate(*it,it->geometry().center(),value);
       // Calculate the flux through surface element caused by this element
 
+      if (it->hasBoundaryIntersections() == false)
+      {
       // integration depends on symmetry
       switch( sysParams.get_symmetry() )
       {
@@ -147,13 +149,15 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         switch (sysParams.get_salt())
         {
           case 0:
-            volumeElem_flux *= std::sinh(value);
+            volumeElem_flux *= it->geometry().volume() * std::sinh(value);
             break;
           case 1:
             volumeElem_flux *= std::exp(value); // Counterions have opposite sign!
             break;
         }
-       summed_flux += volumeElem_flux;
+        summed_flux += volumeElem_flux;
+        //std::cout << "at elem " << r << " contrib from " << r_prime << " elem Volume flux = " << volumeElem_flux << " phi = " << value << " sinh = " << std::sinh(value) << " a = " << a << " b = " << b << " E = " << E << " K = " << K << " summed flux = " << summed_flux << std::endl;
+      }
 
       // ================================================================== 
       // Integral over surface elements

@@ -31,7 +31,7 @@ public:
 
   // constructor parametrized by regions and boundary classes
   PBLocalOperator (const M& m_, const B& b_, const J& j_, 
-		   unsigned int intorder_=5)  // needs boundary cond. type
+		   unsigned int intorder_=2)  // needs boundary cond. type
     : m(m_), b(b_), j(j_), intorder(intorder_)
   {}
 
@@ -95,15 +95,15 @@ public:
         RF f=0.;
         //if (globalpos[0] < -0.0 && globalpos[0] > -.5 && globalpos[1] < .5.) f = -10.;
       	// Parameters describing the PDE
-        // switch (sysParams.get_salt())
-        // {
-        //   case 0:
-        //     f = -1.0 * sysParams.get_lambda2i() * sinh(u);
-        //     break;
-        //   case 1:
-        //     f = -1.0 * sysParams.get_lambda2i() * exp(u);
-        //     break;
-        // }
+        switch (sysParams.get_salt())
+        {
+          case 0:
+            f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+            break;
+          case 1:
+            f = -1.0 * sysParams.get_lambda2i() * exp(u);
+            break;
+        }
       	RF a = 0.; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
