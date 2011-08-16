@@ -23,11 +23,11 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   typedef typename DGF::Traits::RangeType RT;
   RT value;
   // evaluate the potential
-  udgf.evaluate(*it, ii->geometry().center(), value);
+  udgf.evaluate(*it, it->geometry().local(ii->geometry().center()), value);
 
   // Get the E-Field (-grad Phi)
   Dune::FieldVector<Real,dim> E = gradient(gfs, it, u, ii->geometry().center());
-  E *= -1.0/(4.*sysParams.pi);
+  E *= -1.0;
 
   // Build the stress tensor
   Dune::FieldMatrix<Real, dim, dim> res;
@@ -35,7 +35,7 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
     for (int j = 0; j < dim; j++)
     {
       // if (i != j)
-        res[i][j] = -1.0 * E[i] * E[j];
+        res[i][j] = -1.0/(8.0*sysParams.pi*sysParams.get_bjerrum()) * E[i] * E[j];
       // else
         // res[i][j] = -0.5 * E[i] * E[j] +  1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0);
     }
@@ -46,8 +46,8 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   {
     // std::cout << value << " " << std::cosh(value) << std::endl;
     //value = 0; // Do not include osmotic pressure
-    res[i][i] += .5 * E.two_norm2();
-    // res[i][i] += 1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2();
+    // res[i][i] += .5 * E.two_norm2();
+    res[i][i] += 1.0/(8.0 * sysParams.pi * sysParams.get_bjerrum()) * (sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2());
   }
   return res;
 }
