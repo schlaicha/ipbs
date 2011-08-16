@@ -47,6 +47,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
    
     double summed_flux = 0;
+    // double summed_volume_flux = 0;
 	   
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
             	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
@@ -73,10 +74,10 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       
       // Evaluate the potential at the elements center
 	    RT value;
-      udgf.evaluate(*it,it->geometry().center(),value);
+      udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
       // Calculate the flux through surface element caused by this element
 
-      if (it->hasBoundaryIntersections() == false)
+      if (it->hasBoundaryIntersections() == false && it != ipbsElems[i])
       {
       // integration depends on symmetry
       switch( sysParams.get_symmetry() )
@@ -149,14 +150,15 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
         switch (sysParams.get_salt())
         {
           case 0:
-            volumeElem_flux *= it->geometry().volume() * std::sinh(value);
+            volumeElem_flux *= std::sinh(value);
             break;
           case 1:
             volumeElem_flux *= std::exp(value); // Counterions have opposite sign!
             break;
         }
         summed_flux += volumeElem_flux;
-        //std::cout << "at elem " << r << " contrib from " << r_prime << " elem Volume flux = " << volumeElem_flux << " phi = " << value << " sinh = " << std::sinh(value) << " a = " << a << " b = " << b << " E = " << E << " K = " << K << " summed flux = " << summed_flux << std::endl;
+        // summed_volume_flux += volumeElem_flux;
+        //std::cout << "at elem " << r << " contrib from " << r_prime << " elem Volume flux = " << volumeElem_flux << " phi = " << value << " sinh = " << std::sinh(value) << " a = " << a << " b = " << b << " E = " << E << " K = " << K << " summed_volume_flux = " << summed_volume_flux <<" summed flux = " << summed_flux << std::endl;
       }
 
       // ================================================================== 

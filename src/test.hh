@@ -65,7 +65,7 @@ void ipbs_testField(const GV& gv, const DGF& udgf, const GFS& gfs, const U& u,
       //{
         // Evaluate the potential at the elements center
 	      RT value;
-        udgf.evaluate(*it,it->geometry().center(),value);
+        udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
         // Calculate the flux through surface element caused by this element
 
         // integration depends on symmetry

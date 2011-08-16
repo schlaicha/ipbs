@@ -43,7 +43,7 @@ void ipbs_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // Create finite element map
   // typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
-  unsigned const int elementorder = 2;
+  unsigned const int elementorder = 3;
   typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, elementorder> FEM;
   FEM fem(gv);
 
