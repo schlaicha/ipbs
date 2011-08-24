@@ -2,9 +2,9 @@
 radius = 40;
 distance = 100.0;
 height = 100;
-width = 500;
-outer_refinement = 10;
-inner_refinement = 1;
+width = 300;
+outer_refinement = 15;
+inner_refinement = 0.5;
 center_refinement = 5;
 
 // ========== Setuo Geometry ===========

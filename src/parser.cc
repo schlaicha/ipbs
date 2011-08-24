@@ -40,6 +40,7 @@ void parser(std::string config_file)
   const int verbose = 4;
   const double lambda = 1.0;
   const double bjerrum = 0.7;
+  const double newton_tolerance = 1e-10;
 
   // set the symmetry of the system
   sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
@@ -47,6 +48,7 @@ void parser(std::string config_file)
   
   // Parse other options
   sysParams.set_alpha(configuration.get<double>("solver.alpha_sor",alpha_sor));
+  sysParams.set_newton_tolerance(configuration.get<double>("solver.newton_tolerance",newton_tolerance));
   sysParams.set_refinement(configuration.get<int>("mesh.global_refinement_level",level));
   sysParams.set_refinementFraction(configuration.get<double>("mesh.adaptive_refinement_fraction",0));
   sysParams.set_refinementSteps(configuration.get<int>("mesh.adaptive_refinement_steps",1));
@@ -75,5 +77,6 @@ void parser(std::string config_file)
     boundary[i]->set_charge_density(configuration.get<double>(p_name+".charge_density"));
     double epsilonIn = configuration.get<double>(p_name+".epsilon"); 
     boundary[i]->set_epsilons(epsilonIn, epsilonOut);
+    boundary[i]->set_isPlane(configuration.get<bool>(p_name+".isPlane", false));
   }
 }

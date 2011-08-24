@@ -72,6 +72,11 @@ void SysParams::set_tolerance(double value)
   tolerance = value;
 }
 
+void SysParams::set_newton_tolerance(double value)
+{
+  newton_tolerance = value;
+}
+
 void SysParams::set_charge_density(double value)
 {
   charge_density = value;
@@ -145,6 +150,10 @@ double SysParams::get_tolerance()
 	return tolerance;
 }
 
+double SysParams::get_newton_tolerance()
+{
+	return newton_tolerance;
+}
 double SysParams::get_charge_density()
 {
 	return charge_density;

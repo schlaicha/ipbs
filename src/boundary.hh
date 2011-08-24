@@ -12,9 +12,12 @@ class Boundary
     void set_charge_density(double _value);
     double get_charge_density();
     double get_dielectric_factor();
+    void set_isPlane(bool value);
+    bool get_isPlane();
 
   private:
     double factor;
     double charge;
     double charge_density;
+    bool isPlane;
 };

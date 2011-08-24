@@ -21,6 +21,7 @@ class SysParams {
 	double get_error();
 	double get_alpha();
 	double get_tolerance();
+	double get_newton_tolerance();
  	int get_symmetry();
  	double get_boxLength();
  	double get_refinementFraction();
@@ -41,6 +42,7 @@ class SysParams {
   void set_meshfile(std::string filename);
   void set_refinement(int level);
   void set_tolerance(double value);
+  void set_newton_tolerance(double value);
   void set_verbose(int value);
 	void set_charge_density (double value);
 	void set_symmetry (int value);
@@ -58,6 +60,7 @@ class SysParams {
 	double charge;
 	double epsilon;
   double tolerance;
+  double newton_tolerance;
   double totalError;
 	int symmetry;
   int npart;

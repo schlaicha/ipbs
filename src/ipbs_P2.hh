@@ -330,7 +330,7 @@ void ipbs_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
     newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
     newton.setReassembleThreshold(0.0);
     newton.setVerbosityLevel(sysParams.get_verbose());
-    newton.setReduction(1e-10);
+    newton.setReduction(sysParams.get_newton_tolerance());
     newton.setMinLinearReduction(1e-4);
     newton.setMaxIterations(50);
     newton.setLineSearchMaxIterations(25);

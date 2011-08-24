@@ -118,6 +118,9 @@ public:
                     //            - gradu[1]*phi[i] ) * factor;
                         r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1] ) *factor;
                         break;   // "2D_sphere"
+                case 3:  for (size_type i=0; i<lfsu.size(); i++)
+                           r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
+                          break;
                 default:  for (size_type i=0; i<lfsu.size(); i++)
                           r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
                           break;

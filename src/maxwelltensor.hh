@@ -35,7 +35,7 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
     for (int j = 0; j < dim; j++)
     {
       // if (i != j)
-        res[i][j] = -1.0/(8.0*sysParams.pi*sysParams.get_bjerrum()) * E[i] * E[j];
+        res[i][j] = - 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * E[i] * E[j];
       // else
         // res[i][j] = -0.5 * E[i] * E[j] +  1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0);
     }
@@ -47,7 +47,8 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
     // std::cout << value << " " << std::cosh(value) << std::endl;
     //value = 0; // Do not include osmotic pressure
     // res[i][i] += .5 * E.two_norm2();
-    res[i][i] += 1.0/(8.0 * sysParams.pi * sysParams.get_bjerrum()) * (sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2());
+    // res[i][i] += sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2();
+    res[i][i] += 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * ( sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2());
   }
   return res;
 }

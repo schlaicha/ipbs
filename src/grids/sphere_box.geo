@@ -2,18 +2,18 @@
 // Creates the iPBS single sphere with a symmetric mesh
 // refinement is done via the characteristic length
 
-radius = 5;
+radius = 10;
 position = 0;  // Center position of the sphere
-box_size = 30;
-outer_refinement = 2;
-inner_refinement = 0.1;
+box_size = 50;
+outer_refinement = 5;
+inner_refinement = 0.05;
 
 // Define the geometry for 2d-sphere (iPBS)
 
-Point(1) = {0, position, 0, 1.0};
-Point(2) = {0, radius, 0, inner_refinement};
-Point(3) = {-radius, 0, 0, inner_refinement};
-Point(4) = {radius, 0, 0, inner_refinement};
+Point(1) = {position, 0, 0, 1.0};
+Point(2) = {position, radius, 0, inner_refinement};
+Point(3) = {position-radius, 0, 0, inner_refinement};
+Point(4) = {position+radius, 0, 0, inner_refinement};
 Point(5) = {-box_size, 0, 0, outer_refinement};
 Point(6) = {box_size, 0, 0, outer_refinement};
 Point(7) = {-box_size, box_size, 0, outer_refinement};
@@ -33,7 +33,7 @@ Plane Surface(9) = {8};
 // 1 for Neumann
 // 2 for iPBS
 Physical Line(0) = {6,7,5};
-Physical Line(1) = {4};
+Physical Line(1) = {4, 3};
 Physical Line(2) = {2, 1};
 
 

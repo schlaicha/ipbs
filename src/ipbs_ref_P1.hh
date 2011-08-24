@@ -11,13 +11,10 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-//#include "test.hh"
-
 template<class GridType, class ColCom, class temp>
 void ipbs_ref_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              const ColCom& colCom, 
-//             const typename Dune::PDELab::GridFunctionSpace<typename GridType::LeafGridView,Dune::PDELab::P1LocalFiniteElementMap<double,double,2>,Dune::PDELab::NonoverlappingConformingDirichletConstraints,Dune::PDELab::ISTLVectorBackend<1> >::template VectorContainer<Real>& u
              const temp& u_ipbs)
 {
   // We want to know the total calulation time

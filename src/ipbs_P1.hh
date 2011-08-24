@@ -329,7 +329,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
     newton.setReassembleThreshold(0.0);
     newton.setVerbosityLevel(sysParams.get_verbose());
-    newton.setReduction(1e-10);
+    newton.setReduction(sysParams.get_newton_tolerance());
     newton.setMinLinearReduction(1e-3);
     newton.setMaxIterations(50);
     newton.setLineSearchMaxIterations(25);
@@ -396,6 +396,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   
   std::cout << "iPBS calculation time on rank " << colCom.rank() << " is: " << timer.elapsed() << std::endl;
 
-  // ipbs_ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom, u);
+  // ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity); 
+  ipbs_ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom, u);
   
 }

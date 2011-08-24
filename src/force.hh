@@ -25,12 +25,17 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
   
   // Open output file for force on particles
   std::ofstream force_file, vector_force_file;
-  // std::ofstream force2_file, vector_force2_file;
+  std::ofstream force2_file, vector_force2_file;
+  std::ofstream surface_potential_file;;
+  std::ofstream surface_field_file;;
   force_file.open ("forces.dat", std::ios::out);
-  // force2_file.open ("forces2.dat", std::ios::out);
+  force2_file.open ("forces2.dat", std::ios::out);
+  surface_potential_file.open ("surface_potential.dat", std::ios::out);
+  surface_field_file.open ("surface_field.dat", std::ios::out);
   vector_force_file.open ("vector_forces.dat", std::ios::out);
-  // vector_force2_file.open ("vector_forces2.dat", std::ios::out);
-
+  vector_force2_file.open ("vector_forces2.dat", std::ios::out);
+  surface_potential_file << "# Averaged surface potential over boundary of type" << std::endl;
+  surface_field_file << "# Averaged surface field over boundary of type" << std::endl;
   
   // Do the loop for all boundaryIDs > 1 (all colloids)
   for (int i = 2; i < sysParams.get_npart()+2; i++)
@@ -39,8 +44,10 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
     
     //double summed_force_x = 0;
     //double summed_force2 = 0;
+    double summed_potential = 0;
+    double elemCounter = 0;
     Dune::FieldVector<Real, dim> F(0);
-    // Dune::FieldVector<Real, dim> F2(0);
+    Dune::FieldVector<Real, dim> F2(0);
     // loop over elements on this processor
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
@@ -66,16 +73,24 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
               // double force_x = forcevec[0];
               // summed_force_x += force_x;
               // Get the E-Field (-grad Phi))
-              // Dune::FieldVector<Real,dim> tmp = gradient(gfs, it, u, ii->geometry().center());
-              // tmp *= -1.;
+              Dune::FieldVector<Real,dim> tmp = gradient(gfs, it, u, ii->geometry().center());
+              tmp *= -1.;
+              surface_field_file << ii->geometry().center() << tmp << std::endl;
               // Calculate F = q * E
-              // tmp *= ii->geometry().volume() * ii->geometry().center()[1] 
-              //        * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+              tmp *= ii->geometry().volume() * ii->geometry().center()[1] 
+                     * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
               // Integrate in theta
-              // tmp *= 2.0 * sysParams.pi;              
+              tmp *= 2.0 * sysParams.pi;              
               vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
-              // vector_force2_file << ii->geometry().center() << " " << tmp << std::endl;
-              // F2 += tmp;
+              vector_force2_file << ii->geometry().center() << " " << tmp << std::endl;
+              F2 += tmp;
+              typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+              DGF udgf(gfs,u);
+              typedef typename DGF::Traits::RangeType RT;
+              RT value;
+              udgf.evaluate(*it, it->geometry().local(ii->geometry().center()), value);
+              elemCounter++;
+              summed_potential += value;
             }
           }
         }
@@ -85,14 +100,20 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
   // To get SI units divide by 4*PI (E = - 1/(4*pi) grad phi)
   // F /= 4*sysParams.pi;
   // F2 /= 4*sysParams.pi;
+  
+  // Build arithmetic average of surface potential
+  double surface_potential = summed_potential / elemCounter;
+  surface_potential_file << i << " " << surface_potential << std::endl;
 
   // MPI_Allreduce(MPI_IN_PLACE, &F, dim, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
 
     force_file << i << " " << F << std::endl;
-    // force2_file << i << " " << F2 << std::endl;
+    force2_file << i << " " << F2 << std::endl;
   }
   force_file.close();
-  // force2_file.close();
+  force2_file.close();
   vector_force_file.close();
-  // vector_force2_file.close();
+  vector_force2_file.close();
+  surface_potential_file.close();
+  surface_field_file.close();
 }

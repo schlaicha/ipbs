@@ -1,5 +1,14 @@
 #include "boundary.hh"
 
+void Boundary::set_isPlane(bool value)
+{
+  isPlane = value;
+}
+
+bool Boundary::get_isPlane()
+{
+  return isPlane;
+}
 void Boundary::set_epsilons(double epsilonIn, double epsilonOut)
 {
     factor = 2. * epsilonIn / (epsilonIn + epsilonOut) ;

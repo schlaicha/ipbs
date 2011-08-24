@@ -4,6 +4,9 @@
 *.[oa]
 *~
 *.swp
+*.pdf
+*.ps
+*.eps
 *.vtu
 *.pvtu
 *.dat
