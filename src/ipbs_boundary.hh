@@ -209,7 +209,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
                         E_field /= dist.two_norm() * dist.two_norm();
                                   
                         surfaceElem_flux = E_field * unitNormal;
-                        surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density() * ii->geometry().volume();
+                        surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density() * ii->geometry().volume();
                       }
                       break;
                     }
@@ -233,6 +233,10 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     summed_flux += summed_surfaceElem_flux + summed_volumeElem_flux;
     double diel_flux = dielectric_factor * summed_flux;
     fluxContainer[i] = diel_flux;
+<<<<<<< HEAD
     std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+=======
+    //std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+>>>>>>> fe35033a284b54d1511e01fe99be63f12d884298
   }
 }
