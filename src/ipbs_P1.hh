@@ -219,7 +219,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     if (sysParams.get_salt() == 0)
       for(unsigned int i=0; i<countBoundElems; i++)
         {
-          fluxContainer[i] = 0;   // initialize with zero
+          fluxContainer[i] = - boundary[ipbsType[i]-2]->get_charge_density()*4.*sysParams.pi;   // initialize with zero
           fluxContainerStored[i] = 0;   // initialize with zero
           //fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
         }
@@ -247,7 +247,8 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     sysParams.reset_error();
 
     // call the function precomputing the boundary flux values
-    ipbs_boundary(gv,udgf, ipbsElemPointers, fluxContainer, countBoundElems,
+    if (sysParams.counter > 0)
+      ipbs_boundary(gv,udgf, ipbsElemPointers, fluxContainer, countBoundElems,
         boundaryIndexToEntity, indexLookupMap, boundaryElemMapper);
     // make sure each processor has finished calculations before proceeding
     MPI_Barrier(MPI_COMM_WORLD);
@@ -263,17 +264,20 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     MPI_Allreduce(MPI_IN_PLACE, fluxContainer, countBoundElems, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // do SOR step determine the error on each processor
-    for (unsigned int i = 0; i < countBoundElems; i++)
-    {
-      //double fluxCoulomb = boundary[all_types[i]-2]->get_charge_density()  * sysParams.get_bjerrum() * (4.0 * sysParams.pi);
-      //fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
+    if (sysParams.counter > 0)
+      for (unsigned int i = 0; i < countBoundElems; i++)
+      {
+        //double fluxCoulomb = boundary[all_types[i]-2]->get_charge_density()  * sysParams.get_bjerrum() * (4.0 * sysParams.pi);
+        //fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
 
-      fluxContainer[i] = sysParams.get_alpha() * fluxContainer[i]
-                          + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];
-      double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])
-                      /(fluxContainer[i]+fluxContainerStored[i]));
-      sysParams.add_error(error);
-    }
+        fluxContainer[i] = sysParams.get_alpha() * fluxContainer[i]
+                            + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];
+        double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])
+                        /(fluxContainer[i]+fluxContainerStored[i]));
+        sysParams.add_error(error);
+      }
+    else
+      sysParams.add_error(2);
     // set the error to the global maximum of errors so we have a unique stop criterion
     // double error = sysParams.get_error();
     // std::cout << "Error on rank " << colCom.rank() << ": " << error << std::endl;
@@ -398,5 +402,4 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity); 
   ipbs_ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom, u);
-  
 }

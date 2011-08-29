@@ -24,11 +24,16 @@ void ipbs_testField(const GV& gv, const DGF& udgf, const GFS& gfs, const U& u,
   CoulombFlux<ctype,dim> f;
   
   std::ofstream coulomb_file, gradient_file;
+  std::ofstream field_file;
   coulomb_file.open ("efield_coulomb.dat", std::ios::out );
   gradient_file.open ("efield_gradient.dat", std::ios::out );
+  field_file.open("field.dat" , std::ios::out);
   for (LeafIterator elemIt = gv.template begin<0,Dune::Interior_Partition>();
             	elemIt!=gv.template end<0,Dune::Interior_Partition>(); ++elemIt)
   {
+    Dune::FieldVector<ctype,dim> fieldVector = gradient(gfs, elemIt, u, elemIt->geometry().center());
+    fieldVector *= -1.0;
+    field_file << elemIt->geometry().center() << " " << fieldVector << std::endl;
     if (elemIt->hasBoundaryIntersections() == true)
      {
          for (IntersectionIterator elemii = gv.ibegin(*elemIt); elemii != gv.iend(*elemIt); ++elemii)
