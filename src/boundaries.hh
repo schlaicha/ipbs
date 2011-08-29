@@ -247,7 +247,7 @@ public:
       // switch (sysParams.get_symmetry())
       // {
       //   case 2:
-           y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
+           y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum() / boundary[physgroup_index-2]->get_epsilon();
       //     break;
       //   case 3:
       //     y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();

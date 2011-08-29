@@ -2,26 +2,26 @@
 // Creates a charged wall for iPBS using spherical symmetry
 // refinement is done via the characteristic length
 
-box_length = 100;
-box_width = 150;
+box_length = 150;
+box_width = 30;
 wall_position = 0;
-wall_width = 40;
-wall_height = 20;
-wall_refinement = .2;
+wall_width = 2;
+wall_height = 140;
+wall_refinement = .1;
 lower_left_refinement =4.;
 upper_left_refinement = 10.;
 lower_right_refinement = 8.;
 upper_right_refinement = 10.;
-center_refinement = 5.0;
+center_refinement = 0.1;
 
 // Define the geometry for the wall (iPBS)
 
 Point(1) = {-box_width/2, 0, 0, lower_left_refinement};
 Point(2) = {-box_width/2, box_length, 0, upper_left_refinement};
-Point(3) = {-box_width/2, box_length/2, 0, center_refinement};
+Point(3) = {-box_width/2, box_length/2, 0, 1};
 Point(4) = {box_width/2, 0, 0, lower_right_refinement};
 Point(5) = {box_width/2, box_length, 0, upper_right_refinement};
-Point(7) = {box_width/2, box_length/2, 0, center_refinement};
+Point(7) = {box_width/2, box_length/2, 0, 1};
 Point(8) = {0, box_length, 0, center_refinement};
 Point(9) = {wall_position-wall_width/2, 0, 0, wall_refinement};
 Point(10) = {wall_position+wall_width/2, 0, 0, wall_refinement};

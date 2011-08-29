@@ -10,6 +10,7 @@
 SysParams::SysParams()
 {
 	totalError = 1E8;
+  epsilon  = 1.;
 }
 
 int SysParams::get_npart()

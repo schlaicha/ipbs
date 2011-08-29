@@ -27,6 +27,8 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
   // Initialize functor for integrating coulomb flux
   CoulombFlux<ctype,dim> f;
   double dielectric_factor = 0;   // = 2 eps_in / (eps_in + eps_out)
+  double epsilon_in= 0;
+  double epsilon_out = sysParams.get_epsilon();
   
   std::cout << "in ipbs_boundary, countBoundElems = " << countBoundElems << std::endl;
   // Precompute fluxes
@@ -42,6 +44,7 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
           unitNormal = ii->centerUnitOuterNormal();
           r = ii->geometry().center();  // vector of iterative surface boundary center
           dielectric_factor = boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_dielectric_factor();
+          epsilon_in =  boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_epsilon();
         }
       }
     unitNormal*=-1.0;	// turn around unit vector as it is outer normal
@@ -230,9 +233,12 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
       // std::cout << std::endl <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << surfaceElem_flux << " volumeElem_flux = " << volumeElem_flux << " itself_flux = " << itself_flux<< std::endl;
     }
     // Include dielectrics! Multiply with dielectric factor...
-    summed_flux += summed_surfaceElem_flux + summed_volumeElem_flux;
-    double diel_flux = dielectric_factor * summed_flux;
+    double diel_flux = 2/(epsilon_in+epsilon_out) * summed_flux + 
+                        2*epsilon_in/(epsilon_in+epsilon_out) * (summed_surfaceElem_flux + summed_volumeElem_flux);
+    std::cout << "self contribution " <<   2/(epsilon_in+epsilon_out) * summed_flux << " E-field contribution: " <<  2*epsilon_in/(epsilon_in+epsilon_out) * (summed_surfaceElem_flux + summed_volumeElem_flux)<< std::endl;
+    // summed_flux += summed_surfaceElem_flux + summed_volumeElem_flux;
+    // double diel_flux = dielectric_factor * summed_flux;
     fluxContainer[i] = diel_flux;
-    std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+    //std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
   }
 }

@@ -219,7 +219,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     if (sysParams.get_salt() == 0)
       for(unsigned int i=0; i<countBoundElems; i++)
         {
-          fluxContainer[i] = - boundary[ipbsType[i]-2]->get_charge_density()*4.*sysParams.pi;   // initialize with zero
+          fluxContainer[i] = - boundary[ipbsType[i]-2]->get_charge_density() * 4. * sysParams.pi / sysParams.get_epsilon();   // initialize with zero
           fluxContainerStored[i] = 0;   // initialize with zero
           //fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
         }
@@ -237,7 +237,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   
   // --- here the iterative loop starts! ---
   
-  while (sysParams.get_error() > sysParams.get_tolerance() && sysParams.counter < 15)
+  while (sysParams.get_error() > sysParams.get_tolerance())
   {	  
     // construct a discrete grid function for access to solution
     typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
