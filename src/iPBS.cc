@@ -81,7 +81,7 @@ std::vector<Boundary*> boundary;
 #include "ipbs_P1.hh"
 //#include "ipbs_P2.hh"
 #include "ref_P1.hh"
-// #include "test.hh"
+#include "test.hh"
 
 //===============================================================
 // Main programm

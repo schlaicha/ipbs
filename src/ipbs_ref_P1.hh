@@ -180,7 +180,7 @@ for (int step = 0; step <= sysParams.get_refinementSteps(); step++)
   // Calculate the forces
   // force(gv, boundaryIndexToEntity, gfs, u);
 
-  // ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity);
+  ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity);
 }
 
   std::cout << "Reference total calculation time on rank " << colCom.rank() << " is " << timer.elapsed() << std::endl;

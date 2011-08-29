@@ -1,4 +1,5 @@
 #include "boundary.hh"
+#include <iostream>
 
 void Boundary::set_isPlane(bool value)
 {
@@ -12,6 +13,7 @@ bool Boundary::get_isPlane()
 void Boundary::set_epsilons(double epsilonIn, double epsilonOut)
 {
     factor = 2. * epsilonIn / (epsilonIn + epsilonOut) ;
+    std::cout << "Dielectric factor is " << factor << std::endl;
 }
 
 void Boundary::set_charge_density(double _value)
