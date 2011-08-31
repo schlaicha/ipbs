@@ -239,6 +239,14 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // summed_flux += summed_surfaceElem_flux + summed_volumeElem_flux;
     // double diel_flux = dielectric_factor * summed_flux;
     fluxContainer[i] = diel_flux;
+<<<<<<< HEAD
     //std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+=======
+<<<<<<< HEAD
+    std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+=======
+    //std::cout << "At " << ipbsElems[i]->geometry().center() <<" summed_flux is " << summed_flux << " surfaceElem_flux = " << summed_surfaceElem_flux << " volumeElem_flux = " << summed_volumeElem_flux << std::endl;
+>>>>>>> fe35033a284b54d1511e01fe99be63f12d884298
+>>>>>>> fffb5a69d24ccf33f02ec1496a8512e85c6e10bb
   }
 }
