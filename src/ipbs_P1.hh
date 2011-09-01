@@ -211,8 +211,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // allocate array for the data whose size is according to the number of iterative boundary elements
   double* fluxContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
+  double* inducedChargeContainer = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
   // for determining the error we need to store the old fluxes
   double* fluxContainerStored = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
+  double* inducedChargeContainerStored = (double*) malloc(countBoundElems*sizeof(double)); // allocate on all processors
   if (colCom.rank() == 0) 
   {
     srand((unsigned)time(0));
@@ -221,6 +223,8 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
         {
           fluxContainer[i] = - boundary[ipbsType[i]-2]->get_charge_density() * 4. * sysParams.pi / sysParams.get_epsilon();   // initialize with zero
           fluxContainerStored[i] = 0;   // initialize with zero
+          inducedChargeContainer[i] = 0;
+          inducedChargeContainerStored[i] = 0;
           //fluxContainerStored[i] = ((float)rand()/RAND_MAX - 0.5) * 0.05;   // random initial b.c.
         }
     else
@@ -248,7 +252,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
     // call the function precomputing the boundary flux values
     if (sysParams.counter > 0)
-      ipbs_boundary(gv,udgf, ipbsElemPointers, fluxContainer, countBoundElems,
+      ipbs_boundary(gv,udgf, ipbsElemPointers, fluxContainer, inducedChargeContainer, countBoundElems,
         boundaryIndexToEntity, indexLookupMap, boundaryElemMapper);
     // make sure each processor has finished calculations before proceeding
     MPI_Barrier(MPI_COMM_WORLD);
@@ -267,11 +271,11 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     if (sysParams.counter > 0)
       for (unsigned int i = 0; i < countBoundElems; i++)
       {
-        //double fluxCoulomb = boundary[all_types[i]-2]->get_charge_density()  * sysParams.get_bjerrum() * (4.0 * sysParams.pi);
-        //fluxContainer[i] = sysParams.get_alpha() * (fluxContainer[i] + fluxCoulomb)
-
+        // Do SOR step for fluxes and induced surface charges
         fluxContainer[i] = sysParams.get_alpha() * fluxContainer[i]
                             + ( 1 - sysParams.get_alpha()) * fluxContainerStored[i];
+        inducedChargeContainer[i] = sysParams.get_alpha() * inducedChargeContainer[i]
+                            + ( 1 - sysParams.get_alpha()) * inducedChargeContainerStored[i];
         double error = fabs(2.0*(fluxContainer[i]-fluxContainerStored[i])
                         /(fluxContainer[i]+fluxContainerStored[i]));
         sysParams.add_error(error);
@@ -366,6 +370,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     for (unsigned int i = 0; i < countBoundElems; i++)
     {
       fluxContainerStored[i] = fluxContainer [i];
+      inducedChargeContainerStored[i] = inducedChargeContainer[i];
     }
   }
 

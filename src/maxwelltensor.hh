@@ -26,29 +26,24 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   udgf.evaluate(*it, it->geometry().local(ii->geometry().center()), value);
 
   // Get the E-Field (-grad Phi)
-  Dune::FieldVector<Real,dim> E = gradient(gfs, it, u, ii->geometry().center());
-  E *= -1.0;
+  Dune::FieldVector<Real,dim> gradphi = gradient(gfs, it, u, ii->geometry().center());
 
   // Build the stress tensor
   Dune::FieldMatrix<Real, dim, dim> res;
   for (int i = 0; i < dim; i++)
     for (int j = 0; j < dim; j++)
     {
-      // if (i != j)
-        res[i][j] = - 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * E[i] * E[j];
-      // else
-        // res[i][j] = -0.5 * E[i] * E[j] +  1.0 * sysParams.get_lambda2i() * (std::cosh(value) - 1.0);
+      res[i][j] = -gradphi[i]*gradphi[j];
+      //res[i][j] = 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * gradphi[i] * gradphi[j];
     }
 
   // for the correct force on the particles not only electrostatic but also osmotic pressure has to be included!
   // this is in principle proportional to n_+ + n_- - 2c_s = 2 * ( cosh (phi) - 1 )
   for (int i = 0; i < dim; i++)
   {
-    // std::cout << value << " " << std::cosh(value) << std::endl;
-    //value = 0; // Do not include osmotic pressure
-    // res[i][i] += .5 * E.two_norm2();
-    // res[i][i] += sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2();
-    res[i][i] += 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * ( sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * E.two_norm2());
+    res[i][i] += .5 * gradphi.two_norm2();
+    // res[i][i] += std::cosh(value) - 1. + .5 * gradphi.two_norm2();
+    //res[i][i] -= 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * ( sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * gradphi.two_norm2());
   }
   return res;
 }

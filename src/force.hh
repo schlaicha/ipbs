@@ -42,12 +42,12 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
   {
     std::cout << "Calculating the force actin on particle " << i << std::endl;
     
-    //double summed_force_x = 0;
-    //double summed_force2 = 0;
     double summed_potential = 0;
     double elemCounter = 0;
     Dune::FieldVector<Real, dim> F(0);
     Dune::FieldVector<Real, dim> F2(0);
+    //Dune::FieldVector<Real, dim> osmotic_force(0);
+
     // loop over elements on this processor
     for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
@@ -62,28 +62,54 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
             {
               Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
               Dune::FieldVector<Real, dim> forcevec;
-              normal *= -1.0 * ii->geometry().volume() * ii->geometry().center()[1]
-                       * 2.0 * sysParams.pi; // Surface normal
+              normal *= -1.0 * ii->geometry().volume(); // Surface normal
               Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension, 
                   GFS::Traits::GridViewType::dimension>
                       sigma = maxwelltensor(gfs, it, ii, u);
-              sigma.umv(normal, F);
+              //sigma.umv(normal, F);
               sigma.mv(normal, forcevec);
-              forcevec *= 2.0 * sysParams.pi * ii->geometry().center()[1];
+              forcevec *= 2.*sysParams.pi*ii->geometry().center()[1]; // integration in theta
+              F += forcevec;
+
+              // Testing the osmotic part
+              // -----------------------
+              // typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+              // const DGF testdgf(gfs, u);
+              // typedef typename DGF::Traits::RangeType RT;
+              // RT phi_local;
+              // // evaluate the potential
+              // testdgf.evaluate(*it, it->geometry().local(ii->geometry().center()), phi_local);
+
+              // osmotic_force=ii->centerUnitOuterNormal();
+              // osmotic_force*=-1;
+              // osmotic_force*=cosh(phi_local)-1.;
+              // osmotic_force*=ii->geometry().center()[1];
+              // F3 += osmotic_force;
+
               // double force_x = forcevec[0];
               // summed_force_x += force_x;
               // Get the E-Field (-grad Phi))
+
+              // Testing the gradient
+              // --------------------
               Dune::FieldVector<Real,dim> tmp = gradient(gfs, it, u, ii->geometry().center());
-              tmp *= -1.;
-              surface_field_file << ii->geometry().center() << tmp << std::endl;
-              // Calculate F = q * E
-              tmp *= ii->geometry().volume() * ii->geometry().center()[1] 
-                     * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+              Dune::FieldVector<Real,dim> tmp2 = normal;
+              // Forget about tmp2 here!!! We don't know!!!!
+              tmp *= -1.; // E = -grad phi
+              tmp2 *= -2*sysParams.pi*boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
+              tmp -= tmp2;
+              // surface_field_file << ii->geometry().center() << tmp << std::endl;
+              // Calculate F = q * E = sigma * A * E
+              tmp *= ii->geometry().volume() * boundary[boundaryIndexToEntity[ii->boundarySegmentIndex()]-2]->get_charge_density();
               // Integrate in theta
-              tmp *= 2.0 * sysParams.pi;              
+              tmp *= 2.0 * sysParams.pi * ii->geometry().center()[1];               
+
               vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
               vector_force2_file << ii->geometry().center() << " " << tmp << std::endl;
               F2 += tmp;
+              
+              // Evaluate the averaged surface potential
+              // ---------------------------------------
               typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
               DGF udgf(gfs,u);
               typedef typename DGF::Traits::RangeType RT;
@@ -97,10 +123,6 @@ void force(const GV& gv, const std::vector<int>& boundaryIndexToEntity,
       }
     }
 
-  // To get SI units divide by 4*PI (E = - 1/(4*pi) grad phi)
-  // F /= 4*sysParams.pi;
-  // F2 /= 4*sysParams.pi;
-  
   // Build arithmetic average of surface potential
   double surface_potential = summed_potential / elemCounter;
   surface_potential_file << i << " " << surface_potential << std::endl;
