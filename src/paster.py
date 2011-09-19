@@ -24,7 +24,7 @@ for i in range(0,nprocs):
     refFileName = "reference_step_0.dat"
     solFileName = "ipbs_solution.dat"
   else:
-    refFileName = "s%.4d:p%.4d:reference_step_0.dat" %(nprocs,i)
+    refFileName = "s%.4d:p%.4d:reference_step_2.dat" %(nprocs,i)
     solFileName = "s%.4d:p%.4d:ipbs_solution.dat" %(nprocs,i)
   refFile = open(refFileName,"r")
   solFile = open(solFileName,"r")

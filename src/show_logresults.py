@@ -6,6 +6,7 @@ from scipy import *
 from matplotlib.delaunay import *
 from matplotlib import colors, ticker
 import pylab as p
+import numpy as np
 
 def readfile(file):
     x, y ,ref, sol, dif, rel = loadtxt(file, unpack=True) 
@@ -36,10 +37,12 @@ def plotear(xi,yi,zi):
     zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    levels = [1E-10,1E-9,1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1]
+    levels = [.75e-5, 1.25e-4, 2.5e-4, 0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64]
+    #v = np.logspace(1e-8,1e-4, num=50, endpoint=True, base=2.0)
+    #levels = [1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1,1E0,1E1]
     CSF = p.contourf(xi,yi,zi,levels,norm=colors.LogNorm())
     #CSF = p.contourf(xi,yi,zi,levels)
-    CS = p.contour(xi,yi,zi)
+    CS = p.contour(xi,yi,zi,levels)
     p.clabel(CS)
     p.title('IPBS vs Neumann B.C. (absolute difference)')
     p.ylabel('radial coordinate r',fontsize=12)
@@ -53,8 +56,8 @@ def plotear(xi,yi,zi):
 def main():
     filename = sys.argv[1]
     x, y, ref, sol, dif, rel = readfile(filename)
-    #z = abs((ref - sol))
-    z = rel
+    z = log(abs(dif))
+    #z = abs(rel)
     xi, yi = defgrid(x,y)
     zi = interpolacion(x,y,z,xi,yi)
     plotear(xi,yi,zi)

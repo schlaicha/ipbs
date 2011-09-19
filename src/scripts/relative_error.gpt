@@ -1,0 +1,36 @@
+
+set dgrid3d 100,100,
+#set cntrparam levels disc log(0.01),log(0.01),log(0.02),log(0.04),log(0.08),log(0.16),log(0.32),log(0.64),log(1.28),log(2.56),log(10),log(20)
+set cntrparam levels disc 0.0, 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007
+#set cntrparam levels 20
+#set cntrparam bspline
+set view map
+set key outside
+set contour base
+unset colorbox
+unset surface
+set contour
+set palette rgbformulae 34,35,36
+splot [-20:20][:20] '../data.dat' u 1:2:(sqrt($1*$1+$2*$2))<5?-10:(sqrt(($4-$3)*($4-$3))) w l
+#splot [-20:20][:20] '../data.dat' u 1:2:(($4-$3)) w l
+
+
+#set xlabel "{x/{/Symbol l}}" 0,0
+#set ylabel "{y/{/Symbol l}}" 0,0
+#set xtics 1.0
+#set ytics 1.0
+#unset colorbox
+#unset key
+#set dgrid3d
+#set pm3d 
+#set label 1 "0.01" at -0.5,4.8 font "Times-Roman,14"
+#set label 2 "0.02" at -0.5,4.1 font "Times-Roman,14"
+#set label 3 "0.04" at -0.5,3.5 font "Times-Roman,14"
+#set label 4 "0.08" at -0.5,3.0 font "Times-Roman,14"
+#set label 5 "0.16" at -0.5,2.5 font "Times-Roman,14"
+#set term postscript enhanced color solid eps "Times-Roman" 20
+#set out 'twospheres-ipbsclose.eps'
+#set pm3d
+#unset out
+#!sed 's/^LT./LTb/g' twospheres-ipbsclose.eps>  tmp.eps 
+#!eps2eps tmp.eps  twospheres-ipbsclose.eps

@@ -23,6 +23,7 @@ Point(9) = {distance/2, radius, 0, inner_refinement}; // top boarder of right sp
 Point(10) = {-distance/2+radius, 0, 0, inner_refinement}; // right boarder of left sphere
 Point(11) = {-distance/2-radius, 0, 0, inner_refinement}; // left boarder of left sphere
 Point(12) = {-distance/2, radius, 0, inner_refinement}; // top boarder of left sphere
+Point(13) = {0, height, 0, 1}; // top boarder of left sphere
 
 // Define lines
 Line(1) = {3, 5}; // left boerder
@@ -36,20 +37,16 @@ Circle(8) = {7, 1, 9}; // right sphere (right part)
 Circle(9) = {9, 1, 8}; // right sphere (left part)
 Circle(10) = {10, 2, 12}; // left sphere (right part)
 Circle(11) = {12, 2, 11}; // left sphere (left part)
+Line(15) = {0, 13};
 
 // Define surface
-Line Loop(12) = {2, 3, 4, 8, 9, 6, 7, 10, 11, -5, 1};
-Plane Surface(13) = {12};
+Plane Surface(16) = {12};
 
 // ========== Physical Groups (Boundary Conditions) ===========
 
 // Outer boundaries, which are set to Dirichlet B.C.
 // Physical Line(0) = {1, 2, 3};
 // Lower boundaries, wich are set to Neumann B.C.
-Physical Line(1) = {4, 6, 7, 5, 1, 2, 3};
 // Spheres which are set to IPBS B.C.
-Physical Line(2) = {8, 9};
-Physical Line(3) = {10, 11};
 
 // Finally we also need a physical surface
-Physical Surface(14) = {13};

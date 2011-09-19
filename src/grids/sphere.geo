@@ -6,7 +6,7 @@ radius = 10;
 position = 0;  // Center position of the sphere
 box_size = 50;
 outer_refinement = 5;
-inner_refinement = 0.05;
+inner_refinement = 0.2;
 
 // Define the geometry for 2d-sphere (iPBS)
 

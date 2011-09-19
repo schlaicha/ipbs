@@ -2,10 +2,10 @@
 // Infinite plane (Gouy-Chapman model) for iPBS
 
 // Set geometry
-box_length = 60;
-box_width = 1;
-inner_refinement = .01;
-outer_refinement = 3;
+box_length = 20;
+box_width = 10;
+inner_refinement = .02;
+outer_refinement = 5;
 
 // Setup mesh
 Point(1) = {-box_width/2, 0, 0, inner_refinement};

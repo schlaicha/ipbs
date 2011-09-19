@@ -31,10 +31,11 @@ def interpolacion(x,y,z,xi,yi):
 
 def plotear(xi,yi,zi):
     # mask inner circle
-    interior = sqrt((xi**2) + (yi**2)) < 5.0 
-    zi[interior] = ma.empty
+    interior = sqrt((xi**2) + (yi**2)) < 10.0 
+    zi[interior] = ma.zeros
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
+    #levels = [0 ,0.005, 0.01,0.015 , 0.02, 0.03, 0.04, 0.05]
     #levels = [1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,5E-2,1E-2]
     #CSF = p.contourf(xi,yi,zi,levels)
     CSF = p.contourf(xi,yi,zi)
@@ -54,7 +55,7 @@ def main():
     filename2 = sys.argv[2]
     x1, y1, z1 = readfile(filename1)
     x2, y2, z2 = readfile(filename2)
-    z = abs((z2 - z1))
+    z = abs(z2 - z1)
     xi, yi = defgrid(x1,y1)
     zi = interpolacion(x1,y1,z,xi,yi)
     plotear(xi,yi,zi)

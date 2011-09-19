@@ -36,10 +36,10 @@ def plotear(xi,yi,zi):
     zi[interior] = ma.ones
     p.figure(figsize=(16,10))
     #levels = [zi.min() , zi.max() , (zi.max()-zi.min())/10]
-    levels = [1E-10,1E-9,1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1]
+    levels = [5E-10,1E-9,1E-8,1E-7,1E-6,1E-5,1E-4,1E-3,1E-2,1E-1]
     CSF = p.contourf(xi,yi,zi,levels,norm=colors.LogNorm())
     #CSF = p.contourf(xi,yi,zi,levels)
-    CS = p.contour(xi,yi,zi)
+    CS = p.contour(xi,yi,zi,levels, norm=colors.LogNorm())
     p.clabel(CS)
     p.title('IPBS vs Neumann B.C. (absolute difference)')
     p.ylabel('radial coordinate r',fontsize=12)
