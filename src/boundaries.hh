@@ -17,6 +17,11 @@
 #include "p0layout.hh"
 #endif
 
+//#ifndef _IPBSOLVER_H
+//#define _IPBSOLVER_H
+//#include "ipbsolver.hh"
+//#endif
+
 // ============================================================================
 /** \brief class defining the inner elements */
 template<typename GV, typename RF, typename PGMap>
@@ -164,11 +169,11 @@ private :
 
 //! \brief class defining radiation and Neumann boundary conditions
 
-template<typename GV, typename RF, typename PGMap, typename IndexLookupMap>
+template<typename GV, typename RF, typename PGMap, class Ipbssolver>
 class BoundaryFlux
   : public Dune::PDELab::BoundaryGridFunctionBase<
            Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap, IndexLookupMap> >
+           Dune::FieldVector<RF,1> >, BoundaryFlux<GV,RF,PGMap, Ipbssolver> >
 {
 public:
 
@@ -177,10 +182,8 @@ public:
   typedef typename Traits::GridViewType::Grid::ctype ctype;
 
   //! constructor
-  BoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
-      const IndexLookupMap& indexLookupMap_, const int offset_) : gv(gv_), pg(pg_),
-      indexLookupMap(indexLookupMap_), offset(offset_), mapper(gv)
-  {fluxContainer = fluxValues;}
+  BoundaryFlux(const GV& gv_, const PGMap& pg_, const Ipbssolver& ipbsolver_)
+    : gv(gv_), pg(pg_), ipbsolver(ipbsolver_) {}
 
   //! evaluate flux boundary condition
   template<typename I>
@@ -194,11 +197,10 @@ public:
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     if (physgroup_index > 1)
-    {
-      int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
-		    y = fluxContainer[mappedIndex];
-    }
-    else y = 0;
+      y = ipbsolver.get_flux(i);
+    else
+      y = 0;
+    //std::cout << i.geometry().center() << " " << y << std::endl;
     return;
   }
 
@@ -206,10 +208,7 @@ private:
 
   const GV&    gv;
   const PGMap& pg;
-  const double* fluxContainer;
-  const IndexLookupMap& indexLookupMap;
-  const int offset;
-  const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
+  const Ipbssolver& ipbsolver;
 };
 
 
@@ -261,4 +260,56 @@ public:
 
   const GV&    gv;
   const PGMap& pg;
+};
+
+// ============================================================================
+
+//! \brief class defining radiation and Neumann boundary conditions
+
+template<typename GV, typename RF, typename PGMap, typename IndexLookupMap>
+class OldBoundaryFlux
+  : public Dune::PDELab::BoundaryGridFunctionBase<
+           Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
+           Dune::FieldVector<RF,1> >, OldBoundaryFlux<GV,RF,PGMap, IndexLookupMap> >
+{
+public:
+
+  typedef Dune::PDELab::BoundaryGridFunctionTraits<
+          GV,RF,1,Dune::FieldVector<RF,1> > Traits;
+  typedef typename Traits::GridViewType::Grid::ctype ctype;
+
+  //! constructor
+  OldBoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
+      const IndexLookupMap& indexLookupMap_, const int offset_) : gv(gv_), pg(pg_),
+      indexLookupMap(indexLookupMap_), offset(offset_), mapper(gv)
+  {fluxContainer = fluxValues;}
+
+  //! evaluate flux boundary condition
+  template<typename I>
+  inline void evaluate(I& i, typename Traits::RangeType& y) const
+  {
+    /** use physical index to determine B.C.
+* values are specified in .geo file
+* \arg 0 is for Dirichlet surfaces
+* \arg 1 for Neumann
+* \arg 2 for iPBS iterated boundaries */
+
+    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
+    if (physgroup_index > 1)
+    {
+      int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
+y = fluxContainer[mappedIndex];
+    }
+    else y = 0;
+    return;
+  }
+
+private:
+
+  const GV& gv;
+  const PGMap& pg;
+  const double* fluxContainer;
+  const IndexLookupMap& indexLookupMap;
+  const int offset;
+  const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };

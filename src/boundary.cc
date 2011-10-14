@@ -14,7 +14,7 @@ void Boundary::set_epsilons(double epsilonIn, double epsilonOut)
 {
     epsilon = epsilonIn;
     factor = 2. * epsilonIn / (epsilonIn + epsilonOut) ;
-    std::cout << "Epsilon_material = " << epsilonIn << " espilon_solution = " << epsilonOut <<" Dielectric factor is " << factor << std::endl;
+    // std::cout << "Epsilon_material = " << epsilonIn << " espilon_solution = " << epsilonOut <<" Dielectric factor is " << factor << std::endl;
 }
 
 void Boundary::set_charge_density(double _value)

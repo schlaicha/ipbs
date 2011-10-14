@@ -18,25 +18,32 @@
 
 // DUNE includes
 #include<dune/common/mpihelper.hh>
-#include<dune/common/collectivecommunication.hh>
+// #include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
 #include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
 
-// Adaptivity
-#include <dune/pdelab/adaptivity/adapt.hh>
+// // Adaptivity
+// #include <dune/pdelab/adaptivity/adapt.hh>
+
 // Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
-// Multiple Geometry Multiple Codim Mapper
-#include <dune/grid/common/mcmgmapper.hh>
 // quadrature
 #include<dune/grid/common/quadraturerules.hh>
 // Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
 #include<dune/grid/io/file/gmshreader.hh>
+
 // we use UG
-#include<dune/grid/uggrid.hh>
-#include<dune/grid/uggrid/uggridfactory.hh>
+#ifdef ENABLE_UG
+  #include<dune/grid/uggrid.hh>
+  #include<dune/grid/uggrid/uggridfactory.hh>
+#else
+  #error It looks like dunecontrol could not detect your UG installation properly.
+  #error At the moment, iPBS *STRICTLY* depends on UG!
+  #error Compilation will be aborted.
+#endif
+
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
@@ -51,6 +58,7 @@
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/grid/common/gridenums.hh>
+#include <dune/common/dynmatrix.hh>
 
 // global typedefs
 typedef double Real;
@@ -67,6 +75,8 @@ typedef double Real;
 // global access to particles
 std::vector<Boundary*> boundary;
 
+//#include "ipbsgridview.hh"
+
 #include "parser.hh"
 #include "functors.hh"
 #include "integrateentity.hh"
@@ -77,11 +87,13 @@ std::vector<Boundary*> boundary;
 #include "force.hh"
 #include "ipbs_boundary.hh"
 #include "PBLocalOperator.hh"
-#include "ipbs_ref_P1.hh"
+//#include "ipbs_ref_P1.hh"
+//#include "ipbs_prepare.hh"
 #include "ipbs_P1.hh"
 //#include "ipbs_P2.hh"
-#include "ref_P1.hh"
-#include "test.hh"
+//#include "ref_P1.hh"
+//#include "test.hh"
+#include "test_driver.hh"
 
 //===============================================================
 // Main programm
@@ -140,75 +152,37 @@ int main(int argc, char** argv)
     gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
   }
 
-  // for (int i=0;i<elementIndexToEntity.size();i++)
-  //   std::cout << boundaryIndexToEntity[i] << std::endl;
+ // Setup Dune Collective Communication
+ Dune::CollectiveCommunication<MPI_Comm> collCom(helper.getCommunicator());
 
-  // Setup Dune Collective Communication
-  Dune::CollectiveCommunication<MPI_Comm> collCom(helper.getCommunicator());
+ // Communicate boundary vector
 
-  // Communicate boundary vector
-  int size = boundaryIndexToEntity.size();
-  collCom.broadcast (&size, 1, 0);
-  int* boundaryIndexToEntity_carray = (int*) malloc(size*sizeof(int));
-  if (sysParams.get_verbose() > 4)
-    std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
-  if (helper.rank() == 0 ) {
-    for (int i =0; i<size; i++)
-      boundaryIndexToEntity_carray[i]=boundaryIndexToEntity[i];
-  }
-  collCom.broadcast(boundaryIndexToEntity_carray,size,0);
-  if (sysParams.get_verbose() > 4)
-    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
-  if (helper.rank() != 0) {
-    for (int i =0; i<size; i++)
-      boundaryIndexToEntity.push_back(boundaryIndexToEntity_carray[i]);
-    if (sysParams.get_verbose() > 4)
-      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
- }
- free(boundaryIndexToEntity_carray);
-
- // Communicate element vector
- size = elementIndexToEntity.size();
+ int size = boundaryIndexToEntity.size();
  collCom.broadcast (&size, 1, 0);
- int* elementIndexToEntity_carray = (int*) malloc(size*sizeof(int));
- if (sysParams.get_verbose() > 4)
-   std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
- if (helper.rank() == 0 ) {
-   for (int i =0; i<size; i++)
-     elementIndexToEntity_carray[i]=elementIndexToEntity[i];
- }
- collCom.broadcast(elementIndexToEntity_carray,size,0);
- if (sysParams.get_verbose() > 4)
-    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
- if (helper.rank() != 0) {
-   for (int i =0; i<size; i++)
-    elementIndexToEntity.push_back(elementIndexToEntity_carray[i]);
-    if (sysParams.get_verbose() > 4)
-      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
- } 
- free(elementIndexToEntity_carray);
-  
+ if (helper.rank() > 0)
+   boundaryIndexToEntity.reserve(size);
+ collCom.broadcast(&boundaryIndexToEntity[0],size,0);
+
+ 
  // create the grid
  GridType* grid = factory.createGrid();
 
  // refine grid
- if(helper.rank()==0) {
-   std::cout << "Using " << sysParams.get_refinement() << "global refinement steps and" << std::endl;
-   std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
-     << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
- }
+  if(helper.rank()==0) {
+    std::cout << "Using " << sysParams.get_refinement() << "global refinement steps and" << std::endl;
+    std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
+      << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
+  }
+
  grid->globalRefine(sysParams.get_refinement());
  
  grid->loadBalance();
 
- // // get a grid view on the leaf grid
- // typedef GridType::LeafGridView GV;
- // const GV& gv = grid->leafView();
-
  // Call problem drivers
  // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
- ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ // ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
  // ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ test_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
   
  // done
  return 0;

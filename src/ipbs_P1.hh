@@ -12,13 +12,16 @@
 
 #include <map>
 
-template<class GridType, class ColCom>
+template<class GridType>
 void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
-             const ColCom& colCom)
+             Dune::MPIHelper& helper)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
+  timer.start();
+
+  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> colCom(helper.getCommunicator());
 
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
@@ -251,7 +254,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     sysParams.reset_error();
 
     // call the function precomputing the boundary flux values
-    if (sysParams.counter > 0)
+    //if (sysParams.counter > 0)
       ipbs_boundary(gv,udgf, ipbsElemPointers, fluxContainer, inducedChargeContainer, countBoundElems,
         boundaryIndexToEntity, indexLookupMap, boundaryElemMapper);
     // make sure each processor has finished calculations before proceeding
@@ -317,7 +320,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     }
  
     // instanciate boundary fluxes
-    typedef BoundaryFlux<GV,double,std::vector<int>, IndexLookupMap> J;
+    typedef OldBoundaryFlux<GV,double,std::vector<int>, IndexLookupMap> J;
     J j(gv, boundaryIndexToEntity, fluxContainer,indexLookupMap,offset);
 
     // <<<4>>> Make Grid Operator Space
@@ -344,26 +347,26 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     newton.apply();
 
     // save snapshots of each iteration step
-    std::stringstream out;
-    out << "ipbs_step_" << sysParams.counter;
-    std::string filename = out.str();
-    DGF udgf_snapshot(gfs,u);
-    Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-    vtkwriter.write(filename,Dune::VTK::appendedraw);
-    // Prepare filename for sequential Gnuplot output
-    if(colCom.size()>1)
-    {
-      std::stringstream s;
-      s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
-      s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
-      s << filename;
-      filename = s.str();
-    }
-    // Gnuplot output
-    Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-    gnuplotwriter.addVertexData(u,"solution");
-    gnuplotwriter.write(filename + ".dat"); 
+    // std::stringstream out;
+    // out << "ipbs_step_" << sysParams.counter;
+    // std::string filename = out.str();
+    // DGF udgf_snapshot(gfs,u);
+    // Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+    // vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+    // vtkwriter.write(filename,Dune::VTK::appendedraw);
+    // // Prepare filename for sequential Gnuplot output
+    // if(colCom.size()>1)
+    // {
+    //   std::stringstream s;
+    //   s << 's' << std::setw(4) << std::setfill('0') << colCom.size() << ':';
+    //   s << 'p' << std::setw(4) << std::setfill('0') << colCom.rank() << ':';
+    //   s << filename;
+    //   filename = s.str();
+    // }
+    // // Gnuplot output
+    // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+    // gnuplotwriter.addVertexData(u,"solution");
+    // gnuplotwriter.write(filename + ".dat"); 
 
     sysParams.counter ++;
     // copy flux array to backup one for next iteration step
@@ -385,7 +388,7 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
 
   // Prepare filename for sequential Gnuplot output
-  std::string filename = "ipbs_solution";
+  std::string filename = "ipbs_oldsolution";
   std::ostringstream s;
   if(colCom.size()>1)
   {
@@ -401,10 +404,10 @@ void ipbs_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   gnuplotwriter.write(filename); 
 
   // Calculate the forces
-   force(gv, boundaryIndexToEntity, gfs, u);
+  // force(gv, boundaryIndexToEntity, gfs, u);
   
   std::cout << "iPBS calculation time on rank " << colCom.rank() << " is: " << timer.elapsed() << std::endl;
 
   // ipbs_testField(gv,udgf, gfs, u, boundaryIndexToEntity); 
-  ipbs_ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom, u);
+  //ipbs_ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom, u);
 }
