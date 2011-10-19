@@ -1,4 +1,4 @@
-/// Single Geometry Single Codim Mapper
+// Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
 #include <gsl/gsl_sf_ellint.h>
 
@@ -22,7 +22,7 @@ class Ipbsolver
     Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
         const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
       gv(gv_), gfs(gfs_), helper(helper_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), error(0)
+      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), fluxError(0)
 
     /*!
        \param gv the view on the leaf grid
@@ -32,14 +32,18 @@ class Ipbsolver
       init(); // Detect iterative elements
       communicateIpbsData(); 
       bContainer.resize(ipbsPositions.size(),0);
+      inducedChargeDensity.resize(ipbsPositions.size(),0);
+      bEfield.resize(ipbsPositions.size(),0);
       if (use_guess) inital_guess();
     }
 
     bool next_step()
     {
-      std::cout << "in iteration " << sysParams.counter << " the relative error is " << error << std::endl;
-      if (error > sysParams.get_tolerance()) {
-        error = 0; // reset the error for next iteration step
+      std::cout << "in iteration " << sysParams.counter << " the relative fluxError is " << fluxError
+        << " relative error in induced charge density is " << icError << std::endl;
+      if (fluxError > sysParams.get_tolerance()) {
+        fluxError = 0; // reset the fluxError for next iteration step
+        icError = 0;
         return true;
       }
       else
@@ -55,6 +59,49 @@ class Ipbsolver
       return y;
     }
 
+    // ------------------------------------------------------------------------
+    /// Induced charge computation
+    // ------------------------------------------------------------------------
+    void updateIC()
+    {
+      //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
+      bContainerType ic(inducedChargeDensity.size(), 0.);
+      double eps_out = sysParams.get_epsilon();  
+      unsigned int target = my_offset + my_len;
+      for (unsigned int i = my_offset; i < target; i++) {
+        double eps_in = boundary[ipbsType[i]-2]->get_epsilon();
+        //std::cout << "eps_in = " << eps_in << " eps_out = " << eps_out << std::endl;
+        double my_charge = boundary[ipbsType[i]-2]->get_charge_density();
+        // calculate the induced charge in this surface element
+        ic[i] = -(eps_in - eps_out) / (eps_in+eps_out)
+                                * ( my_charge + eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
+                                    * bEfield[i] );
+        //std::cout << "ic[" << i << "] = " << ic[i] << std::endl;
+      }
+      //for (unsigned int i = 0; i < inducedChargeDensity.size(); i++)
+      //  std::cout << communicator.rank() << " induced charge density before " << i << " " << inducedChargeDensity[i] << std::endl;
+      communicator.barrier();
+      communicator.sum(&ic[0], ic.size());
+      // Do the SOR 
+      for (unsigned int i = 0; i < inducedChargeDensity.size(); i++) {
+        inducedChargeDensity[i] = sysParams.get_alpha() * ic[i]
+                          + ( 1 - sysParams.get_alpha()) * inducedChargeDensity[i];
+        double local_icError = fabs(2.0*(ic[i]-inducedChargeDensity[i])
+                      /(ic[i]+inducedChargeDensity[i]));
+        icError = std::max(icError, local_icError);
+      }
+      communicator.barrier();
+      communicator.max(&icError, 1);
+ 
+//      if (communicator.rank() == 0)
+//        for (unsigned int i = 0; i < inducedChargeDensity.size(); i++)
+//          std::cout << communicator.rank() << " induced charge density: " << i << " " << inducedChargeDensity[i] << std::endl;
+    }
+
+    // ------------------------------------------------------------------------
+    /// This method will do the update on the boundary conditions
+    // ------------------------------------------------------------------------
+
     void updateBC(const U& u)
     {
       /// Construct a discrete grid function space for access to solution
@@ -64,6 +111,7 @@ class Ipbsolver
               <Dune::Interior_Partition>::Iterator LeafIterator;
       /// Store the new calculated values
       bContainerType fluxes(ipbsPositions.size(),0.);
+      bEfield.assign(ipbsPositions.size(),0.);
       //std::cout << "Flux length: " << fluxes.size() << std::endl;
 
       // Loop over all elements and calculate the volume integral contribution
@@ -157,6 +205,7 @@ class Ipbsolver
 
           /// Integrate
           fluxes[i] += volumeElem_flux;
+          bEfield[i] += volumeElem_flux;
         }
       }
 
@@ -171,7 +220,10 @@ class Ipbsolver
         for (size_t j = 0; j < ipbsPositions.size(); j++)
         {
           if (i!=j)
-          {
+          { 
+            double lcd = boundary[ipbsType[j]-2]->get_charge_density() 
+                          + inducedChargeDensity[j]; /**< The local charge density 
+                                                       on this particular surface element */
             Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
             Dune::FieldVector<ctype,dim> dist = r - r_prime;
             // Integration depends on symmetry!
@@ -193,8 +245,7 @@ class Ipbsolver
                                         / ((a-b)*sqrt(a)*b) * E
                         + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
                 surfaceElem_flux = E_field * unitNormal;
-                surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * 
-                                    (boundary[ipbsType[j]-2]->get_charge_density() + 0); // TODO induced charge missing
+                surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
               }
               break;
               case 2: // "spherical symmetry"
@@ -210,8 +261,7 @@ class Ipbsolver
                                  / ((a-b)*sqrt(a)*b) * E
                             + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
                 surfaceElem_flux = E_field * unitNormal;
-                surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * 
-                                      (boundary[ipbsType[j]-2]->get_charge_density() + 0); // TODO induced charge missing
+                surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
               }
               break;
               case 3:
@@ -225,14 +275,15 @@ class Ipbsolver
                 E_field /= dist.two_norm() * dist.two_norm();
                           
                 surfaceElem_flux = E_field * unitNormal;
-                surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] *
-                                    (boundary[ipbsType[j]-2]->get_charge_density() + 0); // TODO induced charge missing
+                surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
               }
               break;
             }
+            bEfield[i] += surfaceElem_flux;
           }
           else {
-            surfaceElem_flux = -2. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]-2]->get_charge_density();
+            surfaceElem_flux = -2. * sysParams.get_bjerrum() * sysParams.pi 
+                              * ( boundary[ipbsType[i]-2]->get_charge_density() + inducedChargeDensity[i] );
           }
           fluxes[i] += surfaceElem_flux;
         }
@@ -240,29 +291,31 @@ class Ipbsolver
 
       // Collect results from all nodes
       communicator.barrier();
-      std::cout << "Rank " << communicator.rank() << " has arrived at barrier. It's offset is " << my_offset << ", length is " << my_len << ", target is " << target << std::endl;
       communicator.sum(&fluxes[0], fluxes.size());
+      communicator.sum(&bEfield[0], fluxes.size());
+
+      //for (int i = 0; i < bEfield.size(); i++) {
+      //  std::cout << "bEfield[" << i << "] = " << bEfield[i] << std::endl;
+      //}
 
       // debuging :-)
-      std::stringstream outname;
-      outname << "rank_" << communicator.rank() << "_step_" << sysParams.counter << ".dat";
-      std::string filename = outname.str();
-      std::ofstream outfile;
-      outfile.open(filename, std::ios::out);
+      //std::stringstream outname;
+      //outname << "rank_" << communicator.rank() << "_step_" << sysParams.counter << ".dat";
+      //std::string filename = outname.str();
+      //std::ofstream outfile;
+      //outfile.open(filename, std::ios::out);
 
       // Do the SOR 
       for (unsigned int i = my_offset; i < target; i++) {
         bContainer[i] = sysParams.get_alpha() * fluxes[i]
                           + ( 1 - sysParams.get_alpha()) * bContainer[i];
-        double local_error = fabs(2.0*(fluxes[i]-bContainer[i])
+        double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
                       /(fluxes[i]+bContainer[i]));
-        error = std::max(error, local_error);
-        outfile << ipbsPositions[i] << " " << bContainer[i] << std::endl;
+        fluxError = std::max(fluxError, local_fluxError);
+        //outfile << ipbsPositions[i] << " " << bContainer[i] << std::endl;
       }
       communicator.barrier();
-      communicator.max(&error, 1);
-
-
+      communicator.max(&fluxError, 1);
     }
 
   private:
@@ -278,6 +331,10 @@ class Ipbsolver
         bContainer[i] = -4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]-2]->get_charge_density();
       }
     }
+
+    // ------------------------------------------------------------------------
+    /// This method executes everything related to initialization
+    // ------------------------------------------------------------------------
 
     void init()
     {
@@ -461,8 +518,13 @@ class Ipbsolver
     typedef std::map<int, int> IndexLookupMap;
     IndexLookupMap indexLookupMap;
     typedef std::vector<double> bContainerType;
-    bContainerType bContainer;
+    bContainerType bContainer;  // Store the electric field on the surface elements caused by explicit charges in the system
+    bContainerType inducedChargeDensity;  // Store the induced charge density
+    bContainerType bEfield;   /**< Store the electric field on boundary elements, 
+                                 which is calculated during updateBC(),
+                                 \f[ \vec{E}(\vec{r}) \propto \int_V \sinh(\Phi(\vec{r}))
+                                 \textnormal{d}\vec{r} \f] */
     /// Offset and length of data stream on each node
     unsigned int my_offset, my_len;
-    double error;
+    double fluxError,  icError;
 };
