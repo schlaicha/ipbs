@@ -2,6 +2,10 @@
 #include <dune/grid/common/scsgmapper.hh>
 #include <gsl/gsl_sf_ellint.h>
 //#include "/work/schlaich/gsl/include/gsl/gsl_sf_ellint.h"
+#ifndef MAXWELLTENSOR_H
+#define MAXWELLTENSOR_H
+#include "maxwelltensor.hh"
+#endif
 
 template <class GV, class GFS>
 class Ipbsolver
@@ -321,6 +325,62 @@ class Ipbsolver
       }
       communicator.barrier();
       communicator.max(&fluxError, 1);
+    }
+
+    void forces(const U& u)
+    {
+      // Here we once more loop over all elements on this node (need of the element information
+      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
+      // (see Hsu06a, eq. 61)
+
+      // Open output file for force on particles
+      std::ofstream force_file, vector_force_file;
+      if (communicator.rank() == 0) {
+        force_file.open ("forces.dat", std::ios::out);
+        vector_force_file.open ("vector_forces.dat", std::ios::out);
+      }
+      typedef typename GV::template Codim<0>::template Partition
+              <Dune::Interior_Partition>::Iterator LeafIterator;
+      typedef typename GV::IntersectionIterator IntersectionIterator;
+
+      // Do the loop for all boundaryIDs > 1 (all colloids)
+      for (int i = 2; i < sysParams.get_npart()+2; i++)
+      {
+        std::cout << "Calculating the force acting on particle id " << i << std::endl;
+        Dune::FieldVector<Real, dim> F(0);
+
+        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+                 	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+        {
+          if(it->hasBoundaryIntersections() == true) {
+            for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+              if(ii->boundary() == true) {
+                if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+                {
+                  Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
+                  Dune::FieldVector<Real, dim> forcevec;
+                  normal *= -1.0 * ii->geometry().volume(); // Surface normal
+                  Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, ii, u);
+                  //sigma.umv(normal, F);
+                  sigma.mv(normal, forcevec);
+                  forcevec *= 2.*sysParams.pi*ii->geometry().center()[1]; // integration in theta
+                  F += forcevec;
+                  //vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
+                }
+              }
+            }
+          }
+        }
+        // Sum up force of all nodes
+        communicator.barrier();
+        communicator.sum(&F[0], F.dim());
+        if (communicator.rank() == 0)
+          force_file << i << " " << F << std::endl;        
+      }
+      if (communicator.rank() == 0) {
+        force_file.close();
+        vector_force_file.close();
+      }
     }
 
   private:

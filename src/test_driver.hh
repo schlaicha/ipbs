@@ -117,7 +117,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // --- Here the iterative loop starts ---
 
-  while (ipbs.next_step() && sysParams.counter < 3)
+  while (ipbs.next_step())
   {
     timer.reset();
     newton.apply();
@@ -178,7 +178,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   gnuplotwriter.write(filename); 
 
   // Calculate the forces
-  // force(gv, boundaryIndexToEntity, gfs, u);
+  ipbs.forces(u);
   
   if (helper.rank() == 0) {
     std::ofstream runtime;

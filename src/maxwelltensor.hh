@@ -1,3 +1,8 @@
+#ifndef GRADIENT_H
+#define GRADIENT_H
+#include "gradient.hh"
+#endif
+
 /** \brief Get the Maxwell stress tensor
  
     Some more description :-)
