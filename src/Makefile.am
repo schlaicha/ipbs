@@ -11,7 +11,8 @@ iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(AMIRAMESH_CPPFLAGS) \
 	$(ALBERTA_CPPFLAGS) \
 	$(ALUGRID_CPPFLAGS) \
-	$(GRIDDIM_CPPFLAGS)
+	$(GRIDDIM_CPPFLAGS) 
+
 # The libraries have to be given in reverse order (most basic libraries
 # last).  Also, due to some misunderstanding, a lot of libraries include the
 # -L option in LDFLAGS instead of LIBS -- so we have to include the LDFLAGS
@@ -23,8 +24,8 @@ iPBS_LDADD = \
 	$(AMIRAMESH_LDFLAGS) $(AMIRAMESH_LIBS) \
 	$(UG_LDFLAGS) $(UG_LIBS) \
 	$(DUNEMPILIBS)	\
-	$(LDADD) \
-  -lgsl -lgslcblas
+	$(LDADD) 
+#  	-L/work/schlaich/gsl/lib/gsl -L/work/schlaich/gsl/lib/gslcblas
 iPBS_LDFLAGS = $(AM_LDFLAGS) \
 	$(DUNEMPILDFLAGS) \
 	$(UG_LDFLAGS) \

@@ -1,6 +1,7 @@
 // Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
 #include <gsl/gsl_sf_ellint.h>
+//#include "/work/schlaich/gsl/include/gsl/gsl_sf_ellint.h"
 
 template <class GV, class GFS>
 class Ipbsolver
@@ -37,6 +38,10 @@ class Ipbsolver
       if (use_guess) inital_guess();
     }
 
+    int get_n()
+    {
+      return ipbsPositions.size();
+    }
     bool next_step()
     {
       std::cout << "in iteration " << sysParams.counter << " the relative fluxError is " << fluxError

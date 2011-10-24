@@ -37,13 +37,13 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // NOTE only flux b.c. are iterated, so rest is instantiated only once
   // inner region
-  typedef Regions<GV,double,std::vector<int>> M;
+  typedef Regions<GV,double,std::vector<int> > M;
   M m(gv, elementIndexToEntity);
   // boundary condition type
-  typedef BCType<GV,std::vector<int>> B;
+  typedef BCType<GV,std::vector<int> > B;
   B b(gv, boundaryIndexToEntity);
   // Class defining Dirichlet B.C.
-  typedef BCExtension<GV,double,std::vector<int>> G;
+  typedef BCExtension<GV,double,std::vector<int> > G;
   G g(gv, boundaryIndexToEntity);
 
   // Create finite element map
@@ -92,10 +92,10 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
-  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  LS ls(gfs, 5000, 1);
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
+  LS ls(gfs);
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
@@ -117,33 +117,33 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // --- Here the iterative loop starts ---
 
-  while (ipbs.next_step())
+  while (ipbs.next_step() && sysParams.counter < 3)
   {
     timer.reset();
     newton.apply();
     solvertime += timer.elapsed();
 
     // save snapshots of each iteration step
-    std::stringstream out;
-    out << "ipbs_step_" << sysParams.counter;
-    std::string filename = out.str();
-    DGF udgf_snapshot(gfs,u);
-    Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-    vtkwriter.write(filename,Dune::VTK::appendedraw);
+    // std::stringstream out;
+    // out << "ipbs_step_" << sysParams.counter;
+    // std::string filename = out.str();
+    // DGF udgf_snapshot(gfs,u);
+    // Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+    // vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+    // vtkwriter.write(filename,Dune::VTK::appendedraw);
     // Prepare filename for sequential Gnuplot output
-    if(helper.size()>1)
-    {
-      std::stringstream s;
-      s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-      s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
-      s << filename;
-      filename = s.str();
-    }
-    // Gnuplot output
-    Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-    gnuplotwriter.addVertexData(u,"solution");
-    gnuplotwriter.write(filename + ".dat"); 
+    // if(helper.size()>1)
+    // {
+    //   std::stringstream s;
+    //   s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
+    //   s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
+    //   s << filename;
+    //   filename = s.str();
+    // }
+    // // Gnuplot output
+    // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+    // gnuplotwriter.addVertexData(u,"solution");
+    // gnuplotwriter.write(filename + ".dat"); 
 
     sysParams.counter ++;
 
@@ -180,5 +180,10 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Calculate the forces
   // force(gv, boundaryIndexToEntity, gfs, u);
   
-  std::cout << "average time on rank: " << helper.rank() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+  if (helper.rank() == 0) {
+    std::ofstream runtime;
+    runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
+    runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    runtime.close();
+  }
 }
