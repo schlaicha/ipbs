@@ -179,6 +179,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // Calculate the forces
   ipbs.forces(u);
+  ipbs.forces2(u);
   
   if (helper.rank() == 0) {
     std::ofstream runtime;

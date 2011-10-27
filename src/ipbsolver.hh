@@ -327,6 +327,9 @@ class Ipbsolver
       communicator.max(&fluxError, 1);
     }
 
+    // ------------------------------------------------------------------------
+    /// Force computation
+    // ------------------------------------------------------------------------
     void forces(const U& u)
     {
       // Here we once more loop over all elements on this node (need of the element information
@@ -360,12 +363,13 @@ class Ipbsolver
                   Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
                   Dune::FieldVector<Real, dim> forcevec;
                   normal *= -1.0 * ii->geometry().volume(); // Surface normal
-                  Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, ii, u);
+                  Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                  Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
                   //sigma.umv(normal, F);
                   sigma.mv(normal, forcevec);
                   forcevec *= 2.*sysParams.pi*ii->geometry().center()[1]; // integration in theta
                   F += forcevec;
-                  //vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
+                  vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
                 }
               }
             }
@@ -383,6 +387,88 @@ class Ipbsolver
       }
     }
 
+   
+    // ------------------------------------------------------------------------
+    /// Force computation -- alternative trial version
+    // ------------------------------------------------------------------------
+    void forces2(const U& u, const double del = 2e-2)
+    {
+      // Here we once more loop over all elements on this node (need of the element information
+      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
+      // (see Hsu06a, eq. 61)
+
+      // Open output file for force on particles
+      std::ofstream force_file;
+      if (communicator.rank() == 0) {
+        force_file.open ("forces2.dat", std::ios::out);
+      }
+
+      Dune::FieldVector<Real, dim> F;
+      int evalRank = communicator.size();
+      int myRank = communicator.rank();
+
+      Dune::FieldVector<ctype,dim> x, rightNormal, leftNormal;
+      x[0] = 0;
+      leftNormal[0] = -1.;
+      rightNormal[0] = 1.;
+      leftNormal[1] = rightNormal[1] = 0;
+
+      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
+      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
+      Ep null(NULL);
+
+      bool exit = false;  // stay in loop till upper boarder of the grid is reached
+      for (double y = 0; ; y+=del) {
+        x[1] = y;
+
+        Hsearch hsearch(gv.grid(), gv.indexSet());
+        Ep ep(null);  // Initialize an empty entity pointer
+        try{
+          ep = hsearch.findEntity(x);
+          if(ep->partitionType() == Dune::InteriorEntity)
+            evalRank = myRank;
+        }
+        catch (const Dune::GridError&) { /* do nothing */ }
+
+        evalRank = communicator.min(evalRank);
+          if(myRank == evalRank) {
+            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+            Dune::FieldVector<Real, dim> forcevec, normal;
+            normal = rightNormal;
+            normal *= del; // Surface normal
+            Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, x, u);
+            //sigma.umv(normal, F);
+            sigma.mv(normal, forcevec);
+            forcevec *= 2.*sysParams.pi*x[1]; // integration in theta
+            F += forcevec;
+          }
+        else
+            ep = null;
+        if(myRank == 0 && evalRank == communicator.size()) {
+            Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+                  << "the grid" << std::endl;
+            exit = 1;
+        }
+        exit = communicator.max(exit);
+        if (exit == 1)
+          break;
+        evalRank = communicator.size();
+      }
+
+      std::cout << "Arrived at barrier." << std::endl;
+
+      // Sum up force of all nodes
+      communicator.barrier();
+      communicator.sum(&F[0], F.dim());
+      if (communicator.rank() == 0) {
+        force_file << F << std::endl;        
+        force_file.close();
+      }
+    }
+
+  
+  // ------------------------------------------------------------------------
+
   private:
     void inital_guess()
     {
@@ -396,7 +482,7 @@ class Ipbsolver
         bContainer[i] = -4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]-2]->get_charge_density();
       }
     }
-
+ 
     // ------------------------------------------------------------------------
     /// This method executes everything related to initialization
     // ------------------------------------------------------------------------

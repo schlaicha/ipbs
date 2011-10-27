@@ -15,10 +15,11 @@
 */
 
 
-template <typename GFS, typename Iterator, typename Intersection, typename U>
+template <typename GFS, typename Iterator, typename U>
 Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   GFS::Traits::GridViewType::dimension>
-  maxwelltensor(const GFS& gfs, const Iterator& it, const Intersection& ii, const U& u)
+  maxwelltensor(const GFS& gfs, const Iterator& it, 
+      const Dune::FieldVector<double,GFS::Traits::GridViewType::dimension>& global, const U& u)
 {
   const int dim = GFS::Traits::GridViewType::dimension;
   
@@ -28,10 +29,10 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   typedef typename DGF::Traits::RangeType RT;
   RT value;
   // evaluate the potential
-  udgf.evaluate(*it, it->geometry().local(ii->geometry().center()), value);
+  udgf.evaluate(*it, it->geometry().local(global), value);
 
   // Get the E-Field (-grad Phi)
-  Dune::FieldVector<Real,dim> gradphi = gradient(gfs, it, u, ii->geometry().center());
+  Dune::FieldVector<Real,dim> gradphi = gradient(gfs, it, u, global);
 
   // Build the stress tensor
   Dune::FieldMatrix<Real, dim, dim> res;
