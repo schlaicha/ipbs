@@ -148,11 +148,9 @@ class Ipbsolver
           // integration depends on symmetry
           switch( sysParams.get_symmetry() )
           {
-            case 1:   // infinite cylinder
+            case 1:   // image charged particle on y-axis
             {
-              // use minimum image convention
-              if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-              else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
+              // Do this once for this coordinate and once for the mirrored one (r -> -r)
               double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
               double b = 4.0 * r[1] * r_prime[1];
               double k = sqrt(b/a);
@@ -161,6 +159,19 @@ class Ipbsolver
               Dune::FieldVector<ctype,dim> E_field(0.);
               E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
               E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                             / ((a-b)*sqrt(a)*b) * E
+                           + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+              // now mirror
+              Dune::FieldVector<ctype,dim> tmpr(r);
+              tmpr[0] *= -1.;
+              Dune::FieldVector<ctype,dim> tmpdist = r - r_prime;
+              a = tmpdist[0]*tmpdist[0] + tmpr[1]*tmpr[1] + r_prime[1]*r_prime[1] + 2.0 * tmpr[1] * r_prime[1];
+              b = 4.0 * tmpr[1] * r_prime[1];
+              k = sqrt(b/a);
+              E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+              K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+              E_field[0] += -2.0 * tmpdist[0] / ((a-b)*sqrt(a)) * E;
+              E_field[1] += 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * tmpr[1])
                              / ((a-b)*sqrt(a)*b) * E
                            + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
               volumeElem_flux = E_field * unitNormal;
@@ -238,11 +249,9 @@ class Ipbsolver
             // Integration depends on symmetry!
             switch ( sysParams.get_symmetry() )
             {
-              case 1: // an infinite cylinder
+              case 1:  // image charged particle on y-axis
               {
-                // use minimum image convention
-                if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-                else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
+                // Do this once for this coordinate and once for the mirrored one (r -> -r)
                 double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
                 double b = 4.0 * r[1] * r_prime[1];
                 double k = sqrt(b/a);
@@ -251,6 +260,19 @@ class Ipbsolver
                 Dune::FieldVector<ctype,dim> E_field(0.);
                 E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
                 E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                                        / ((a-b)*sqrt(a)*b) * E
+                        + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+                // now mirror
+                Dune::FieldVector<ctype,dim> tmpr(r);
+                tmpr[0] *= -1.;
+                Dune::FieldVector<ctype,dim> tmpdist = r - r_prime;
+                a = tmpdist[0]*tmpdist[0] + tmpr[1]*tmpr[1] + r_prime[1]*r_prime[1] + 2.0 * tmpr[1] * r_prime[1];
+                b = 4.0 * tmpr[1] * r_prime[1];
+                k = sqrt(b/a);
+                E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+                K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+                E_field[0] += -2.0 * tmpdist[0] / ((a-b)*sqrt(a)) * E;
+                E_field[1] += 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * tmpr[1])
                                         / ((a-b)*sqrt(a)*b) * E
                         + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
                 surfaceElem_flux = E_field * unitNormal;
@@ -293,6 +315,26 @@ class Ipbsolver
           else {
             surfaceElem_flux = -2. * sysParams.get_bjerrum() * sysParams.pi 
                               * ( boundary[ipbsType[i]-2]->get_charge_density() + inducedChargeDensity[i] );
+            // in case of mirroring also include mirrored element
+            double lcd = boundary[ipbsType[i]-2]->get_charge_density() 
+                          + inducedChargeDensity[i]; /**< The local charge density 
+                                                       on this particular surface element */
+            Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[i]);
+            r_prime[0] *= -1.;
+            Dune::FieldVector<ctype,dim> dist = r - r_prime;
+            double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
+            double b = 4.0 * r[1] * r_prime[1];
+            double k = sqrt(b/a);
+            double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+            double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+            Dune::FieldVector<ctype,dim> E_field(0.);
+            E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
+            E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                                    / ((a-b)*sqrt(a)*b) * E
+                    + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+            double tmp = E_field * unitNormal;
+            tmp *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[i] * r_prime[1] * lcd;
+            surfaceElem_flux += tmp;
           }
           fluxes[i] += surfaceElem_flux;
         }
@@ -369,7 +411,7 @@ class Ipbsolver
                   sigma.mv(normal, forcevec);
                   forcevec *= 2.*sysParams.pi*ii->geometry().center()[1]; // integration in theta
                   F += forcevec;
-                  vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
+                  //vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
                 }
               }
             }
