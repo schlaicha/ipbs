@@ -34,11 +34,12 @@ epsilon = 1
 
 [boundary_2]
 #charge_density = 0.114716803
-#charge_density = 0.0126826595
-charge_density = 0.00457490266
+charge_density = 0.0126826595
+#charge_density = 0.00457490266
 epsilon = 1
 
 [boundary_3]
 #charge_density = 0.114716803
-charge_density = 0.00457490266
+charge_density = 0.0126826595
+#charge_density = 0.00457490266
 epsilon = 1

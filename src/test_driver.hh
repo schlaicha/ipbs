@@ -123,27 +123,27 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     newton.apply();
     solvertime += timer.elapsed();
 
-    // save snapshots of each iteration step
-    // std::stringstream out;
-    // out << "ipbs_step_" << sysParams.counter;
-    // std::string filename = out.str();
-    // DGF udgf_snapshot(gfs,u);
-    // Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-    // vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-    // vtkwriter.write(filename,Dune::VTK::appendedraw);
-    // Prepare filename for sequential Gnuplot output
-    // if(helper.size()>1)
-    // {
-    //   std::stringstream s;
-    //   s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-    //   s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
-    //   s << filename;
-    //   filename = s.str();
-    // }
-    // // Gnuplot output
-    // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-    // gnuplotwriter.addVertexData(u,"solution");
-    // gnuplotwriter.write(filename + ".dat"); 
+//     // save snapshots of each iteration step
+//     std::stringstream out;
+//     out << "ipbs_step_" << sysParams.counter;
+//     std::string filename = out.str();
+//     DGF udgf_snapshot(gfs,u);
+//     Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+//     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+//     vtkwriter.write(filename,Dune::VTK::appendedraw);
+//     // Prepare filename for sequential Gnuplot output
+//     if(helper.size()>1)
+//     {
+//       std::stringstream s;
+//       s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
+//       s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
+//       s << filename;
+//       filename = s.str();
+//     }
+//     // Gnuplot output
+//     Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+//     gnuplotwriter.addVertexData(u,"solution");
+//     gnuplotwriter.write(filename + ".dat"); 
 
     sysParams.counter ++;
 
@@ -151,7 +151,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
     ipbs.updateBC(u);
     ipbs.updateIC();
     itertime += timer.elapsed();
- }
+  }
 
   // --- here the iterative loop ends! ---
 
@@ -180,6 +180,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Calculate the forces
   ipbs.forces(u);
   ipbs.forces2(u);
+  ipbs.forces3(u);
   
   if (helper.rank() == 0) {
     std::ofstream runtime;

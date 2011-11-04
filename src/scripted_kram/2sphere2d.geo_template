@@ -1,13 +1,13 @@
 // Define setup variables
-radius = 40;
+radius = 13.3;
 distance = @distance@;
 height = 400;
 //height = 10 + 1*distance;
 //width = 120+distance/2;
-width = 800 + 2* distance;
-lc_sphere = .4;
+width = 11*radius + 2* distance;
+lc_sphere = .1;
 //lc_center = @lc_center@;
-lc_center = distance/radius*0.1;
+lc_center = distance/radius*2.;
 lc_boarder = 40;
 // lc_boarder = 0.3 + 0.05 * distance ;
 
