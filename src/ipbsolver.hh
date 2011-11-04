@@ -380,9 +380,10 @@ class Ipbsolver
 
       // Open output file for force on particles
       std::ofstream force_file, vector_force_file;
+
+      vector_force_file.open (filename_helper("vector_forces"), std::ios::out);
       if (communicator.rank() == 0) {
         force_file.open ("forces.dat", std::ios::out);
-        vector_force_file.open ("vector_forces.dat", std::ios::out);
       }
       typedef typename GV::template Codim<0>::template Partition
               <Dune::Interior_Partition>::Iterator LeafIterator;
@@ -409,9 +410,9 @@ class Ipbsolver
                   Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
                   //sigma.umv(normal, F);
                   sigma.mv(normal, forcevec);
-                  forcevec *= 2.*sysParams.pi*ii->geometry().center()[1]; // integration in theta
+                  forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
                   F += forcevec;
-                  //vector_force_file << ii->geometry().center() << " " << forcevec << std::endl;
+                  vector_force_file << evalPos << " " << forcevec << std::endl;
                 }
               }
             }
@@ -474,7 +475,7 @@ class Ipbsolver
 
         evalRank = communicator.min(evalRank);
           if(myRank == evalRank) {
-            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+            std::cout << "Detected element containing " << x << " on rank " << myRank << std::endl;
             Dune::FieldVector<Real, dim> forcevec, normal;
             normal = rightNormal;
             normal *= del; // Surface normal
@@ -507,6 +508,146 @@ class Ipbsolver
         force_file.close();
       }
     }
+
+    // ------------------------------------------------------------------------
+    /// Force computation -- alternative trial version (SPHERE)
+    // ------------------------------------------------------------------------
+    void forces3(const U& u, const int steps = 1000)
+    {
+      // Here we once more loop over all elements on this node (need of the element information
+      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
+      // (see Hsu06a, eq. 61)
+
+      // Open output file for force on particles
+      std::ofstream force_file, vector_force_file;
+      vector_force_file.open (filename_helper("vector_forces3"), std::ios::out);
+      if (communicator.rank() == 0) {
+        force_file.open ("forces3.dat", std::ios::out);
+      }
+
+      Dune::FieldVector<Real, dim> F;
+      int evalRank = communicator.size();
+      int myRank = communicator.rank();
+
+      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
+      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
+      Ep null(NULL);
+      Dune::FieldVector<ctype,dim> x, normal;
+      Hsearch hsearch(gv.grid(), gv.indexSet());
+      Ep ep(null);  // Initialize an empty entity pointer
+
+      bool exit = false;  // stay in loop till upper boarder of the grid is reached
+      double del = 1./sqrt(sysParams.get_lambda2i());
+      double y_max = 0.;
+      double x_max = 0.;
+      x[0] = 0;
+      for (;;y_max+=del) {
+        x[1] = y_max;
+        try{
+          ep = hsearch.findEntity(x);
+          if(ep->partitionType() == Dune::InteriorEntity)
+            evalRank = myRank;
+        }
+        catch (const Dune::GridError&) { /* do nothing */ }
+        evalRank = communicator.min(evalRank);
+        if(myRank == evalRank) {
+            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+            Dune::FieldVector<Real, dim> forcevec, normal;
+        }
+        else
+            ep = null;
+        if(myRank == 0 && evalRank == communicator.size()) {
+          Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+                << "the grid" << std::endl;
+        exit = 1;
+      }
+      exit = communicator.max(exit);
+      if (exit == 1)
+        break;
+      evalRank = communicator.size();
+    }
+    communicator.barrier();
+    y_max = communicator.max(y_max)-del;
+    exit  = 0; 
+    x[1] = y_max;
+    for (;;x_max-=del) {
+      x[0] = x_max;
+      try{
+        ep = hsearch.findEntity(x);
+        if(ep->partitionType() == Dune::InteriorEntity)
+          evalRank = myRank;
+      }
+      catch (const Dune::GridError&) { /* do nothing */ }
+      evalRank = communicator.min(evalRank);
+      if(myRank == evalRank) {
+          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+          Dune::FieldVector<Real, dim> forcevec, normal;
+      }
+      else
+          ep = null;
+      if(myRank == 0 && evalRank == communicator.size()) {
+        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+              << "the grid" << std::endl;
+      exit = 1;
+    }
+    exit = communicator.max(exit);
+    if (exit == 1)
+      break;
+    evalRank = communicator.size();
+    }
+    
+    communicator.barrier();
+    x_max = communicator.max(x_max)-del;
+    double radius = (fabs(x_max/2.) > y_max ? y_max : (fabs(x_max/2.)));
+    del = 2.*radius / steps;
+    double y_old = 0.;
+    double x_old = 0.;
+    for (double x = 0; x > x_max; x-=del)
+    {
+      double y = sqrt(radius*radius - (x+radius)*(x+radius));
+      Dune::FieldVector<Real, dim> evalPos;
+      evalPos[0] = x;
+      evalPos[1] = y;
+      double dx = x-x_old;
+      double dy = y-y_old;
+      Dune::FieldVector<Real, dim> normal(evalPos);
+      normal /= radius;
+      Dune::FieldVector<Real, dim> forcevec;
+      normal *= sqrt(dx*dx+dy*dy); // Surface normal
+      // detect element to evaluate on
+      try{
+        ep = hsearch.findEntity(evalPos);
+        if(ep->partitionType() == Dune::InteriorEntity)
+          evalRank = myRank;
+      }
+      catch (const Dune::GridError&) { /* do nothing */ }
+      evalRank = communicator.min(evalRank);
+      if(myRank == evalRank) {
+          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+          Dune::FieldVector<Real, dim> forcevec, normal;
+      }
+      if(myRank == 0 && evalRank == communicator.size()) {
+        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+              << "the grid" << std::endl;
+      }
+
+      Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, evalPos, u);
+      //sigma.umv(normal, F);
+      sigma.mv(normal, forcevec);
+      forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
+      F += forcevec;
+      vector_force_file << evalPos << " " << forcevec << std::endl;
+    }
+
+    // Sum up force of all nodes
+    communicator.barrier();
+    communicator.sum(&F[0], F.dim());
+    if (communicator.rank() == 0) {
+      force_file << F << std::endl;        
+      force_file.close();
+    }
+    vector_force_file.close();
+  }
 
   
   // ------------------------------------------------------------------------
@@ -658,66 +799,3 @@ class Ipbsolver
       }
       
       if( communicator.rank() !=0) // other nodes send their positions to master node
-      {
-        MPI_Send(&ipbsType[0],length_on_processor[communicator.rank()],MPI_INT,0,1,MPI_COMM_WORLD);
-        MPI_Send(&ipbsVolumes[0],length_on_processor[communicator.rank()],MPI_DOUBLE,0,2,MPI_COMM_WORLD);
-      }
-      else
-      {
-        int tmpcounter = length_on_processor[0];
-        // get positions from other nodes
-        for (int i = 1; i < communicator.size(); i++) {
-          MPI_Recv(&ipbsType[tmpcounter],length_on_processor[i],MPI_INT,i,1,MPI_COMM_WORLD,&status);
-          MPI_Recv(&ipbsVolumes[tmpcounter],length_on_processor[i],MPI_DOUBLE,i,2,MPI_COMM_WORLD,&status);
-          tmpcounter += length_on_processor[i];
-        }
-      }
-
-      //if (communicator.rank() == 0)
-      //{  for(unsigned int i=0;i<ipbsType.size();i++)
-      //    std::cout << ipbsType[i] << " " << ipbsVolumes[i] << " " << ipbsPositions[i] << std::endl;
-      //}
-      communicator.broadcast(&ipbsType[0], countBoundElems, 0);
-      communicator.broadcast(&ipbsVolumes[0], countBoundElems, 0);
-      communicator.barrier();
-      return 0;
-#else
-      my_len = ipbsType.size();
-      my_offset = 0;
-      return -1;
-#endif
-    }
-
-    const GV& gv;
-    /// The grid function space
-    const GFS& gfs;
-    Dune::MPIHelper& helper;
-    const std::vector<int>& boundaryIndexToEntity;
-    // provide a mapper for getting indices of iterated boundary elements
-    typedef Dune::SingleCodimSingleGeomTypeMapper<GV, 0> BoundaryElemMapper;
-    BoundaryElemMapper boundaryElemMapper;
-    /// The communicator decides weither to use MPI or fake
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
-
-    /// Store the center of boundary intersections of iterative type
-    std::vector<Dune::FieldVector<ctype,dim> > ipbsPositions;
-    /// Store the normal vector at the center of boundary intersections of iterative type
-    std::vector<Dune::FieldVector<ctype,dim> > ipbsNormals;
-    /// Store the volume of boundary intersections of iterative type
-    std::vector<Real> ipbsVolumes;
-    /// Provide a vector storing the type of the iterative boundary @todo Maybe it's more reasonable to store its surface charge density
-    std::vector<int> ipbsType;
-    /// For fast access to the precomputed fluxes we use binary tree  - only local index is needed :-)
-    typedef std::map<int, int> IndexLookupMap;
-    IndexLookupMap indexLookupMap;
-    typedef std::vector<double> bContainerType;
-    bContainerType bContainer;  // Store the electric field on the surface elements caused by explicit charges in the system
-    bContainerType inducedChargeDensity;  // Store the induced charge density
-    bContainerType bEfield;   /**< Store the electric field on boundary elements, 
-                                 which is calculated during updateBC(),
-                                 \f[ \vec{E}(\vec{r}) \propto \int_V \sinh(\Phi(\vec{r}))
-                                 \textnormal{d}\vec{r} \f] */
-    /// Offset and length of data stream on each node
-    unsigned int my_offset, my_len;
-    double fluxError,  icError;
-};

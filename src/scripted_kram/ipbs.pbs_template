@@ -1,0 +1,5 @@
+#PBS -l nodes=1:ppn=8:opteron
+#PBS -l walltime=06:00:00
+
+cd @path@
+/usr/local/bin/mpiexec -np 8 @command@
