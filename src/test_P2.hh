@@ -16,7 +16,7 @@
 #endif
 
 template<class GridType>
-void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
+void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              Dune::MPIHelper& helper)
 {
@@ -27,7 +27,6 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
   const GV& gv = grid->leafView();
- // const IpbsGridView<GridType>& gv = static_cast<IpbsGridView<GridType> > (grid->leafView());
 
   // some typedef
   const int dim = GV::dimension;
@@ -47,8 +46,10 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   G g(gv, boundaryIndexToEntity);
 
   // Create finite element map
-  typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
-  FEM fem;
+  // typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
+  unsigned const int elementorder = 2;
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, elementorder> FEM;
+  FEM fem(gv);
 
   // <<<2>>> Make grid function space
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
@@ -86,7 +87,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
-  LOP lop(m,b,j);
+  LOP lop(m,b,j,3);
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
   GOS gos(gfs,cc,gfs,cc,lop);
@@ -172,15 +173,14 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  // Gnuplot output
-  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename); 
+  // // Gnuplot output  - not for higher order elements
+  // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  // gnuplotwriter.addVertexData(u,"solution");
+  // gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);
   ipbs.forces2(u);
-  // ipbs.forces3(u);
   
   if (helper.rank() == 0) {
     std::ofstream runtime;

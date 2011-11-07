@@ -35,10 +35,15 @@
 #include<dune/grid/io/file/gmshreader.hh>
 
 // we use UG
-#ifdef ENABLE_UG
+#ifdef UGGRID
   #include<dune/grid/uggrid.hh>
   #include<dune/grid/uggrid/uggridfactory.hh>
-#else
+#endif
+#ifdef ALUGRID
+  #include<dune/grid/alugrid.hh>
+  #include<dune/grid/alugrid/2d/alu2dgridfactory.hh>
+#endif
+#if !(UGGRID || ALUGRID)
   #error It looks like dunecontrol could not detect your UG installation properly.
   #error At the moment, iPBS *STRICTLY* depends on UG!
   #error Compilation will be aborted.
@@ -92,8 +97,8 @@ std::vector<Boundary*> boundary;
 //#include "ipbs_P1.hh"
 //#include "ipbs_P2.hh"
 //#include "ref_P1.hh"
-//#include "test.hh"
 #include "test_driver.hh"
+#include "test_P2.hh"
 
 //===============================================================
 // Main programm
@@ -141,7 +146,11 @@ int main(int argc, char** argv)
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
   
+#ifdef UGGRID
   typedef Dune::UGGrid<dimgrid> GridType;
+#elif ALUGRID
+  typedef Dune::ALUConformGrid< dimgrid, dimgrid > GridType;
+#endif
   Dune::GridFactory<GridType> factory;
 
  
@@ -182,7 +191,8 @@ int main(int argc, char** argv)
  // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
  // ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
  // ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
- test_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ // test_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ test_P2(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
   
  // done
  return 0;

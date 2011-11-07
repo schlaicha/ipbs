@@ -381,7 +381,7 @@ class Ipbsolver
       // Open output file for force on particles
       std::ofstream force_file, vector_force_file;
 
-      vector_force_file.open (filename_helper("vector_forces"), std::ios::out);
+      vector_force_file.open (filename_helper("vector_forces").c_str(), std::ios::out);
       if (communicator.rank() == 0) {
         force_file.open ("forces.dat", std::ios::out);
       }
@@ -799,3 +799,84 @@ class Ipbsolver
       }
       
       if( communicator.rank() !=0) // other nodes send their positions to master node
+      {
+        MPI_Send(&ipbsType[0],length_on_processor[communicator.rank()],MPI_INT,0,1,MPI_COMM_WORLD);
+        MPI_Send(&ipbsVolumes[0],length_on_processor[communicator.rank()],MPI_DOUBLE,0,2,MPI_COMM_WORLD);
+      }
+      else
+      {
+        int tmpcounter = length_on_processor[0];
+        // get positions from other nodes
+        for (int i = 1; i < communicator.size(); i++) {
+          MPI_Recv(&ipbsType[tmpcounter],length_on_processor[i],MPI_INT,i,1,MPI_COMM_WORLD,&status);
+          MPI_Recv(&ipbsVolumes[tmpcounter],length_on_processor[i],MPI_DOUBLE,i,2,MPI_COMM_WORLD,&status);
+          tmpcounter += length_on_processor[i];
+        }
+      }
+
+      //if (communicator.rank() == 0)
+      //{  for(unsigned int i=0;i<ipbsType.size();i++)
+      //    std::cout << ipbsType[i] << " " << ipbsVolumes[i] << " " << ipbsPositions[i] << std::endl;
+      //}
+      communicator.broadcast(&ipbsType[0], countBoundElems, 0);
+      communicator.broadcast(&ipbsVolumes[0], countBoundElems, 0);
+      communicator.barrier();
+      return 0;
+#else
+      my_len = ipbsType.size();
+      my_offset = 0;
+      return -1;
+#endif
+    }
+ 
+    // ------------------------------------------------------------------------
+    /// Filenamehelper for parallel output
+    // ------------------------------------------------------------------------
+
+    std::string filename_helper(const std::string &name)
+    {
+      // generate filename for process data
+      std::ostringstream pieceName;
+      if( communicator.size() > 1 )
+      {
+        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << ":";
+        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << ":";
+      }
+      pieceName << name << ".dat";
+      return pieceName.str();
+    }
+
+
+    const GV& gv;
+    /// The grid function space
+    const GFS& gfs;
+    Dune::MPIHelper& helper;
+    const std::vector<int>& boundaryIndexToEntity;
+    // provide a mapper for getting indices of iterated boundary elements
+    typedef Dune::SingleCodimSingleGeomTypeMapper<GV, 0> BoundaryElemMapper;
+    BoundaryElemMapper boundaryElemMapper;
+    /// The communicator decides weither to use MPI or fake
+    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
+
+    /// Store the center of boundary intersections of iterative type
+    std::vector<Dune::FieldVector<ctype,dim> > ipbsPositions;
+    /// Store the normal vector at the center of boundary intersections of iterative type
+    std::vector<Dune::FieldVector<ctype,dim> > ipbsNormals;
+    /// Store the volume of boundary intersections of iterative type
+    std::vector<Real> ipbsVolumes;
+    /// Provide a vector storing the type of the iterative boundary @todo Maybe it's more reasonable to store its surface charge density
+    std::vector<int> ipbsType;
+    /// For fast access to the precomputed fluxes we use binary tree  - only local index is needed :-)
+    typedef std::map<int, int> IndexLookupMap;
+    IndexLookupMap indexLookupMap;
+    typedef std::vector<double> bContainerType;
+    bContainerType bContainer;  // Store the electric field on the surface elements caused by explicit charges in the system
+    bContainerType inducedChargeDensity;  // Store the induced charge density
+    bContainerType bEfield;   /**< Store the electric field on boundary elements, 
+                                 which is calculated during updateBC(),
+                                 \f[ \vec{E}(\vec{r}) \propto \int_V \sinh(\Phi(\vec{r}))
+                                 \textnormal{d}\vec{r} \f] */
+    /// Offset and length of data stream on each node
+    unsigned int my_offset, my_len;
+    double fluxError,  icError;
+};
