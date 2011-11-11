@@ -21,7 +21,7 @@ class Ipbsolver
   // Some typedef
   typedef typename GV::Grid::ctype ctype;
   static const int dim = GV::dimension;
-  typedef typename GFS::template VectorContainer<Real>::Type U;
+  typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
 
   public:
     Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 

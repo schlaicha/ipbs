@@ -63,7 +63,7 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
   con.compute_ghosts(gfs);
 
   // Create coefficient vector (with zero values)
-  typedef typename GFS::template VectorContainer<Real>::Type U;
+  typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
   U u(gfs,0.0);
   
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
@@ -88,19 +88,22 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
   LOP lop(m,b,j,3);
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
-  GOS gos(gfs,cc,gfs,cc,lop);
+  //typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+  typedef VBE::MatrixBackend MBE;
+  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,Real,Real,Real,CC,CC> GO;
+  GO go(gfs,cc,gfs,cc,lop);
+  //typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GO;
+  //GO go(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   LS ls(gfs);
 
   // <<<5b>>> Solve nonlinear problem
-  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
-  NEWTON newton(gos,u,ls);
+  typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
+  NEWTON newton(go,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());

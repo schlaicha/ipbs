@@ -29,12 +29,19 @@
 // Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
 // quadrature
-#include<dune/grid/common/quadraturerules.hh>
+#include<dune/geometry/quadraturerules.hh>
 // Input/Output
 #include <dune/grid/io/file/gnuplot.hh>
 #include<dune/grid/io/file/gmshreader.hh>
 
 // we use UG
+#if (!(UGGRID || ALUGRID) && !(defined HAVE_UGGRID))
+  #error It looks like dunecontrol could not detect your UG installation properly.
+  #error At the moment, iPBS *STRICTLY* depends on UG!
+  #error Compilation will be aborted.
+#else
+  #define UGGRID
+#endif
 #ifdef UGGRID
   #include<dune/grid/uggrid.hh>
   #include<dune/grid/uggrid/uggridfactory.hh>
@@ -42,11 +49,6 @@
 #ifdef ALUGRID
   #include<dune/grid/alugrid.hh>
   #include<dune/grid/alugrid/2d/alu2dgridfactory.hh>
-#endif
-#if !(UGGRID || ALUGRID)
-  #error It looks like dunecontrol could not detect your UG installation properly.
-  #error At the moment, iPBS *STRICTLY* depends on UG!
-  #error Compilation will be aborted.
 #endif
 
 // pdelab includes
@@ -58,7 +60,7 @@
 #include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 #include<dune/pdelab/gridfunctionspace/interpolate.hh>
 #include<dune/pdelab/gridfunctionspace/constraints.hh>
-#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
+#include<dune/pdelab/gridoperator/gridoperator.hh>
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
@@ -97,7 +99,7 @@ std::vector<Boundary*> boundary;
 //#include "ipbs_P1.hh"
 //#include "ipbs_P2.hh"
 //#include "ref_P1.hh"
-#include "test_driver.hh"
+//#include "test_driver.hh"
 #include "test_P2.hh"
 
 //===============================================================
