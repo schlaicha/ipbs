@@ -106,8 +106,8 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setVerbosityLevel(sysParams.get_verbose());
   newton.setReduction(sysParams.get_newton_tolerance());
   newton.setMinLinearReduction(5e-1); // seems to be low in parallel?
-  newton.setMaxIterations(50);
-  newton.setLineSearchMaxIterations(25);
+  newton.setMaxIterations(100);
+  newton.setLineSearchMaxIterations(50);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   sysParams.counter = 0;

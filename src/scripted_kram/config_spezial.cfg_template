@@ -1,0 +1,37 @@
+# Config file for the IPBS
+
+# Settings for the IPBS solver
+[solver] 
+# Parameter for Successive Overrelaxation (SOR) in [0;2]
+alpha_sor = 0.67 
+# Accuracy we want to reach
+tolerance = 5e-5
+newton_tolerance = 5e-6
+
+[mesh]
+filename = "mesh.msh"
+global_refinement_level = 0
+adaptive_refinement_steps = 0
+adaptive_refinement_fraction = 0.13
+symmetry = 1
+boxLength = 30
+
+[system]
+# Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
+
+verbose = 0
+# 0 - salt case enabled ; 1 - counterions
+salt = 1
+NPart = 1
+lambda = 142.648
+bjerrum = 0.71
+epsilon = 1
+
+# boundary types like specified in msh-file
+# note: 0 always sets zero dirichlet
+#       1 always sets zero flux
+# others are used to model colloidal particles
+
+[boundary_2]
+charge_density = 0.203
+epsilon = 1

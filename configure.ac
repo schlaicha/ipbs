@@ -10,8 +10,8 @@ AM_CONFIG_HEADER([config.h])
 # we need no more than the standard DE-stuff
 # this module depends on dune-common dune-grid dune-localfunctions dune-istl dune-pdelab
 # this implies checking for [dune-common], [dune-grid], [dune-localfunctions], [dune-istl], [dune-pdelab]
-LIBS="-lgslcblas"
-AC_CHECK_LIB(gsl,main, [], [AC_MSG_ERROR(could not find  GSL)] ) 
+#LIBS="-lgslcblas"
+#AC_CHECK_LIB(gsl,main, [], [AC_MSG_ERROR(could not find  GSL)] ) 
 DUNE_CHECK_ALL
 
 # implicitly set the Dune-flags everywhere

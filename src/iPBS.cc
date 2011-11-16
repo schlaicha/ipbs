@@ -35,15 +35,10 @@
 #include<dune/grid/io/file/gmshreader.hh>
 
 // we use UG
-#ifdef UGGRID
+#ifdef ENABLE_UG
   #include<dune/grid/uggrid.hh>
   #include<dune/grid/uggrid/uggridfactory.hh>
-#endif
-#ifdef ALUGRID
-  #include<dune/grid/alugrid.hh>
-  #include<dune/grid/alugrid/2d/alu2dgridfactory.hh>
-#endif
-#if !(UGGRID || ALUGRID)
+#else
   #error It looks like dunecontrol could not detect your UG installation properly.
   #error At the moment, iPBS *STRICTLY* depends on UG!
   #error Compilation will be aborted.
@@ -146,11 +141,7 @@ int main(int argc, char** argv)
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
   
-#ifdef UGGRID
   typedef Dune::UGGrid<dimgrid> GridType;
-#elif ALUGRID
-  typedef Dune::ALUConformGrid< dimgrid, dimgrid > GridType;
-#endif
   Dune::GridFactory<GridType> factory;
 
  
