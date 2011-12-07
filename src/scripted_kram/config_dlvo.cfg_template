@@ -3,7 +3,7 @@
 # Settings for the IPBS solver
 [solver] 
 # Parameter for Successive Overrelaxation (SOR) in [0;2]
-alpha_sor = 0.67 
+alpha_sor = 1 
 # Accuracy we want to reach
 tolerance = 5e-5
 newton_tolerance = 5e-6
@@ -23,12 +23,8 @@ verbose = 0
 # 0 - salt case enabled ; 1 - counterions
 salt = 0
 NPart = 1
-#lambda = 30.00 # 0 
-#lambda = 23.52 # 160 
-#lambda = 19.98 # 320 
-#lambda = 16.01 # 640 
-lambda = 12.23 # 1280
-bjerrum = 0.71
+lambda = 10
+bjerrum = 1
 epsilon = 1
 
 # boundary types like specified in msh-file
@@ -37,5 +33,5 @@ epsilon = 1
 # others are used to model colloidal particles
 
 [boundary_2]
-charge_density = 0.203
+charge_density = 0.001 
 epsilon = 1

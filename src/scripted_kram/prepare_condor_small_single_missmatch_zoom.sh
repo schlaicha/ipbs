@@ -1,9 +1,9 @@
-#!bin/bash
+#!/bin/bash
 
 date=$(date +"%F_%T")
 rundir=run_$date
-runpath=/work/schlaich/data/iPBS/$rundir
-execpath=/work/schlaich/progs/dune-2.1/iPBS/src
+runpath=/data/data4/schlaich/data/iPBS/$rundir
+execpath=/data/data4/schlaich/progs/dune-2.1/iPBS/src
 scriptpath=$execpath/scripted_kram
 returnpath=$(pwd)
 
@@ -31,14 +31,14 @@ for x in `seq 1 25`; do
   fi
   cd $dir
   sed -e "s/@distance@/$d/g" $scriptpath/2sphere_sym_small.geo_template > mesh.geo
-  sed -e "s|@command@|$execpath/iPBS $runpath/$dir/config.cfg|g" $scriptpath/ipbs_single.pbs_template > ipbs.pbs_tmp
+  
   sed -e "s|@path@|$runpath/$dir|g" $scriptpath/config_small.cfg_template > config.cfg
-  sed -e "s|@path@|$runpath/$dir|g" ipbs.pbs_tmp > ipbs.pbs
-  rm ipbs.pbs_tmp
+ 
+  
   cd ..
   echo "cd $runpath/$dir" >> execute.sh
-  echo "/work/schlaich/progs/gmsh-2.5.0-Linux/bin/gmsh -2 mesh.geo" >> execute.sh 
-  echo "qsub -N iPBS_dist_$d $runpath/$dir/ipbs.pbs" >> execute.sh
+  echo "condor_run \"gmsh -2 mesh.geo; $execpath/iPBS config.cfg\" 2>err.txt 1>out.txt < /dev/null &" >> $runpath/execute.sh
+  
   echo "cd .." >> execute.sh
   echo "head -n 1 $dir/forces.dat | awk '{print \"$d \" \$2 \" \" \$3}' >> force.dat" >> analyze.sh
   echo "tail -n 1 $dir/forces.dat | awk '{print \"$d \" \$2 \" \" \$3}' >> force2.dat" >> analyze.sh

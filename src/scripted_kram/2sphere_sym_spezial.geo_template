@@ -2,11 +2,11 @@
 radius = 10;
 distance = @distance@;
 height = 80;
-width = 80;
+width = 160;
 lc_sphere = .05;
 //lc_center = @lc_center@;
 lc_center = 0.08;
-lc_boarder = 5;
+lc_boarder = 8;
 
 // ========== Setup Geometry ===========
 

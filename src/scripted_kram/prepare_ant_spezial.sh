@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 
 date=$(date +"%F_%T")
 rundir=run_chatterji_$date
@@ -22,8 +22,6 @@ fi
 cd $runpath
 for x in `seq 1 20`; do
   d="$(echo "scale=3; 1.07^${x}.*20.0" | bc)"
-#for x in $(seq 85 15 395); do
-#  d="$(echo "scale=1; ${x}. / 1." | bc)"
   echo $d
   dir=two_colloid_dist_${d}
   if [ -e $dir ]; then
