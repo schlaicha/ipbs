@@ -11,6 +11,7 @@
 *.pvtu
 *.dat
 *.log
+*.pyc
 Makefile
 Makefile.in
 .deps

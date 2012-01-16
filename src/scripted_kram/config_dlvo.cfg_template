@@ -3,7 +3,7 @@
 # Settings for the IPBS solver
 [solver] 
 # Parameter for Successive Overrelaxation (SOR) in [0;2]
-alpha_sor = 0.67 
+alpha_sor = 1 
 # Accuracy we want to reach
 tolerance = 5e-5
 newton_tolerance = 5e-6
@@ -22,8 +22,8 @@ boxLength = 30
 verbose = 0
 # 0 - salt case enabled ; 1 - counterions
 salt = 0
-NPart = 2
-lambda = 1
+NPart = 1
+lambda = 10
 bjerrum = 1
 epsilon = 1
 
