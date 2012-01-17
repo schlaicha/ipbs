@@ -2,6 +2,9 @@
 
 **/
 
+#ifndef _GRADIENT_HH
+#define _GRADIENT_HH
+
 template <typename GFS, class Iterator, typename U>
 Dune::FieldVector<double,GFS::Traits::GridViewType::dimension>
 gradient(const GFS& gfs, const Iterator& it, const U& u,
@@ -51,3 +54,5 @@ gradient(const GFS& gfs, const Iterator& it, const U& u,
 
   return gradu;
 }
+
+#endif  // _GRADIENT_HH

@@ -36,10 +36,10 @@ epsilon = 1
 charge_density = 0.114716803
 #charge_density = 0.0126826595
 #charge_density = 0.00457490266
-epsilon = 1
+epsilon = 0.0125
 
 [boundary_3]
 charge_density = 0.114716803
 #charge_density = 0.0126826595
 #charge_density = 0.00457490266
-epsilon = 1
+epsilon = 0.0125

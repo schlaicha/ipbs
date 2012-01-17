@@ -10,13 +10,12 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-#ifndef _IPBSOLVER_H
-#define _IPBSOLVER_H
 #include "ipbsolver.hh"
-#endif
+#include "boundaries.hh"
+#include "PBLocalOperator.hh"
 
-template<class GridType>
-void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
+template<class GridType, int k>
+void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              Dune::MPIHelper& helper)
 {
@@ -27,10 +26,8 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
   const GV& gv = grid->leafView();
- // const IpbsGridView<GridType>& gv = static_cast<IpbsGridView<GridType> > (grid->leafView());
 
   // some typedef
-  const int dim = GV::dimension;
   typedef typename GV::Grid::ctype ctype;
 
   // <<<1>>> Setup the problem from mesh file
@@ -47,8 +44,10 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   G g(gv, boundaryIndexToEntity);
 
   // Create finite element map
-  typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
-  FEM fem;
+#if GRIDDIM == 2
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
+#endif
+  FEM fem(gv);
 
   // <<<2>>> Make grid function space
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
@@ -86,7 +85,7 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
-  LOP lop(m,b,j);
+  LOP lop(m,b,j,k+1);   // integration order
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
   GOS gos(gfs,cc,gfs,cc,lop);
@@ -105,8 +104,8 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setVerbosityLevel(sysParams.get_verbose());
   newton.setReduction(sysParams.get_newton_tolerance());
   newton.setMinLinearReduction(5e-1); // seems to be low in parallel?
-  newton.setMaxIterations(50);
-  newton.setLineSearchMaxIterations(25);
+  newton.setMaxIterations(100);
+  newton.setLineSearchMaxIterations(50);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   sysParams.counter = 0;
@@ -172,20 +171,20 @@ void test_P1(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  // Gnuplot output
-  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename); 
+  // // Gnuplot output  - not for higher order elements
+  // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  // gnuplotwriter.addVertexData(u,"solution");
+  // gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);
-  ipbs.forces2(u);
-  // ipbs.forces3(u);
+//  ipbs.forces2(u);
   
   if (helper.rank() == 0) {
-    std::ofstream runtime;
-    runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
-    runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
-    runtime.close();
-  }
+    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    //std::ofstream runtime;
+    //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
+    //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    //runtime.close();
+ }
 }

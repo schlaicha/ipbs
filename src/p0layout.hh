@@ -1,4 +1,6 @@
 // layout for codim0 data
+#ifndef _P0LAYOUT_H
+#define _P0LAYOUT_H
 template <int dim>
 struct P0Layout
 {
@@ -8,3 +10,4 @@ struct P0Layout
     return false;
   }
 };
+#endif

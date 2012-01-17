@@ -1,3 +1,9 @@
+
+// Local Operator for IPBS
+
+#ifndef _PBLOP_H
+#define _PBLOP_H
+
 #include<dune/grid/common/genericreferenceelements.hh>
 #include<dune/grid/common/quadraturerules.hh>
 #include<dune/pdelab/common/geometrywrapper.hh>
@@ -5,12 +11,7 @@
 #include<dune/pdelab/localoperator/pattern.hh>
 #include<dune/pdelab/localoperator/flags.hh>
 
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
 #include "sysparams.hh"
-#endif
-
-// Local Operator for IPBS
 
 template<typename M, typename B, typename J>
 class PBLocalOperator : 
@@ -202,3 +203,5 @@ private:
   const J& j;
   unsigned int intorder;
 };
+
+#endif  // _PBLOP_H
