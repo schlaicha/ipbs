@@ -1,3 +1,9 @@
+
+// Local Operator for IPBS
+
+#ifndef _PBLOP_H
+#define _PBLOP_H
+
 #include<dune/grid/common/genericreferenceelements.hh>
 #include<dune/grid/common/quadraturerules.hh>
 #include<dune/pdelab/common/geometrywrapper.hh>
@@ -5,12 +11,7 @@
 #include<dune/pdelab/localoperator/pattern.hh>
 #include<dune/pdelab/localoperator/flags.hh>
 
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
 #include "sysparams.hh"
-#endif
-
-// Local Operator for IPBS
 
 template<typename M, typename B, typename J>
 class PBLocalOperator : 
@@ -113,6 +114,9 @@ public:
         // Integration with added term for metric
         switch ( sysParams.get_symmetry() )
         {
+                case 1: for (size_type i=0; i<lfsu.size(); i++)
+                        r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1] ) *factor;
+                        break;   // "2D_sphere mirrored"
                 case 2: for (size_type i=0; i<lfsu.size(); i++)
                     //    r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1]
                     //            - gradu[1]*phi[i] ) * factor;
@@ -181,7 +185,7 @@ public:
         RF metric;
         switch ( sysParams.get_symmetry() )
         {
-                case 1: metric = 1.0; break; // "2D_cylinder"
+                case 1: metric = 1.0*global[1]*2.0*sysParams.pi; break;   // "2D_sphere mirrored"
                 case 2: metric = 1.0*global[1]*2.0*sysParams.pi; break;   // "2D_sphere"
                 case 3: metric = 1.0; break; // "3D"
                 default:    metric = 0.0; std::cerr << "Error: Could not detect metric" << std::endl;
@@ -199,3 +203,5 @@ private:
   const J& j;
   unsigned int intorder;
 };
+
+#endif  // _PBLOP_H

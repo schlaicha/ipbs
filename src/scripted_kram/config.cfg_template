@@ -5,21 +5,21 @@
 # Parameter for Successive Overrelaxation (SOR) in [0;2]
 alpha_sor = 0.67 
 # Accuracy we want to reach
-tolerance = 1e-4
-newton_tolerance = 5e-5
+tolerance = 5e-5
+newton_tolerance = 5e-6
 
 [mesh]
 filename = "mesh.msh"
 global_refinement_level = 0
 adaptive_refinement_steps = 0
 adaptive_refinement_fraction = 0.13
-symmetry = 2
+symmetry = 1
 boxLength = 30
 
 [system]
 # Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
 
-verbose = 2
+verbose = 0
 # 0 - salt case enabled ; 1 - counterions
 salt = 0
 NPart = 2
@@ -33,9 +33,5 @@ epsilon = 1
 # others are used to model colloidal particles
 
 [boundary_2]
-charge_density = 4
-epsilon = 1
-
-[boundary_3]
-charge_density = 4
+charge_density = 0.001 
 epsilon = 1

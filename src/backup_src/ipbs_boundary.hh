@@ -267,7 +267,5 @@ void ipbs_boundary(const GV& gv, const DGF& udgf,
     // fluxContainer[i] = (summed_surfaceElem_flux+summed_volumeElem_flux) + 2.*sysParams.pi*sysParams.get_bjerrum()*(my_charge+induced_charge);
     // Update induced charge on surface elements
     inducedChargeContainer[i] = induced_charge;
-
-    // std::cout << r  << " " << "self contribution " <<   2/(epsilon_in+epsilon_out) * summed_flux << " E-field contribution: " <<  2*epsilon_in/(epsilon_in+epsilon_out) * (summed_surfaceElem_flux + summed_volumeElem_flux)<< std::endl;
   }
 }

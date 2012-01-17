@@ -1,3 +1,7 @@
+
+#ifndef _PARSER_H
+#define _PARSER_H
+
 /** \file
     
     \brief Read in IPBS configuration parameters from a config file 
@@ -8,14 +12,11 @@
 #include<string>
 #include<dune/common/parametertree.hh>
 #include<dune/common/parametertreeparser.hh>
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
 #include "sysparams.hh"
-#endif
-#ifndef _BOUNDARY_H
-#define _BOUNDARY_H
 #include "boundary.hh"
-#endif
+
+extern SysParams sysParams;
+extern std::vector<Boundary*> boundary;
 
 void parser(std::string config_file)
 {
@@ -62,7 +63,6 @@ void parser(std::string config_file)
   // Create particles
   int n_particle = configuration.get<int>("system.NPart");
   sysParams.set_npart(n_particle);
-  extern std::vector<Boundary*> boundary;
   for (int i = 0; i < n_particle; i++)
     boundary.push_back(new Boundary());
 
@@ -79,4 +79,7 @@ void parser(std::string config_file)
     boundary[i]->set_epsilons(epsilonIn, epsilonOut);
     boundary[i]->set_isPlane(configuration.get<bool>(p_name+".isPlane", false));
   }
+
 }
+
+#endif  // _PARSER_H

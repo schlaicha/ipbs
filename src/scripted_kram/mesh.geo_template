@@ -1,14 +1,14 @@
 // Define setup variables
-radius = 1;
+radius = 40;
 distance = @distance@;
-height = 10;
+height = 400;
 //height = 10 + 1*distance;
 //width = 120+distance/2;
-width = 12 + 2* distance;
-lc_sphere = .03;
+width = 800 + 2* distance;
+lc_sphere = .4;
 //lc_center = @lc_center@;
-lc_center = distance/radius*0.01;
-lc_boarder = 3;
+lc_center = distance/radius*0.1;
+lc_boarder = 40;
 // lc_boarder = 0.3 + 0.05 * distance ;
 
 // ========== Setuo Geometry ===========

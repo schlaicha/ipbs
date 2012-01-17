@@ -11,77 +11,67 @@
 #endif
 
 // std includes
-#include<math.h>
-#include<iostream>
-#include<vector>
-#include<string>
+//#include<math.h>
+//#include<iostream>
+//#include<vector>
+//#include<string>
 
-// DUNE includes
+// global DUNE includes
 #include<dune/common/mpihelper.hh>
 #include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
-#include<dune/common/fvector.hh>
+//#include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
 
-// Adaptivity
-#include <dune/pdelab/adaptivity/adapt.hh>
+// // Adaptivity
+// #include <dune/pdelab/adaptivity/adapt.hh>
+
 // Single Geometry Single Codim Mapper
-#include <dune/grid/common/scsgmapper.hh>
-// Multiple Geometry Multiple Codim Mapper
-#include <dune/grid/common/mcmgmapper.hh>
+//#include <dune/grid/common/scsgmapper.hh>
 // quadrature
-#include<dune/grid/common/quadraturerules.hh>
+//#include<dune/grid/common/quadraturerules.hh>
 // Input/Output
-#include <dune/grid/io/file/gnuplot.hh>
+//#include <dune/grid/io/file/gnuplot.hh>
+
+/* include grid IO */
 #include<dune/grid/io/file/gmshreader.hh>
-// we use UG
-#include<dune/grid/uggrid.hh>
-#include<dune/grid/uggrid/uggridfactory.hh>
+#include <dune/grid/utility/gridtype.hh>
+
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
-#include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// P1 in 1,2,3 dimensions
+//#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
-#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
+//#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
+//#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 #include<dune/pdelab/gridfunctionspace/interpolate.hh>
-#include<dune/pdelab/gridfunctionspace/constraints.hh>
-#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
+//#include<dune/pdelab/gridfunctionspace/constraints.hh>
+//#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
-#include <dune/grid/common/gridenums.hh>
+//#include <dune/grid/common/gridenums.hh>
+//#include <dune/common/dynmatrix.hh>
+#if GRIDDIM == 2
+#include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
+#endif
 
 // global typedefs
 typedef double Real;
 
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
 #include "sysparams.hh"
-#endif
-#ifndef _PARTICLE_H
-#define _PARTICLE_H
 #include "boundary.hh"
-#endif
+#include "parser.hh"
+#include "ipbs_Pk.hh"
 
 // global access to particles
 std::vector<Boundary*> boundary;
+SysParams sysParams;
 
-#include "parser.hh"
-#include "functors.hh"
-#include "integrateentity.hh"
-#include "eval_elliptic.hh"
-#include "boundaries.hh"
-#include "gradient.hh"
-#include "maxwelltensor.hh"
-#include "force.hh"
-#include "ipbs_boundary.hh"
-#include "PBLocalOperator.hh"
-#include "ipbs_ref_P1.hh"
-#include "ipbs_P1.hh"
-//#include "ipbs_P2.hh"
-#include "ref_P1.hh"
-#include "test.hh"
+//#include "functors.hh"
+//#include "integrateentity.hh"
+//#include "boundaries.hh"
+//#include "PBLocalOperator.hh"
+
 
 //===============================================================
 // Main programm
@@ -92,7 +82,7 @@ int main(int argc, char** argv)
   // Initialize Mpi
   Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
    if(Dune::MPIHelper::isFake)
-    std::cout<< "This is (at the moment) a sequential program!" << std::endl;
+    std::cout<< "This is a sequential program!" << std::endl;
   else
   {
     if(helper.rank()==0)
@@ -123,13 +113,13 @@ int main(int argc, char** argv)
   
   
   // <<<1>>> Setup the problem from mesh file
-  const int dimgrid = 2;         // 2d mesh
   
   // define vectors to store boundary and element mapping
   std::vector<int> boundaryIndexToEntity;
   std::vector<int> elementIndexToEntity;
   
-  typedef Dune::UGGrid<dimgrid> GridType;
+  typedef Dune::GridSelector::GridType GridType;
+  //typedef Dune::UGGrid<dimgrid> GridType;
   Dune::GridFactory<GridType> factory;
 
  
@@ -140,75 +130,38 @@ int main(int argc, char** argv)
     gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
   }
 
-  // for (int i=0;i<elementIndexToEntity.size();i++)
-  //   std::cout << boundaryIndexToEntity[i] << std::endl;
+ // Setup Dune Collective Communication
+ Dune::CollectiveCommunication<MPI_Comm> colCom(helper.getCommunicator());
 
-  // Setup Dune Collective Communication
-  Dune::CollectiveCommunication<MPI_Comm> collCom(helper.getCommunicator());
+ // Communicate boundary vector
 
-  // Communicate boundary vector
-  int size = boundaryIndexToEntity.size();
-  collCom.broadcast (&size, 1, 0);
-  int* boundaryIndexToEntity_carray = (int*) malloc(size*sizeof(int));
-  if (sysParams.get_verbose() > 4)
-    std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
-  if (helper.rank() == 0 ) {
-    for (int i =0; i<size; i++)
-      boundaryIndexToEntity_carray[i]=boundaryIndexToEntity[i];
-  }
-  collCom.broadcast(boundaryIndexToEntity_carray,size,0);
-  if (sysParams.get_verbose() > 4)
-    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
-  if (helper.rank() != 0) {
-    for (int i =0; i<size; i++)
-      boundaryIndexToEntity.push_back(boundaryIndexToEntity_carray[i]);
-    if (sysParams.get_verbose() > 4)
-      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
- }
- free(boundaryIndexToEntity_carray);
+ int size = boundaryIndexToEntity.size();
+ colCom.broadcast (&size, 1, 0);
+ if (helper.rank() > 0)
+   boundaryIndexToEntity.reserve(size);
+ colCom.broadcast(&boundaryIndexToEntity[0],size,0);
 
- // Communicate element vector
- size = elementIndexToEntity.size();
- collCom.broadcast (&size, 1, 0);
- int* elementIndexToEntity_carray = (int*) malloc(size*sizeof(int));
- if (sysParams.get_verbose() > 4)
-   std::cout << "size is now " << size << "on node " << helper.rank() << "\n";
- if (helper.rank() == 0 ) {
-   for (int i =0; i<size; i++)
-     elementIndexToEntity_carray[i]=elementIndexToEntity[i];
- }
- collCom.broadcast(elementIndexToEntity_carray,size,0);
- if (sysParams.get_verbose() > 4)
-    std::cout << "array bcasted " << "on node " << helper.rank() << "\n";
- if (helper.rank() != 0) {
-   for (int i =0; i<size; i++)
-    elementIndexToEntity.push_back(elementIndexToEntity_carray[i]);
-    if (sysParams.get_verbose() > 4)
-      std::cout << "vector was created " << "on node " << helper.rank() << "\n";
- } 
- free(elementIndexToEntity_carray);
-  
+ 
  // create the grid
  GridType* grid = factory.createGrid();
 
  // refine grid
- if(helper.rank()==0) {
-   std::cout << "Using " << sysParams.get_refinement() << "global refinement steps and" << std::endl;
-   std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
-     << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
- }
+  if(helper.rank()==0) {
+    std::cout << "Using " << sysParams.get_refinement() << " global refinement steps and" << std::endl;
+    std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
+      << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
+  }
+
  grid->globalRefine(sysParams.get_refinement());
  
  grid->loadBalance();
 
- // // get a grid view on the leaf grid
- // typedef GridType::LeafGridView GV;
- // const GV& gv = grid->leafView();
-
  // Call problem drivers
- // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
- ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
- // ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, collCom);
+ // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom);
+ // ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ // ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, colCom);
+ // test_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ ipbs_Pk<GridType, 2>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
   
  // done
  return 0;

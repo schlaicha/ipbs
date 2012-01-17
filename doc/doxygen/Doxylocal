@@ -29,3 +29,6 @@ INPUT                 += @srcdir@/mainpage #                          @srcdir@/m
 
 # IMAGE_PATH            += @top_srcdir@/dune/iPBS/pics
 
+
+EXTRACT_PRIVATE        = YES
+SEARCH_ENGINE          = YES
