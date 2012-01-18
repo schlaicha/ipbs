@@ -7,6 +7,18 @@ AC_CONFIG_SRCDIR([src/iPBS.cc])
 AM_CONFIG_HEADER([config.h])
 GSL_VERSION=1.00 # don#t know if this makes sense here...
 
+AC_ARG_ENABLE(grid,
+              [--enable-grid[=grid type] Specify the default grid manager:
+              ug [default]: use UG
+              alu: use ALUGRID_SIMPLEX],
+              [ if   test "x$enableval" = "xug"; then AC_DEFINE([UGGRID], [],
+                                                    [default choice replacing NOGRID])
+                elif test "x$enableval" = "xalu"
+                  then AC_DEFINE([ALUGRID_SIMPLEX], [],                                                        [default choice replacing NOGRID])
+                else echo "Error!"; echo "Unknown grid manager"; exit -1
+                fi],
+              AC_DEFINE([UGGRID],[],[default choice replacing NOGRID]) )
+
 # we need no more than the standard DE-stuff
 # this module depends on dune-common dune-grid dune-localfunctions dune-istl dune-pdelab
 # this implies checking for [dune-common], [dune-grid], [dune-localfunctions], [dune-istl], [dune-pdelab]
