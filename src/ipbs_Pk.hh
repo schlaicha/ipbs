@@ -50,15 +50,22 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   FEM fem(gv);
 
   // <<<2>>> Make grid function space
+#if HAVE_MPI
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
+#else
+  typedef Dune::PDELab::ConformingDirichletConstraints CON;
+#endif
+
   CON con;
+#if HAVE_MPI
+  // Compute Ghost Elements
+  con.compute_ghosts(gfs);
+#endif
+
   // Define ISTL Vector backend - template argument is the blocksize!
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem,con);
-
-  // Compute Ghost Elements
-  con.compute_ghosts(gfs);
 
   // Create coefficient vector (with zero values)
   typedef typename GFS::template VectorContainer<Real>::Type U;
@@ -91,10 +98,15 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
+#if HAVE_MPI
   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   LS ls(gfs);
+#else
+  typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  LS ls(5000, true);
+#endif
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;

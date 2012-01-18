@@ -20,18 +20,18 @@
 #include<dune/common/mpihelper.hh>
 #include<dune/common/collectivecommunication.hh>
 #include<dune/common/exceptions.hh>
-//#include<dune/common/fvector.hh>
 #include<dune/common/timer.hh>
 
-// // Adaptivity
-// #include <dune/pdelab/adaptivity/adapt.hh>
-
-// Single Geometry Single Codim Mapper
-//#include <dune/grid/common/scsgmapper.hh>
-// quadrature
-//#include<dune/grid/common/quadraturerules.hh>
-// Input/Output
+//TODO: sort out
+//#include <dune/pdelab/adaptivity/adapt.hh>
+//#include <dune/grid/common/gridenums.hh>
+//#include <dune/common/dynmatrix.hh>
 //#include <dune/grid/io/file/gnuplot.hh>
+//#include<dune/pdelab/gridfunctionspace/constraints.hh>
+//#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
+//#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
+//#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
+//#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
 
 /* include grid IO */
 #include<dune/grid/io/file/gmshreader.hh>
@@ -39,18 +39,11 @@
 
 // pdelab includes
 #include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-//#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
 #include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
-//#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-//#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 #include<dune/pdelab/gridfunctionspace/interpolate.hh>
-//#include<dune/pdelab/gridfunctionspace/constraints.hh>
-//#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
-//#include <dune/grid/common/gridenums.hh>
-//#include <dune/common/dynmatrix.hh>
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
@@ -66,12 +59,6 @@ typedef double Real;
 // global access to particles
 std::vector<Boundary*> boundary;
 SysParams sysParams;
-
-//#include "functors.hh"
-//#include "integrateentity.hh"
-//#include "boundaries.hh"
-//#include "PBLocalOperator.hh"
-
 
 //===============================================================
 // Main programm
@@ -119,7 +106,6 @@ int main(int argc, char** argv)
   std::vector<int> elementIndexToEntity;
   
   typedef Dune::GridSelector::GridType GridType;
-  //typedef Dune::UGGrid<dimgrid> GridType;
   Dune::GridFactory<GridType> factory;
 
  
@@ -130,37 +116,34 @@ int main(int argc, char** argv)
     gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
   }
 
- // Setup Dune Collective Communication
- Dune::CollectiveCommunication<MPI_Comm> colCom(helper.getCommunicator());
-
- // Communicate boundary vector
-
- int size = boundaryIndexToEntity.size();
- colCom.broadcast (&size, 1, 0);
- if (helper.rank() > 0)
-   boundaryIndexToEntity.reserve(size);
- colCom.broadcast(&boundaryIndexToEntity[0],size,0);
-
+  // MPIHelper ensures that this works for the sequential case
+  Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> colCom(helper.getCommunicator());
  
- // create the grid
- GridType* grid = factory.createGrid();
-
- // refine grid
+  // Communicate boundary vector
+  int size = boundaryIndexToEntity.size();
+  colCom.broadcast (&size, 1, 0);
+  if (helper.rank() > 0)
+    boundaryIndexToEntity.reserve(size);
+  colCom.broadcast(&boundaryIndexToEntity[0],size,0);
+  
+  // create the grid
+  GridType* grid = factory.createGrid();
+ 
+  // refine grid
   if(helper.rank()==0) {
     std::cout << "Using " << sysParams.get_refinement() << " global refinement steps and" << std::endl;
     std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
       << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
   }
 
- grid->globalRefine(sysParams.get_refinement());
- 
- grid->loadBalance();
 
- // Call problem drivers
- // ref_P1(grid, elementIndexToEntity, boundaryIndexToEntity, colCom);
- // ipbs_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
- // ipbs_P2(grid, elementIndexToEntity, boundaryIndexToEntity, colCom);
- // test_P1(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+  // Load balance the parallel grid
+  // grid->globalRefine(sysParams.get_refinement());
+ 
+  // Load balance the parallel grid
+  std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
+
+ // Call problem driver
  ipbs_Pk<GridType, 2>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
   
  // done
