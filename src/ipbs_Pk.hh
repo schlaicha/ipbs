@@ -10,6 +10,8 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
+#include <dune/pdelab/gridoperator/gridoperator.hh>
+
 #include "ipbsolver.hh"
 #include "boundaries.hh"
 #include "PBLocalOperator.hh"
@@ -94,12 +96,18 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef PBLocalOperator<M,B,J> LOP;
   LOP lop(m,b,j,k+1);   // integration order
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
-  GOS gos(gfs,cc,gfs,cc,lop);
+#if HAVE_MPI    // enable overlapping mode
+  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
+                                    Real,Real,Real,CC,CC,true> GO;
+#else
+  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
+                                    Real,Real,Real,CC,CC> GO;
+#endif
+  GO go(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
-  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO,double> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   LS ls(gfs);
