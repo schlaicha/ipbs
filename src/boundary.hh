@@ -3,6 +3,9 @@
     \todo Doc me!
 */
 
+#ifndef _BOUNDARY_H
+#define _BOUNDARY_H
+
 #include <vector>
 
 class Boundary
@@ -23,3 +26,5 @@ class Boundary
     double charge_density;
     bool isPlane;
 };
+
+#endif  // _BOUNDARY_H

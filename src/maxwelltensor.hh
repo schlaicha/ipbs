@@ -1,7 +1,12 @@
-#ifndef GRADIENT_H
-#define GRADIENT_H
+
+#ifndef _MAXWELLTENSOR_HH
+#define _MAXWELLTENSOR_HH
+
+#include<dune/common/fvector.hh>
 #include "gradient.hh"
-#endif
+#include "sysparams.hh"
+
+extern SysParams sysParams;
 
 /** \brief Get the Maxwell stress tensor
  
@@ -57,3 +62,5 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   }
   return res;
 }
+
+#endif  // _MAXWELLTENSOR_HH

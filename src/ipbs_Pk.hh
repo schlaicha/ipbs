@@ -10,13 +10,12 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-#ifndef _IPBSOLVER_H
-#define _IPBSOLVER_H
 #include "ipbsolver.hh"
-#endif
+#include "boundaries.hh"
+#include "PBLocalOperator.hh"
 
-template<class GridType>
-void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
+template<class GridType, int k>
+void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
              Dune::MPIHelper& helper)
 {
@@ -29,7 +28,6 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
   const GV& gv = grid->leafView();
 
   // some typedef
-  const int dim = GV::dimension;
   typedef typename GV::Grid::ctype ctype;
 
   // <<<1>>> Setup the problem from mesh file
@@ -46,21 +44,28 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
   G g(gv, boundaryIndexToEntity);
 
   // Create finite element map
-  // typedef Dune::PDELab::P1LocalFiniteElementMap<ctype,Real,dim> FEM;
-  unsigned const int elementorder = 2;
-  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, elementorder> FEM;
+#if GRIDDIM == 2
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
+#endif
   FEM fem(gv);
 
   // <<<2>>> Make grid function space
+#if HAVE_MPI
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
+#else
+  typedef Dune::PDELab::ConformingDirichletConstraints CON;
+#endif
+
   CON con;
+#if HAVE_MPI
+  // Compute Ghost Elements
+  con.compute_ghosts(gfs);
+#endif
+
   // Define ISTL Vector backend - template argument is the blocksize!
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem,con);
-
-  // Compute Ghost Elements
-  con.compute_ghosts(gfs);
 
   // Create coefficient vector (with zero values)
   typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
@@ -87,19 +92,21 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
-  LOP lop(m,b,j,3);
-  //typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-  typedef VBE::MatrixBackend MBE;
-  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,Real,Real,Real,CC,CC> GO;
-  GO go(gfs,cc,gfs,cc,lop);
-  //typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GO;
-  //GO go(gfs,cc,gfs,cc,lop);
+  LOP lop(m,b,j,k+1);   // integration order
+  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+  GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
+#if HAVE_MPI
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   LS ls(gfs);
+#else
+  typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  LS ls(5000, true);
+#endif
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
@@ -183,12 +190,13 @@ void test_P2(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // Calculate the forces
   ipbs.forces(u);
-  ipbs.forces2(u);
+//  ipbs.forces2(u);
   
   if (helper.rank() == 0) {
-    std::ofstream runtime;
-    runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
-    runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
-    runtime.close();
-  }
+    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    //std::ofstream runtime;
+    //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
+    //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    //runtime.close();
+ }
 }

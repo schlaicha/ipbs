@@ -1,12 +1,9 @@
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
 #include "sysparams.hh"
-#endif
 
 // Implementation of SysParams functionality
 
-// Constructor
-// Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length
+/** Constructor
+/  Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length */
 SysParams::SysParams()
 {
 	totalError = 1E8;
@@ -195,5 +192,3 @@ int SysParams::get_refinement()
 {
   return refinement;
 }
-
-SysParams sysParams;

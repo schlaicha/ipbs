@@ -1,11 +1,17 @@
 // Single Geometry Single Codim Mapper
+
+#ifndef _IPBSOLVER_HH
+#define _IPBSOLVER_HH
+
 #include <dune/grid/common/scsgmapper.hh>
+#include<dune/common/fvector.hh>
 #include <gsl/gsl_sf_ellint.h>
-//#include "/work/schlaich/gsl/include/gsl/gsl_sf_ellint.h"
-#ifndef MAXWELLTENSOR_H
-#define MAXWELLTENSOR_H
+#include "sysparams.hh"
+#include "boundary.hh"
 #include "maxwelltensor.hh"
-#endif
+
+extern SysParams sysParams;
+extern std::vector<Boundary*> boundary;
 
 template <class GV, class GFS>
 class Ipbsolver
@@ -431,226 +437,226 @@ class Ipbsolver
     }
 
    
-    // ------------------------------------------------------------------------
-    /// Force computation -- alternative trial version
-    // ------------------------------------------------------------------------
-    
-    void forces2(const U& u, const double del = 2e-2)
-    {
-      // Here we once more loop over all elements on this node (need of the element information
-      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
-      // (see Hsu06a, eq. 61)
-
-      // Open output file for force on particles
-      std::ofstream force_file;
-      if (communicator.rank() == 0) {
-        force_file.open ("forces2.dat", std::ios::out);
-      }
-
-      Dune::FieldVector<Real, dim> F;
-      int evalRank = communicator.size();
-      int myRank = communicator.rank();
-
-      Dune::FieldVector<ctype,dim> x, rightNormal, leftNormal;
-      x[0] = 0;
-      leftNormal[0] = -1.;
-      rightNormal[0] = 1.;
-      leftNormal[1] = rightNormal[1] = 0;
-
-      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
-      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
-      Ep null (NULL);
-
-      bool exit = false;  // stay in loop till upper boarder of the grid is reached
-      for (double y = 0; ; y+=del) {
-        x[1] = y;
-
-        Hsearch hsearch(gv.grid(), gv.indexSet());
-        Ep ep(null);  // Initialize an empty entity pointer
-        try{
-          ep = hsearch.findEntity(x);
-          if(ep->partitionType() == Dune::InteriorEntity)
-            evalRank = myRank;
-        }
-        catch (const Dune::GridError&) { /* do nothing */ }
-
-        evalRank = communicator.min(evalRank);
-          if(myRank == evalRank) {
-            std::cout << "Detected element containing " << x << " on rank " << myRank << std::endl;
-            Dune::FieldVector<Real, dim> forcevec, normal;
-            normal = rightNormal;
-            normal *= del; // Surface normal
-            Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, x, u);
-            //sigma.umv(normal, F);
-            sigma.mv(normal, forcevec);
-            forcevec *= 2.*sysParams.pi*x[1]; // integration in theta
-            F += forcevec;
-          }
-        else
-            ep = null;
-        if(myRank == 0 && evalRank == communicator.size()) {
-            Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-                  << "the grid" << std::endl;
-            exit = 1;
-        }
-        exit = communicator.max(exit);
-        if (exit == 1)
-          break;
-        evalRank = communicator.size();
-      }
-
-      std::cout << "Arrived at barrier." << std::endl;
-
-      // Sum up force of all nodes
-      communicator.barrier();
-      communicator.sum(&F[0], F.dim());
-      if (communicator.rank() == 0) {
-        force_file << F << std::endl;        
-        force_file.close();
-      }
-    }
-
-    // ------------------------------------------------------------------------
-    /// Force computation -- alternative trial version (SPHERE)
-    // ------------------------------------------------------------------------
-//    void forces3(const U& u, const int steps = 1000)
+//    // ------------------------------------------------------------------------
+//    /// Force computation -- alternative trial version
+//    // ------------------------------------------------------------------------
+//    
+//    void forces2(const U& u, const double del = 2e-2)
 //    {
 //      // Here we once more loop over all elements on this node (need of the element information
 //      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
 //      // (see Hsu06a, eq. 61)
 //
 //      // Open output file for force on particles
-//      std::ofstream force_file, vector_force_file;
-//      vector_force_file.open (filename_helper("vector_forces3"), std::ios::out);
+//      std::ofstream force_file;
 //      if (communicator.rank() == 0) {
-//        force_file.open ("forces3.dat", std::ios::out);
+//        force_file.open ("forces2.dat", std::ios::out);
 //      }
 //
 //      Dune::FieldVector<Real, dim> F;
 //      int evalRank = communicator.size();
 //      int myRank = communicator.rank();
 //
+//      Dune::FieldVector<ctype,dim> x, rightNormal, leftNormal;
+//      x[0] = 0;
+//      leftNormal[0] = -1.;
+//      rightNormal[0] = 1.;
+//      leftNormal[1] = rightNormal[1] = 0;
+//
 //      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
 //      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
-//      Ep null(NULL);
-//      Dune::FieldVector<ctype,dim> x, normal;
-//      Hsearch hsearch(gv.grid(), gv.indexSet());
-//      Ep ep(null);  // Initialize an empty entity pointer
+//      Ep null (NULL);
 //
 //      bool exit = false;  // stay in loop till upper boarder of the grid is reached
-//      double del = 1./sqrt(sysParams.get_lambda2i());
-//      double y_max = 0.;
-//      double x_max = 0.;
-//      x[0] = 0;
-//      for (;;y_max+=del) {
-//        x[1] = y_max;
+//      for (double y = 0; ; y+=del) {
+//        x[1] = y;
+//
+//        Hsearch hsearch(gv.grid(), gv.indexSet());
+//        Ep ep(null);  // Initialize an empty entity pointer
 //        try{
 //          ep = hsearch.findEntity(x);
 //          if(ep->partitionType() == Dune::InteriorEntity)
 //            evalRank = myRank;
 //        }
 //        catch (const Dune::GridError&) { /* do nothing */ }
+//
 //        evalRank = communicator.min(evalRank);
-//        if(myRank == evalRank) {
-//            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+//          if(myRank == evalRank) {
+//            std::cout << "Detected element containing " << x << " on rank " << myRank << std::endl;
 //            Dune::FieldVector<Real, dim> forcevec, normal;
-//        }
+//            normal = rightNormal;
+//            normal *= del; // Surface normal
+//            Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, x, u);
+//            //sigma.umv(normal, F);
+//            sigma.mv(normal, forcevec);
+//            forcevec *= 2.*sysParams.pi*x[1]; // integration in theta
+//            F += forcevec;
+//          }
 //        else
 //            ep = null;
 //        if(myRank == 0 && evalRank == communicator.size()) {
-//          Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-//                << "the grid" << std::endl;
-//        exit = 1;
-//      }
-//      exit = communicator.max(exit);
-//      if (exit == 1)
-//        break;
-//      evalRank = communicator.size();
-//    }
-//    communicator.barrier();
-//    y_max = communicator.max(y_max)-del;
-//    exit  = 0; 
-//    x[1] = y_max;
-//    for (;;x_max-=del) {
-//      x[0] = x_max;
-//      try{
-//        ep = hsearch.findEntity(x);
-//        if(ep->partitionType() == Dune::InteriorEntity)
-//          evalRank = myRank;
-//      }
-//      catch (const Dune::GridError&) { /* do nothing */ }
-//      evalRank = communicator.min(evalRank);
-//      if(myRank == evalRank) {
-//          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
-//          Dune::FieldVector<Real, dim> forcevec, normal;
-//      }
-//      else
-//          ep = null;
-//      if(myRank == 0 && evalRank == communicator.size()) {
-//        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-//              << "the grid" << std::endl;
-//      exit = 1;
-//    }
-//    exit = communicator.max(exit);
-//    if (exit == 1)
-//      break;
-//    evalRank = communicator.size();
-//    }
-//    
-//    communicator.barrier();
-//    x_max = communicator.max(x_max)-del;
-//    double radius = (fabs(x_max/2.) > y_max ? y_max : (fabs(x_max/2.)));
-//    del = 2.*radius / steps;
-//    double y_old = 0.;
-//    double x_old = 0.;
-//    for (double x = 0; x > x_max; x-=del)
-//    {
-//      double y = sqrt(radius*radius - (x+radius)*(x+radius));
-//      Dune::FieldVector<Real, dim> evalPos;
-//      evalPos[0] = x;
-//      evalPos[1] = y;
-//      double dx = x-x_old;
-//      double dy = y-y_old;
-//      Dune::FieldVector<Real, dim> normal(evalPos);
-//      normal /= radius;
-//      Dune::FieldVector<Real, dim> forcevec;
-//      normal *= sqrt(dx*dx+dy*dy); // Surface normal
-//      // detect element to evaluate on
-//      try{
-//        ep = hsearch.findEntity(evalPos);
-//        if(ep->partitionType() == Dune::InteriorEntity)
-//          evalRank = myRank;
-//      }
-//      catch (const Dune::GridError&) { /* do nothing */ }
-//      evalRank = communicator.min(evalRank);
-//      if(myRank == evalRank) {
-//          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
-//          Dune::FieldVector<Real, dim> forcevec, normal;
-//      }
-//      if(myRank == 0 && evalRank == communicator.size()) {
-//        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-//              << "the grid" << std::endl;
+//            Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+//                  << "the grid" << std::endl;
+//            exit = 1;
+//        }
+//        exit = communicator.max(exit);
+//        if (exit == 1)
+//          break;
+//        evalRank = communicator.size();
 //      }
 //
-//      Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, evalPos, u);
-//      //sigma.umv(normal, F);
-//      sigma.mv(normal, forcevec);
-//      forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
-//      F += forcevec;
-//      vector_force_file << evalPos << " " << forcevec << std::endl;
+//      std::cout << "Arrived at barrier." << std::endl;
+//
+//      // Sum up force of all nodes
+//      communicator.barrier();
+//      communicator.sum(&F[0], F.dim());
+//      if (communicator.rank() == 0) {
+//        force_file << F << std::endl;        
+//        force_file.close();
+//      }
 //    }
 //
-//    // Sum up force of all nodes
-//    communicator.barrier();
-//    communicator.sum(&F[0], F.dim());
-//    if (communicator.rank() == 0) {
-//      force_file << F << std::endl;        
-//      force_file.close();
-//    }
-//    vector_force_file.close();
-//  }
-
-  
+//    // ------------------------------------------------------------------------
+//    /// Force computation -- alternative trial version (SPHERE)
+//    // ------------------------------------------------------------------------
+////    void forces3(const U& u, const int steps = 1000)
+////    {
+////      // Here we once more loop over all elements on this node (need of the element information
+////      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
+////      // (see Hsu06a, eq. 61)
+////
+////      // Open output file for force on particles
+////      std::ofstream force_file, vector_force_file;
+////      vector_force_file.open (filename_helper("vector_forces3"), std::ios::out);
+////      if (communicator.rank() == 0) {
+////        force_file.open ("forces3.dat", std::ios::out);
+////      }
+////
+////      Dune::FieldVector<Real, dim> F;
+////      int evalRank = communicator.size();
+////      int myRank = communicator.rank();
+////
+////      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
+////      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
+////      Ep null(NULL);
+////      Dune::FieldVector<ctype,dim> x, normal;
+////      Hsearch hsearch(gv.grid(), gv.indexSet());
+////      Ep ep(null);  // Initialize an empty entity pointer
+////
+////      bool exit = false;  // stay in loop till upper boarder of the grid is reached
+////      double del = 1./sqrt(sysParams.get_lambda2i());
+////      double y_max = 0.;
+////      double x_max = 0.;
+////      x[0] = 0;
+////      for (;;y_max+=del) {
+////        x[1] = y_max;
+////        try{
+////          ep = hsearch.findEntity(x);
+////          if(ep->partitionType() == Dune::InteriorEntity)
+////            evalRank = myRank;
+////        }
+////        catch (const Dune::GridError&) { /* do nothing */ }
+////        evalRank = communicator.min(evalRank);
+////        if(myRank == evalRank) {
+////            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+////            Dune::FieldVector<Real, dim> forcevec, normal;
+////        }
+////        else
+////            ep = null;
+////        if(myRank == 0 && evalRank == communicator.size()) {
+////          Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+////                << "the grid" << std::endl;
+////        exit = 1;
+////      }
+////      exit = communicator.max(exit);
+////      if (exit == 1)
+////        break;
+////      evalRank = communicator.size();
+////    }
+////    communicator.barrier();
+////    y_max = communicator.max(y_max)-del;
+////    exit  = 0; 
+////    x[1] = y_max;
+////    for (;;x_max-=del) {
+////      x[0] = x_max;
+////      try{
+////        ep = hsearch.findEntity(x);
+////        if(ep->partitionType() == Dune::InteriorEntity)
+////          evalRank = myRank;
+////      }
+////      catch (const Dune::GridError&) { /* do nothing */ }
+////      evalRank = communicator.min(evalRank);
+////      if(myRank == evalRank) {
+////          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+////          Dune::FieldVector<Real, dim> forcevec, normal;
+////      }
+////      else
+////          ep = null;
+////      if(myRank == 0 && evalRank == communicator.size()) {
+////        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+////              << "the grid" << std::endl;
+////      exit = 1;
+////    }
+////    exit = communicator.max(exit);
+////    if (exit == 1)
+////      break;
+////    evalRank = communicator.size();
+////    }
+////    
+////    communicator.barrier();
+////    x_max = communicator.max(x_max)-del;
+////    double radius = (fabs(x_max/2.) > y_max ? y_max : (fabs(x_max/2.)));
+////    del = 2.*radius / steps;
+////    double y_old = 0.;
+////    double x_old = 0.;
+////    for (double x = 0; x > x_max; x-=del)
+////    {
+////      double y = sqrt(radius*radius - (x+radius)*(x+radius));
+////      Dune::FieldVector<Real, dim> evalPos;
+////      evalPos[0] = x;
+////      evalPos[1] = y;
+////      double dx = x-x_old;
+////      double dy = y-y_old;
+////      Dune::FieldVector<Real, dim> normal(evalPos);
+////      normal /= radius;
+////      Dune::FieldVector<Real, dim> forcevec;
+////      normal *= sqrt(dx*dx+dy*dy); // Surface normal
+////      // detect element to evaluate on
+////      try{
+////        ep = hsearch.findEntity(evalPos);
+////        if(ep->partitionType() == Dune::InteriorEntity)
+////          evalRank = myRank;
+////      }
+////      catch (const Dune::GridError&) { /* do nothing */ }
+////      evalRank = communicator.min(evalRank);
+////      if(myRank == evalRank) {
+////          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
+////          Dune::FieldVector<Real, dim> forcevec, normal;
+////      }
+////      if(myRank == 0 && evalRank == communicator.size()) {
+////        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
+////              << "the grid" << std::endl;
+////      }
+////
+////      Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, evalPos, u);
+////      //sigma.umv(normal, F);
+////      sigma.mv(normal, forcevec);
+////      forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
+////      F += forcevec;
+////      vector_force_file << evalPos << " " << forcevec << std::endl;
+////    }
+////
+////    // Sum up force of all nodes
+////    communicator.barrier();
+////    communicator.sum(&F[0], F.dim());
+////    if (communicator.rank() == 0) {
+////      force_file << F << std::endl;        
+////      force_file.close();
+////    }
+////    vector_force_file.close();
+////  }
+//
+//  
   // ------------------------------------------------------------------------
 
   private:
@@ -881,3 +887,5 @@ class Ipbsolver
     unsigned int my_offset, my_len;
     double fluxError,  icError;
 };
+
+#endif  /* _IPBSOLVER_HH */

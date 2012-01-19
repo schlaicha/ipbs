@@ -7,20 +7,12 @@
           and set to IPBS / reference cases
     */
 
-#ifndef _SYSPARAMS_H
-#define _SYSPARAMS_H
-#include "sysparams.hh"
-#endif
+#ifndef _BOUNDARIES_HH
+#define _BOUNDARIES_HH
 
-#ifndef _P0LAYOUT_H
-#define _P0LAYOUT_H
+#include<dune/common/fvector.hh>
 #include "p0layout.hh"
-#endif
-
-//#ifndef _IPBSOLVER_H
-//#define _IPBSOLVER_H
-//#include "ipbsolver.hh"
-//#endif
+#include "ipbsolver.hh"
 
 // ============================================================================
 /** \brief class defining the inner elements */
@@ -313,3 +305,6 @@ private:
   const int offset;
   const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
 };
+
+
+#endif  // _BOUNDARIES_HH

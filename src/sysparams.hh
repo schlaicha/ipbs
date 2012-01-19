@@ -3,6 +3,9 @@
     \todo Doc me!
 */
 
+#ifndef _SYSPARAMS_H
+#define _SYSPARAMS_H
+
 #include <string>
 
 class SysParams {
@@ -74,6 +77,4 @@ class SysParams {
   int refinementSteps;
 };
 
-// Global access to this class via global instance
-// TODO is there a better way for parallelization?
-extern SysParams sysParams;
+#endif  // _SYSPARAMS_H
