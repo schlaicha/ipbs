@@ -5,13 +5,19 @@ noinst_PROGRAMS = iPBS
 
 iPBS_SOURCES = iPBS.cc sysparams.cc parser.cc boundary.cc
 
+MY_GRIDDIM_CPPFLAGS = -DGRIDDIM=@MY_GRIDDIM@ -DWORLDDIM=@MY_GRIDDIM@ -DNOGRID
+#MY_GRIDTYPE_CPPFLAGS = -DGRIDTYPE=@MY_GRIDTYPE@
+
 iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(DUNEMPICPPFLAGS) \
 	$(UG_CPPFLAGS) \
 	$(AMIRAMESH_CPPFLAGS) \
 	$(ALBERTA_CPPFLAGS) \
 	$(ALUGRID_CPPFLAGS) \
-	$(GRIDDIM_CPPFLAGS) 
+	$(MY_GRIDDIM_CPPFLAGS)
+#	$(MY_GRIDTYPE_CPPFLAGS)
+#	-DGRIDDIM=2 -DWORLDDIM=2
+#	$(GRIDDIM_CPPFLAGS) 
 
 # The libraries have to be given in reverse order (most basic libraries
 # last).  Also, due to some misunderstanding, a lot of libraries include the
