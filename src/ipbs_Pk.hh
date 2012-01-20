@@ -50,22 +50,24 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   FEM fem(gv);
 
   // <<<2>>> Make grid function space
-#if HAVE_MPI
+  
+  // Define ISTL Vector backend - template argument is the blocksize!
+  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+  
+  // Setup constraints
+#if HAVE_MPI  // UG and AluGrid are nonoverlapping grids
   typedef Dune::PDELab::NonoverlappingConformingDirichletConstraints CON;
 #else
   typedef Dune::PDELab::ConformingDirichletConstraints CON;
 #endif
+  CON con;  // initialize constraints
 
-  CON con;
-#if HAVE_MPI
-  // Compute Ghost Elements
-  con.compute_ghosts(gfs);
-#endif
-
-  // Define ISTL Vector backend - template argument is the blocksize!
-  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
   typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
   GFS gfs(gv,fem,con);
+
+#if HAVE_MPI  // Compute Ghost Elements
+    con.compute_ghosts(gfs);
+#endif
 
   // Create coefficient vector (with zero values)
   typedef typename GFS::template VectorContainer<Real>::Type U;
