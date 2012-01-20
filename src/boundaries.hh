@@ -137,9 +137,9 @@ public :
                         typename Traits::RangeType& y) const
   {
     //! Set value for potential at outer domain boundaries
-    const int dim = Traits::GridViewType::Grid::dimension;
-    typedef typename Traits::GridViewType::Grid::ctype ctype;
-    Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
+    // const int dim = Traits::GridViewType::Grid::dimension;
+    // typedef typename Traits::GridViewType::Grid::ctype ctype;
+    // Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
     // if (x.two_norm() < 21.)
     //   y = 1.0;
     // else
