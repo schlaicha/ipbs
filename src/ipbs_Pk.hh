@@ -10,6 +10,12 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
+#if GRIDDIM == 2
+#include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
+#endif
+//#include <dune/grid/io/file/gnuplot.hh>
+#include "../dune/iPBS/datawriter.hh"
+
 #include "ipbsolver.hh"
 #include "boundaries.hh"
 #include "PBLocalOperator.hh"
@@ -22,6 +28,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // We want to know the total calulation time
   Dune::Timer timer;
   timer.start();
+  
+  std::ofstream status;
+  status.open ("status.dat", std::ios::out | std::ios::out); 
 
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
@@ -117,9 +126,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());
   newton.setReduction(sysParams.get_newton_tolerance());
-  newton.setMinLinearReduction(5e-1); // seems to be low in parallel?
-  newton.setMaxIterations(100);
-  newton.setLineSearchMaxIterations(50);
+  newton.setMinLinearReduction(5e-7); // seems to be low in parallel?
+  newton.setMaxIterations(20);
+  newton.setLineSearchMaxIterations(10);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   sysParams.counter = 0;
@@ -133,7 +142,18 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   while (ipbs.next_step())
   {
     timer.reset();
-    newton.apply();
+    try{
+        newton.apply();
+    }
+    catch (Dune::Exception &e){
+        status << "Dune reported error: " << e << std::endl;
+        std::cerr << "Dune reported error: " << e << std::endl;
+        break;
+    }
+    catch (...){
+        std::cerr << "Unknown exception thrown!" << std::endl;
+        break;
+    }
     solvertime += timer.elapsed();
 
 //   // save snapshots of each iteration step
@@ -168,6 +188,14 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // --- here the iterative loop ends! ---
 
+
+  double fluxError, icError;
+  status << "reached convergence criterion: " << ipbs.next_step(fluxError, icError) << std::endl;
+  status << "in iteration " << sysParams.counter << std::endl
+      << "maximum relative change in boundary condition calculation is " << std::endl << fluxError << std::endl
+      << "maximum relative change in induced charge density is " << std::endl << icError << std::endl;
+  status.close();
+
   // <<<6>>> graphical output
   DGF udgf(gfs,u);
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
@@ -185,10 +213,14 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  // // Gnuplot output  - not for higher order elements
-  // Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  // gnuplotwriter.addVertexData(u,"solution");
-  // gnuplotwriter.write(filename); 
+//  MyDataWriter<GV> mydatawriter(gv);
+//  mydatawriter.addVertexData(u, "solution");
+//  mydatawriter.write(filename);
+  // Gnuplot output  - not for higher order elements
+  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+  gnuplotwriter.addVertexData(u,"solution");
+  //gnuplotwriter.addCellData(u,"solution");
+  gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);

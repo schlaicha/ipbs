@@ -52,10 +52,29 @@ class Ipbsolver
     {
       return ipbsPositions.size();
     }
+
     bool next_step()
     {
       std::cout << "in iteration " << sysParams.counter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
+      if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
+        fluxError = 0; // reset the fluxError for next iteration step
+        icError = 0;
+        return true;
+      }
+      else
+        return false;
+    }
+    
+    /*!
+     * \param _fluxError return the current maximum relative change in boundary condition calulation
+     * \param _icError return the current maximum relative change in induced charge computation
+     */
+
+    bool next_step(double& _fluxError, double& _icError)
+    {
+      _fluxError = fluxError;
+      _icError = icError;
       if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
         fluxError = 0; // reset the fluxError for next iteration step
         icError = 0;
