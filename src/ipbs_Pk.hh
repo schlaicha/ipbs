@@ -13,8 +13,8 @@
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
-//#include <dune/grid/io/file/gnuplot.hh>
-#include "../dune/iPBS/datawriter.hh"
+#include <dune/grid/io/file/gnuplot.hh>
+//#include "../dune/iPBS/datawriter.hh"
 
 #include "ipbsolver.hh"
 #include "boundaries.hh"
@@ -219,7 +219,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Gnuplot output  - not for higher order elements
   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
   gnuplotwriter.addVertexData(u,"solution");
-  //gnuplotwriter.addCellData(u,"solution");
   gnuplotwriter.write(filename); 
 
   // Calculate the forces
