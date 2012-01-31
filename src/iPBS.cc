@@ -26,7 +26,6 @@
 //#include <dune/pdelab/adaptivity/adapt.hh>
 //#include <dune/grid/common/gridenums.hh>
 //#include <dune/common/dynmatrix.hh>
-//#include <dune/grid/io/file/gnuplot.hh>
 //#include<dune/pdelab/gridfunctionspace/constraints.hh>
 //#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 //#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
@@ -43,9 +42,7 @@
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
-#if GRIDDIM == 2
-#include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
-#endif
+
 
 // global typedefs
 typedef double Real;
