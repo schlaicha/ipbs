@@ -121,7 +121,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
   typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  LS ls(gfs);
+  //LS ls(gfs);
+  LS ls(gfs, 20000, 1);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   LS ls(5000, true);
