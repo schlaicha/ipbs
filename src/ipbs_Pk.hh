@@ -147,7 +147,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // --- Here the iterative loop starts ---
 
-  while (ipbs.next_step())
+  do
   {
     timer.reset();
     try{
@@ -190,7 +190,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     ipbs.updateBC(u);
     ipbs.updateIC();
     itertime += timer.elapsed();
- }
+  }
+  while (ipbs.next_step());
 
   // --- here the iterative loop ends! ---
 
