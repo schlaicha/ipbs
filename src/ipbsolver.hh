@@ -33,7 +33,8 @@ class Ipbsolver
     Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
         const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
       gv(gv_), gfs(gfs_), helper(helper_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), fluxError(0)
+      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), fluxError(0),
+      iterationCounter(0)
 
     /*!
        \param gv the view on the leaf grid
@@ -55,11 +56,10 @@ class Ipbsolver
 
     bool next_step()
     {
-      std::cout << "in iteration " << sysParams.counter << " the relative fluxError is " << fluxError
+      std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
       if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        fluxError = 0; // reset the fluxError for next iteration step
-        icError = 0;
+        iterationCounter++;
         return true;
       }
       else
@@ -71,13 +71,12 @@ class Ipbsolver
      * \param _icError return the current maximum relative change in induced charge computation
      */
 
-    bool next_step(double& _fluxError, double& _icError)
+    bool next_step(double& _fluxError, double& _icError, int& _iterations)
     {
       _fluxError = fluxError;
       _icError = icError;
+      _iterations = iterationCounter;
       if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        fluxError = 0; // reset the fluxError for next iteration step
-        icError = 0;
         return true;
       }
       else
@@ -98,6 +97,7 @@ class Ipbsolver
     // ------------------------------------------------------------------------
     void updateIC()
     {
+      icError = 0;  // reset the fluxError for next iteration step
       //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
       bContainerType ic(inducedChargeDensity.size(), 0.);
       double eps_out = sysParams.get_epsilon();  
@@ -118,8 +118,8 @@ class Ipbsolver
       communicator.sum(&ic[0], ic.size());
       // Do the SOR 
       for (unsigned int i = 0; i < inducedChargeDensity.size(); i++) {
-        inducedChargeDensity[i] = sysParams.get_alpha() * ic[i]
-                          + ( 1 - sysParams.get_alpha()) * inducedChargeDensity[i];
+        inducedChargeDensity[i] = sysParams.get_alpha_ic() * ic[i]
+                          + ( 1 - sysParams.get_alpha_ic()) * inducedChargeDensity[i];
         double local_icError = fabs(2.0*(ic[i]-inducedChargeDensity[i])
                       /(ic[i]+inducedChargeDensity[i]));
         icError = std::max(icError, local_icError);
@@ -138,6 +138,7 @@ class Ipbsolver
 
     void updateBC(const U& u)
     {
+      fluxError = 0;  // reset the fluxError for next iteration step
       /// Construct a discrete grid function space for access to solution
       typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
       DGF udgf(gfs,u);
@@ -383,8 +384,8 @@ class Ipbsolver
 
       // Do the SOR 
       for (unsigned int i = my_offset; i < target; i++) {
-        bContainer[i] = sysParams.get_alpha() * fluxes[i]
-                          + ( 1 - sysParams.get_alpha()) * bContainer[i];
+        bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
+                          + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
         double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
                       /(fluxes[i]+bContainer[i]));
         fluxError = std::max(fluxError, local_fluxError);
@@ -904,6 +905,7 @@ class Ipbsolver
                                  \textnormal{d}\vec{r} \f] */
     /// Offset and length of data stream on each node
     unsigned int my_offset, my_len;
+    unsigned int iterationCounter;
     double fluxError,  icError;
 };
 

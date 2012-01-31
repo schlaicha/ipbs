@@ -131,7 +131,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setLineSearchMaxIterations(10);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
-  sysParams.counter = 0;
   
   double inittime = timer.elapsed();
   double solvertime = 0.;
@@ -178,8 +177,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 //   gnuplotwriter.addVertexData(u,"solution");
 //   gnuplotwriter.write(filename + ".dat"); 
 
-    sysParams.counter ++;
-
     timer.reset();
     ipbs.updateBC(u);
     ipbs.updateIC();
@@ -190,8 +187,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
 
   double fluxError, icError;
-  status << "reached convergence criterion: " << ipbs.next_step(fluxError, icError) << std::endl;
-  status << "in iteration " << sysParams.counter << std::endl
+  int iterations;
+  status << "reached convergence criterion: " << ipbs.next_step(fluxError, icError, iterations) << std::endl;
+  status << "in iteration " << iterations << std::endl
       << "maximum relative change in boundary condition calculation is " << std::endl << fluxError << std::endl
       << "maximum relative change in induced charge density is " << std::endl << icError << std::endl;
   status.close();
