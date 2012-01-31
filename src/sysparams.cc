@@ -4,6 +4,7 @@
 
 /** Constructor
 /  Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length */
+
 SysParams::SysParams()
 {
 	totalError = 1E8;
@@ -38,6 +39,16 @@ void SysParams::set_symmetry(int value)
   // 2 is "2D_sphere"
   // 3 is "3D"  - not verified!
   symmetry = value;
+}
+
+void SysParams::set_maxiter(int _maxiter)
+{
+  maxiter = _maxiter;
+}
+
+int SysParams::get_maxiter()
+{
+  return maxiter;
 }
 
 int SysParams::get_refinementSteps()
@@ -103,14 +114,24 @@ void SysParams::add_error(double error)
 	}
 }
 
-void SysParams::set_alpha(double alpha_in)
+void SysParams::set_alpha_ipbs(double alpha_in)
 {
-	alpha=alpha_in;
+	alpha_ipbs=alpha_in;
 }
 
-double SysParams::get_alpha()
+double SysParams::get_alpha_ipbs()
 {
-	return alpha;
+	return alpha_ipbs;
+}
+
+void SysParams::set_alpha_ic(double alpha_in)
+{
+  alpha_ic=alpha_in;
+}
+
+double SysParams::get_alpha_ic()
+{
+	return alpha_ic;
 }
 
 void SysParams::reset_error()
