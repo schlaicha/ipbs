@@ -232,7 +232,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 //  ipbs.forces2(u);
   
   if (helper.rank() == 0) {
-    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;
     //std::ofstream runtime;
     //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
     //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
