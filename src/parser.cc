@@ -48,7 +48,9 @@ void parser(std::string config_file)
   sysParams.set_boxLength(configuration.get<double>("mesh.boxLength",0.0));
   
   // Parse other options
-  sysParams.set_alpha(configuration.get<double>("solver.alpha_sor",alpha_sor));
+  sysParams.set_maxiter(configuration.get<int>("solver.maxiter",100));
+  sysParams.set_alpha_ipbs(configuration.get<double>("solver.alpha_ipbs",alpha_sor));
+  sysParams.set_alpha_ic(configuration.get<double>("solver.alpha_ic",alpha_sor));
   sysParams.set_newton_tolerance(configuration.get<double>("solver.newton_tolerance",newton_tolerance));
   sysParams.set_refinement(configuration.get<int>("mesh.global_refinement_level",level));
   sysParams.set_refinementFraction(configuration.get<double>("mesh.adaptive_refinement_fraction",0));

@@ -12,7 +12,6 @@ class SysParams {
  public:
 	SysParams();	// We now only need a default constructor
 
-	int counter;
 	static constexpr double pi = 3.14159265358979323846;
   
   // Return parameters needed during runtime
@@ -22,7 +21,9 @@ class SysParams {
 	double get_lambda2i();
 	double get_charge_density();
 	double get_error();
-	double get_alpha();
+	double get_alpha_ic();
+	double get_alpha_ipbs();
+	int get_maxiter();
 	double get_tolerance();
 	double get_newton_tolerance();
  	int get_symmetry();
@@ -41,7 +42,9 @@ class SysParams {
   void reset_error(double error);
 	void set_lambda (double value);
 	void set_bjerrum (double value);
-	void set_alpha(double);
+	void set_alpha_ic(double);
+	void set_alpha_ipbs(double);
+  void set_maxiter(int);
   void set_meshfile(std::string filename);
   void set_refinement(int level);
   void set_tolerance(double value);
@@ -69,7 +72,9 @@ class SysParams {
   int npart;
   int salt;
 	int boxLength;
-	double alpha;	// SOR parameter
+	double alpha_ic;	// SOR parameter
+	double alpha_ipbs;	// SOR parameter
+  int maxiter;
   std::string meshfile;
   int refinement;
   int verbose;
