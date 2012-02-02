@@ -33,9 +33,8 @@ class Ipbsolver
     Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
         const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
       gv(gv_), gfs(gfs_), helper(helper_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), fluxError(0),
-      iterationCounter(0)
-
+      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
+     
     /*!
        \param gv the view on the leaf grid
        \param boundaryIndexToEntity physical property of boundary elements
