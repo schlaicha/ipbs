@@ -10,13 +10,11 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
-#include <dune/pdelab/gridoperator/gridoperator.hh>
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
 #include <dune/grid/io/file/gnuplot.hh>
-
-//#include "../dune/iPBS/datawriter.hh"
+#include "../dune/iPBS/datawriter.hh"
 
 #include "ipbsolver.hh"
 #include "boundaries.hh"
@@ -31,8 +29,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   Dune::Timer timer;
   timer.start();
   
-  std::ofstream status;
-  status.open ("status.dat", std::ios::out | std::ios::out); 
+  std::stringstream status;
+  //std::ofstream status;
+  //status.open ("status.dat", std::ios::out | std::ios::out); 
 
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
@@ -81,7 +80,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 #endif
 
   // Create coefficient vector (with zero values)
-  typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
+  typedef typename GFS::template VectorContainer<Real>::Type U;
   U u(gfs,0.0);
   
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
@@ -107,30 +106,23 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef PBLocalOperator<M,B,J> LOP;
   LOP lop(m,b,j,k+1);   // integration order
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-#if HAVE_MPI    // enable overlapping mode
-  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
-                                    Real,Real,Real,CC,CC,true> GO;
-#else
-  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
-                                    Real,Real,Real,CC,CC> GO;
-#endif
-  GO go(gfs,cc,gfs,cc,lop);
+  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
+  GOS gos(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
-  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  //LS ls(gfs);
-  LS ls(gfs, 20000, 1);
+  LS ls(gfs);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   LS ls(5000, true);
 #endif
 
   // <<<5b>>> Solve nonlinear problem
-  typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
-  NEWTON newton(go,u,ls);
+  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
+  NEWTON newton(gos,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());
@@ -145,6 +137,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double solvertime = 0.;
   double itertime = 0.;
 
+  
   // --- Here the iterative loop starts ---
 
   do
@@ -154,7 +147,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
         newton.apply();
     }
     catch (Dune::Exception &e){
-        status << "Dune reported error: " << e << std::endl;
+        status << "# Dune reported error: " << e << std::endl;
         std::cerr << "Dune reported error: " << e << std::endl;
         break;
     }
@@ -198,11 +191,12 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   double fluxError, icError;
   int iterations;
-  status << "reached convergence criterion: " << ipbs.next_step(fluxError, icError, iterations) << std::endl;
-  status << "in iteration " << iterations << std::endl
-      << "maximum relative change in boundary condition calculation is " << std::endl << fluxError << std::endl
-      << "maximum relative change in induced charge density is " << std::endl << icError << std::endl;
-  status.close();
+  status << "# reached convergence criterion: " << std::boolalpha <<
+    ipbs.next_step(fluxError, icError, iterations) << std::endl;
+  status << "# in iteration " << iterations << std::endl
+      << "# maximum relative change in boundary condition calculation is " <<  fluxError << std::endl
+      << "# maximum relative change in induced charge density is " << icError << std::endl;
+  //status.close();
 
   // <<<6>>> graphical output
   DGF udgf(gfs,u);
@@ -221,13 +215,13 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-//  MyDataWriter<GV> mydatawriter(gv);
-//  mydatawriter.addVertexData(u, "solution");
+  DataWriter<GV> mydatawriter(gv, helper);
+  mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
 //  mydatawriter.write(filename);
   // Gnuplot output  - not for higher order elements
-  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename); 
+//  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+//  gnuplotwriter.addVertexData(u,"solution");
+//  gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);
