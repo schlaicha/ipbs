@@ -13,7 +13,7 @@
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
-#include "../dune/iPBS/datawriter.hh"
+#include "../dune/ipbs/datawriter.hh"
 
 #include "ipbsolver.hh"
 #include "boundaries.hh"

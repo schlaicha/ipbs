@@ -71,7 +71,7 @@ int main(int argc, char** argv)
   {
     if(helper.rank()==0)
     {
-       std::cout << "Hello World! This is iPBS." << std::endl;
+       std::cout << "Hello World! This is IPBS." << std::endl;
        std::cout << "parallel run on " << helper.size() << " process(es)" << std::endl;
     }
   }
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   {
     if (helper.rank()==0)
     {
-	std::cout << "usage: ./iPBS <configuration file>" << std::endl;
+	std::cout << "usage: ./ipbs <configuration file>" << std::endl;
 	return 1;
     }
   }

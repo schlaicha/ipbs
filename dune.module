@@ -3,8 +3,8 @@
 ################################
 
 #Name of the module
-Module: iPBS
+Module: ipbs
 Version: 0.1
 Maintainer: schlaich@icp.uni-stuttgart.de
 #depending on 
-Depends: dune-common dune-grid dune-localfunctions dune-istl dune-pdelab
+Depends: dune-common (>= 2.1) dune-grid (>= 2.1) dune-localfunctions (>= 2.1) dune-istl (>= 2.1) dune-pdelab (>= 0.2.1)

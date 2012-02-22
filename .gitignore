@@ -26,12 +26,12 @@ doc/doxygen/doxygen-tag
 doc/doxygen/man
 doc/doxygen/latex
 doc/doxygen/html
-iPBS.pc
+ipbs.pc
 install-sh
 libtool
 ltmain.sh
 missing
-src/iPBS
+src/ipbs
 stamp-h1
 aclocal.m4
 dependencies.m4

@@ -1,11 +1,11 @@
 
 SUBDIRS =
 
-noinst_PROGRAMS = iPBS
+noinst_PROGRAMS = ipbs
 
-iPBS_SOURCES = iPBS.cc sysparams.cc parser.cc boundary.cc
+ipbs_SOURCES = ipbs.cc sysparams.cc parser.cc boundary.cc
 
-iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
+ipbs_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(DUNEMPICPPFLAGS) \
 	$(UG_CPPFLAGS) \
 	$(AMIRAMESH_CPPFLAGS) \
@@ -17,7 +17,7 @@ iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
 # last).  Also, due to some misunderstanding, a lot of libraries include the
 # -L option in LDFLAGS instead of LIBS -- so we have to include the LDFLAGS
 # here as well.
-iPBS_LDADD = \
+ipbs_LDADD = \
 	$(DUNE_LDFLAGS) $(DUNE_LIBS) \
 	$(ALUGRID_LDFLAGS) $(ALUGRID_LIBS) \
 	$(ALBERTA_LDFLAGS) $(ALBERTA_LIBS) \
@@ -25,7 +25,7 @@ iPBS_LDADD = \
 	$(UG_LDFLAGS) $(UG_LIBS) \
 	$(DUNEMPILIBS)	\
 	$(LDADD) 
-iPBS_LDFLAGS = $(AM_LDFLAGS) \
+ipbs_LDFLAGS = $(AM_LDFLAGS) \
 	$(DUNEMPILDFLAGS) \
 	$(UG_LDFLAGS) \
 	$(AMIRAMESH_LDFLAGS) \

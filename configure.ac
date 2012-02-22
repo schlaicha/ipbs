@@ -3,7 +3,7 @@
 AC_PREREQ(2.50)
 DUNE_AC_INIT # gets module version from dune.module file
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([src/iPBS.cc])
+AC_CONFIG_SRCDIR([src/ipbs.cc])
 AM_CONFIG_HEADER([config.h])
 #GSL_VERSION=1.00 # don#t know if this makes sense here...
 
@@ -28,9 +28,9 @@ AC_CONFIG_FILES([
   doc/doxygen/Makefile
   doc/doxygen/Doxyfile
   dune/Makefile
-  dune/iPBS/Makefile
+  dune/ipbs/Makefile
   m4/Makefile
-  iPBS.pc
+  ipbs.pc
 ])
 AC_OUTPUT
 # finally print the summary information
