@@ -13,7 +13,6 @@
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
-#include <dune/grid/io/file/gnuplot.hh>
 #include "../dune/iPBS/datawriter.hh"
 
 #include "ipbsolver.hh"
@@ -39,6 +38,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // some typedef
   typedef typename GV::Grid::ctype ctype;
+  const int dim = GV::dimension;
 
   // <<<1>>> Setup the problem from mesh file
 
@@ -127,9 +127,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());
   newton.setReduction(sysParams.get_newton_tolerance());
-  newton.setMinLinearReduction(5e-7); // seems to be low in parallel?
-  newton.setMaxIterations(20);
-  newton.setLineSearchMaxIterations(10);
+  newton.setMinLinearReduction(1e-10); // seems to be low in parallel?
+  newton.setMaxIterations(100);
+  newton.setLineSearchMaxIterations(50);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   
@@ -165,19 +165,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 //   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
 //   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
 //   vtkwriter.write(filename,Dune::VTK::appendedraw);
-//   // Prepare filename for sequential Gnuplot output
-//   if(helper.size()>1)
-//   {
-//     std::stringstream s;
-//     s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-//     s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
-//     s << filename;
-//     filename = s.str();
-//   }
-//   // Gnuplot output
-//   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-//   gnuplotwriter.addVertexData(u,"solution");
-//   gnuplotwriter.write(filename + ".dat"); 
 
     timer.reset();
     ipbs.updateBC(u);
@@ -215,13 +202,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  DataWriter<GV> mydatawriter(gv, helper);
+  DataWriter<GV,dim> mydatawriter(gv, helper);
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
-//  mydatawriter.write(filename);
-  // Gnuplot output  - not for higher order elements
-//  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-//  gnuplotwriter.addVertexData(u,"solution");
-//  gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);
