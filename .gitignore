@@ -15,7 +15,6 @@
 Makefile
 Makefile.in
 .deps
-*.m4
 am
 configure
 config.*
@@ -34,4 +33,5 @@ ltmain.sh
 missing
 src/iPBS
 stamp-h1
-
+aclocal.m4
+dependencies.m4

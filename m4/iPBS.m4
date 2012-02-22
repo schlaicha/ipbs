@@ -6,7 +6,9 @@ dnl -*- autoconf -*-
 # Additional checks needed to build iPBS
 # This macro should be invoked by every module which depends on iPBS, as
 # well as by iPBS itself
-AC_DEFUN([IPBS_CHECKS])
+AC_DEFUN([IPBS_CHECKS],[
+  IPBS_CHECK_GRID
+])
 
 # Additional checks needed to find iPBS
 # This macro should be invoked by every module which depends on iPBS, but
