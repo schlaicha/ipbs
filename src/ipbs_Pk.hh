@@ -16,7 +16,7 @@
 #endif
 #include <dune/grid/io/file/gnuplot.hh>
 
-//#include "../dune/iPBS/datawriter.hh"
+#include "../dune/iPBS/datawriter.hh"
 
 #include "ipbsolver.hh"
 #include "boundaries.hh"
@@ -31,8 +31,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   Dune::Timer timer;
   timer.start();
   
-  std::ofstream status;
-  status.open ("status.dat", std::ios::out | std::ios::out); 
+  std::stringstream status;
+  //std::ofstream status;
+  //status.open ("status.dat", std::ios::out | std::ios::out); 
 
   // get a grid view on the leaf grid
   typedef typename GridType::LeafGridView GV;
@@ -145,6 +146,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double solvertime = 0.;
   double itertime = 0.;
 
+  
   // --- Here the iterative loop starts ---
 
   do
@@ -154,7 +156,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
         newton.apply();
     }
     catch (Dune::Exception &e){
-        status << "Dune reported error: " << e << std::endl;
+        status << "# Dune reported error: " << e << std::endl;
         std::cerr << "Dune reported error: " << e << std::endl;
         break;
     }
@@ -198,11 +200,12 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   double fluxError, icError;
   int iterations;
-  status << "reached convergence criterion: " << ipbs.next_step(fluxError, icError, iterations) << std::endl;
-  status << "in iteration " << iterations << std::endl
-      << "maximum relative change in boundary condition calculation is " << std::endl << fluxError << std::endl
-      << "maximum relative change in induced charge density is " << std::endl << icError << std::endl;
-  status.close();
+  status << "# reached convergence criterion: " << std::boolalpha <<
+    ipbs.next_step(fluxError, icError, iterations) << std::endl;
+  status << "# in iteration " << iterations << std::endl
+      << "# maximum relative change in boundary condition calculation is " <<  fluxError << std::endl
+      << "# maximum relative change in induced charge density is " << icError << std::endl;
+  //status.close();
 
   // <<<6>>> graphical output
   DGF udgf(gfs,u);
@@ -221,13 +224,13 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-//  MyDataWriter<GV> mydatawriter(gv);
-//  mydatawriter.addVertexData(u, "solution");
+  DataWriter<GV> mydatawriter(gv, helper);
+  mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
 //  mydatawriter.write(filename);
   // Gnuplot output  - not for higher order elements
-  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-  gnuplotwriter.addVertexData(u,"solution");
-  gnuplotwriter.write(filename); 
+//  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
+//  gnuplotwriter.addVertexData(u,"solution");
+//  gnuplotwriter.write(filename); 
 
   // Calculate the forces
   ipbs.forces(u);
