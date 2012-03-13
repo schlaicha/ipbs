@@ -6,7 +6,7 @@ BASEDIR = ..
 # add list of html files to generate from wml
 PAGES=
 
-docdir=$(datadir)/doc/iPBS
+docdir=$(datadir)/doc/ipbs
 
 include $(top_srcdir)/am/webstuff
 include $(top_srcdir)/am/global-rules
