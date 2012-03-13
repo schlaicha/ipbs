@@ -19,6 +19,7 @@ IPBS_CHECKS
 # implicitly set the Dune-flags everywhere
 AC_SUBST(AM_CPPFLAGS, '$(DUNE_CPPFLAGS) -I$(top_srcdir)')
 AC_SUBST(AM_LDFLAGS, $DUNE_LDFLAGS)
+AC_SUBST([LDADD], '$(top_builddir)/dune/ipbs/libipbs.la $(DUNE_LIBS)')
 LIBS="$LIBS $DUNE_LIBS"
 
 AC_CONFIG_FILES([
