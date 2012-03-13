@@ -17,7 +17,7 @@ DUNE_CHECK_ALL
 IPBS_CHECKS
 
 # implicitly set the Dune-flags everywhere
-AC_SUBST(AM_CPPFLAGS, $DUNE_CPPFLAGS)
+AC_SUBST(AM_CPPFLAGS, '$(DUNE_CPPFLAGS) -I$(top_srcdir)')
 AC_SUBST(AM_LDFLAGS, $DUNE_LDFLAGS)
 LIBS="$LIBS $DUNE_LIBS"
 
@@ -29,6 +29,7 @@ AC_CONFIG_FILES([
   doc/doxygen/Doxyfile
   dune/Makefile
   dune/ipbs/Makefile
+  dune/ipbs/test/Makefile
   m4/Makefile
   ipbs.pc
 ])

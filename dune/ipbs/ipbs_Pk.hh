@@ -13,11 +13,19 @@
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #endif
-#include "../dune/ipbs/datawriter.hh"
 
-#include "ipbsolver.hh"
-#include "boundaries.hh"
-#include "PBLocalOperator.hh"
+// pdelab includes
+#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
+#include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
+#include<dune/pdelab/gridfunctionspace/interpolate.hh>
+#include<dune/pdelab/backend/istlvectorbackend.hh>
+#include<dune/pdelab/backend/istlmatrixbackend.hh>
+#include<dune/pdelab/backend/istlsolverbackend.hh>
+
+#include <dune/ipbs/datawriter.hh>
+#include <dune/ipbs/ipbsolver.hh>
+#include <dune/ipbs/boundaries.hh>
+#include <dune/ipbs/PBLocalOperator.hh>
 
 template<class GridType, int k>
 void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
@@ -215,5 +223,44 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
     //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
     //runtime.close();
+    
+#ifdef SURFACE_POT
+    std::cout << "Now I would calculate the surface potential :-)" << std::endl;
+    typedef typename GV::template Codim<0>::template Partition
+              <Dune::Interior_Partition>::Iterator LeafIterator;
+    typedef typename GV::IntersectionIterator IntersectionIterator;
+    typedef typename DGF::Traits::RangeType RT;
+    // Do the loop for all boundaryIDs > 1 (all colloids)
+    for (int i = 2; i < sysParams.get_npart()+2; i++)
+    {
+      int nElems = 0;
+      double sum = 0.;
+      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+      {
+        if(it->hasBoundaryIntersections() == true) {
+          for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+            if(ii->boundary() == true) {
+              if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+              {
+                Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
+                    it->geometry().local(evalPos);
+                RT value;
+                // evaluate the potential
+                udgf.evaluate(*it, local, value);
+                sum += value;
+                nElems++;
+              }
+            }
+          }
+        }
+      }
+      sum /= nElems;
+      boundary[i-2]->set_res_surface_pot(sum);
+      std::cout << "Averaged surface potential: " << sum << std::endl;
+    }
+#endif
+    
  }
 }

@@ -16,6 +16,8 @@ class Boundary
     double get_charge_density();
     double get_dielectric_factor();
     double get_epsilon();
+    void set_res_surface_pot(double _value);
+    double get_res_surface_pot();
     void set_isPlane(bool value);
     bool get_isPlane();
 
@@ -24,6 +26,7 @@ class Boundary
     double epsilon;
     double charge;
     double charge_density;
+    double res_surface_pot;
     bool isPlane;
 };
 

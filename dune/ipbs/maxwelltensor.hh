@@ -3,7 +3,7 @@
 #define _MAXWELLTENSOR_HH
 
 #include<dune/common/fvector.hh>
-#include "gradient.hh"
+//#include "gradient.hh"
 #include "sysparams.hh"
 
 extern SysParams sysParams;

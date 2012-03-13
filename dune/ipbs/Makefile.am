@@ -1,3 +1,6 @@
+
+SUBDIRS = test
+
 ipbsincludedir = $(includedir)/dune/ipbs
 ipbsinclude_HEADERS = ipbs.hh
 

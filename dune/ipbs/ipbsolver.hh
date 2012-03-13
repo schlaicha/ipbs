@@ -76,10 +76,10 @@ class Ipbsolver
       _icError = icError;
       _iterations = iterationCounter;
       if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        return true;
+        return false;
       }
       else
-        return false;
+        return true;
     }
     
     template <typename I>
