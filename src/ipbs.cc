@@ -48,10 +48,10 @@
 // global typedefs
 typedef double Real;
 
-#include "sysparams.hh"
-#include "boundary.hh"
-#include "parser.hh"
-#include "ipbs_Pk.hh"
+#include "dune/ipbs/sysparams.hh"
+#include "dune/ipbs/boundary.hh"
+#include "dune/ipbs/parser.hh"
+#include "dune/ipbs/ipbs_Pk.hh"
 
 // global access to particles
 std::vector<Boundary*> boundary;
