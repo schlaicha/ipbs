@@ -27,7 +27,9 @@
 #include <dune/ipbs/boundaries.hh>
 #include <dune/ipbs/PBLocalOperator.hh>
 
+// test some solvers
 //#include<dune/pdelab/stationary/linearproblem.hh>
+//#include <dune/pdelab/backend/seqistlsolverbackend.hh>
 
 template<class GridType, int k>
 void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
@@ -127,6 +129,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   LS ls(gfs);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_CG_ILU0 LS;
   //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_AMG_SOR<GOS> LS;
   LS ls(5000, true);
 #endif
@@ -164,7 +168,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     timer.reset();
     try{
         newton.apply();
-        //slp.apply();
     }
     catch (Dune::Exception &e){
         status << "# Dune reported error: " << e << std::endl;
@@ -178,15 +181,14 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     solvertime += timer.elapsed();
 
    // save snapshots of each iteration step
-   std::stringstream out;
-   out << "ipbs_step_" << iterations;
-   std::string filename = out.str();
-   DGF udgf_snapshot(gfs,u);
-   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-   vtkwriter.write(filename,Dune::VTK::appendedraw);
-  
-   mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+   //std::stringstream out;
+   //out << "ipbs_step_" << iterations;
+   //std::string filename = out.str();
+   //DGF udgf_snapshot(gfs,u);
+   //Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+   //vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+   //vtkwriter.write(filename,Dune::VTK::appendedraw);
+   //mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
    timer.reset();
    ipbs.updateBC(u);
@@ -222,7 +224,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
+  mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
   // Calculate the forces
   ipbs.forces(u);

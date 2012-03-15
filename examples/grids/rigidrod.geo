@@ -1,21 +1,21 @@
 // Gmsh project created on Tue 13 Mar 2012
 
 // Set geometry
-sqrt_dist = 120;
-radius = 3;
-circle_refinement = .05;
+sqrt_dist = 6;
+radius = 1;
+circle_refinement = .1;
 corner_refinement = .1;
 faraway_refinement = 10;
 outer_refinement = 1;
 delta = .3;
-box_height = 240.;
-box_width = 240;
+box_height = 110.;
+box_width = 110;
 
 // Setup mesh
-Point(0) = {0, 0, 0, faraway_refinement};
+Point(0) = {0, 0, 0, corner_refinement};
 //Point(1) = {delta, delta, 0, corner_refinement};
-Point(2) = {0, box_height, 0, faraway_refinement};
-Point(3) = {box_width, 0, 0, faraway_refinement};
+Point(2) = {0, box_height, 0, outer_refinement};
+Point(3) = {box_width, 0, 0, outer_refinement};
 Point(4) = {box_width, box_height, 0, faraway_refinement};
 Point(5) = {sqrt_dist, sqrt_dist, 0};
 Point(6) = {sqrt_dist-radius, sqrt_dist, 0, circle_refinement};
@@ -39,10 +39,7 @@ Line Loop(11) = {5, 6, 7, 8};
 Plane Surface(12) = {10, 11};
 
 // Define boundaries
-Physical Line(1) = {2, 4, 3, 1};
-//Physical Line(1) = {2, 4};
-//Physical Line(2) = {1, 3, 9};
-//Physical Line(2) = {1};
-//Physical Line(3) = {3};
-Physical Line(2) = {7, 6, 5, 8};
+Physical Line(1) = {2, 4};
+Physical Line(2) = {1, 3};
+Physical Line(3) = {7, 6, 5, 8};
 Physical Surface(13) = {12};

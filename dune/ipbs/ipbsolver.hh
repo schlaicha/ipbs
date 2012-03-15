@@ -434,7 +434,10 @@ class Ipbsolver
                   Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
                   //sigma.umv(normal, F);
                   sigma.mv(normal, forcevec);
-                  forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
+                  if (sysParams.get_symmetry() > 0) {
+                    // integration in theta
+                    forcevec *= 2.*sysParams.pi*evalPos[1]; 
+                  }
                   F += forcevec;
                   vector_force_file << evalPos << " " << forcevec << std::endl;
                 }
