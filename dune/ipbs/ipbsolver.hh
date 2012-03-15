@@ -13,6 +13,8 @@
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
 
+
+
 template <class GV, class GFS>
 class Ipbsolver
 
@@ -75,11 +77,14 @@ class Ipbsolver
       _fluxError = fluxError;
       _icError = icError;
       _iterations = iterationCounter;
+      std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
+        << " relative error in induced charge density is " << icError << std::endl;
       if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        return false;
+        iterationCounter++;
+        return true;
       }
       else
-        return true;
+        return false;
     }
     
     template <typename I>
@@ -173,9 +178,19 @@ class Ipbsolver
           // integration depends on symmetry
           switch( sysParams.get_symmetry() )
           {
-            case 1:   // image charged particle on y-axis
+            case 0: // cartesian coordinates 
             {
-              // Do this once for this coordinate and once for the mirrored one (r -> -r)
+              Dune::FieldVector<ctype,dim> E_field(0.);
+              E_field = dist;
+              E_field /= dist.two_norm() * dist.two_norm();
+                        
+              volumeElem_flux = E_field * unitNormal;
+              volumeElem_flux *= sysParams.get_lambda2i() / (4.0 * sysParams.pi) * it->geometry().volume();
+            }
+            break;
+
+            case 1:   // mirror particle charge on y-axis (sph. red. sym)
+            {
               double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
               double b = 4.0 * r[1] * r_prime[1];
               double k = sqrt(b/a);
@@ -221,21 +236,7 @@ class Ipbsolver
             }
 	          break;
 
-            case 3: // An ininite plane in 2d cartesion coordinates 
-            {
-              // use minimum image convention
-              // if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-              // else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
-             
-              Dune::FieldVector<ctype,dim> E_field(0.);
-              E_field = dist;
-              E_field /= dist.two_norm() * dist.two_norm();
-                        
-              volumeElem_flux = E_field * unitNormal;
-              volumeElem_flux *= 2. * sysParams.get_lambda2i() / (4.0 * sysParams.pi) * it->geometry().volume();
-            }
-            break;
-          }
+         }
 
           // Now get the counterion distribution and calculate flux
           switch (sysParams.get_salt())
@@ -274,9 +275,18 @@ class Ipbsolver
             // Integration depends on symmetry!
             switch ( sysParams.get_symmetry() )
             {
-              case 1:  // image charged particle on y-axis
+              case 0:
               {
-                // Do this once for this coordinate and once for the mirrored one (r -> -r)
+                Dune::FieldVector<ctype,dim> E_field(0.);
+                E_field = dist;
+                E_field /= dist.two_norm() * dist.two_norm();
+                          
+                surfaceElem_flux = E_field * unitNormal;
+                surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
+              }
+              break;
+              case 1:  // mirror particle charge on y-axis
+              {
                 double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
                 double b = 4.0 * r[1] * r_prime[1];
                 double k = sqrt(b/a);
@@ -320,46 +330,35 @@ class Ipbsolver
                 surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
               }
               break;
-              case 3:
-              {
-                // use minimum image convention
-                // if (dist[0] > sysParams.get_boxLength()/2.0) dist[0]-=sysParams.get_boxLength();
-                // else if (dist[0] < -sysParams.get_boxLength()/2.0) dist[0] +=sysParams.get_boxLength();
-               
-                Dune::FieldVector<ctype,dim> E_field(0.);
-                E_field = dist;
-                E_field /= dist.two_norm() * dist.two_norm();
-                          
-                surfaceElem_flux = E_field * unitNormal;
-                surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
-              }
-              break;
-            }
+           }
             bEfield[i] += surfaceElem_flux;
           }
           else {
             surfaceElem_flux = -2. * sysParams.get_bjerrum() * sysParams.pi 
                               * ( boundary[ipbsType[i]-2]->get_charge_density() + inducedChargeDensity[i] );
             // in case of mirroring also include mirrored element
-            double lcd = boundary[ipbsType[i]-2]->get_charge_density() 
-                          + inducedChargeDensity[i]; /**< The local charge density 
-                                                       on this particular surface element */
-            Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[i]);
-            r_prime[0] *= -1.;
-            Dune::FieldVector<ctype,dim> dist = r - r_prime;
-            double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-            double b = 4.0 * r[1] * r_prime[1];
-            double k = sqrt(b/a);
-            double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-            double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-            Dune::FieldVector<ctype,dim> E_field(0.);
-            E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-            E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                                    / ((a-b)*sqrt(a)*b) * E
-                    + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-            double tmp = E_field * unitNormal;
-            tmp *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[i] * r_prime[1] * lcd;
-            surfaceElem_flux += tmp;
+            if (sysParams.get_symmetry() == 1)
+            {
+              double lcd = boundary[ipbsType[i]-2]->get_charge_density() 
+                            + inducedChargeDensity[i]; /**< The local charge density 
+                                                         on this particular surface element */
+              Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[i]);
+              r_prime[0] *= -1.;
+              Dune::FieldVector<ctype,dim> dist = r - r_prime;
+              Dune::FieldVector<ctype,dim> E_field(0.);
+              double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
+              double b = 4.0 * r[1] * r_prime[1];
+              double k = sqrt(b/a);
+              double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
+              double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
+              E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
+              E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
+                                / ((a-b)*sqrt(a)*b) * E
+                + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
+              double tmp = E_field * unitNormal;
+              tmp *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[i] * r_prime[1] * lcd;
+              surfaceElem_flux += tmp;
+            }
           }
           fluxes[i] += surfaceElem_flux;
         }

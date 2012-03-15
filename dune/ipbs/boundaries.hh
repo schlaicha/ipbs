@@ -192,7 +192,7 @@ public:
       y = ipbsolver.get_flux(i);
     else
       y = 0;
-    //std::cout << i.geometry().center() << " " << y << std::endl;
+    // std::cout << i.geometry().center() << " booundary " << physgroup_index << " flux " << y << std::endl;
     return;
   }
 
@@ -235,15 +235,7 @@ public:
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     if (physgroup_index > 1)
-      // switch (sysParams.get_symmetry())
-      // {
-      //   case 2:
            y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum() / boundary[physgroup_index-2]->get_epsilon();
-      //     break;
-      //   case 3:
-      //     y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
-      //     break;
-      // }
     else y = 0;
     return;
   }

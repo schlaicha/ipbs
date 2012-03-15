@@ -27,6 +27,8 @@
 #include <dune/ipbs/boundaries.hh>
 #include <dune/ipbs/PBLocalOperator.hh>
 
+//#include<dune/pdelab/stationary/linearproblem.hh>
+
 template<class GridType, int k>
 void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
              const std::vector<int>& boundaryIndexToEntity,
@@ -108,7 +110,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
-  ipbs.updateBC(u);
+  //ipbs.updateBC(u);
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
@@ -125,8 +127,13 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   LS ls(gfs);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_AMG_SOR<GOS> LS;
   LS ls(5000, true);
 #endif
+
+  //typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
+  //SLP slp(gos, u, ls, 1e-10);
+  //slp.apply();
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
@@ -145,7 +152,11 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double solvertime = 0.;
   double itertime = 0.;
 
-  
+  double fluxError, icError;
+  int iterations = 0;
+
+  DataWriter<GV,dim> mydatawriter(gv, helper);
+
   // --- Here the iterative loop starts ---
 
   do
@@ -153,6 +164,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     timer.reset();
     try{
         newton.apply();
+        //slp.apply();
     }
     catch (Dune::Exception &e){
         status << "# Dune reported error: " << e << std::endl;
@@ -165,27 +177,27 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     }
     solvertime += timer.elapsed();
 
-//   // save snapshots of each iteration step
-//   std::stringstream out;
-//   out << "ipbs_step_" << sysParams.counter;
-//   std::string filename = out.str();
-//   DGF udgf_snapshot(gfs,u);
-//   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-//   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-//   vtkwriter.write(filename,Dune::VTK::appendedraw);
+   // save snapshots of each iteration step
+   std::stringstream out;
+   out << "ipbs_step_" << iterations;
+   std::string filename = out.str();
+   DGF udgf_snapshot(gfs,u);
+   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+   vtkwriter.write(filename,Dune::VTK::appendedraw);
+  
+   mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
-    timer.reset();
-    ipbs.updateBC(u);
-    ipbs.updateIC();
-    itertime += timer.elapsed();
+   timer.reset();
+   ipbs.updateBC(u);
+   ipbs.updateIC();
+   itertime += timer.elapsed();
   }
-  while (ipbs.next_step());
+  while (ipbs.next_step(fluxError,icError,iterations));
 
   // --- here the iterative loop ends! ---
 
 
-  double fluxError, icError;
-  int iterations;
   status << "# reached convergence criterion: " << std::boolalpha <<
     ipbs.next_step(fluxError, icError, iterations) << std::endl;
   status << "# in iteration " << iterations << std::endl
@@ -210,7 +222,6 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  DataWriter<GV,dim> mydatawriter(gv, helper);
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
 
   // Calculate the forces
