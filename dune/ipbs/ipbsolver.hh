@@ -182,8 +182,11 @@ class Ipbsolver
             {
               Dune::FieldVector<ctype,dim> E_field(0.);
               E_field = dist;
+#if GRIDDIM == 2
               E_field /= dist.two_norm() * dist.two_norm();
-                        
+#elif GRIDDIM == 3
+              E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
+#endif                  
               volumeElem_flux = E_field * unitNormal;
               volumeElem_flux *= sysParams.get_lambda2i() / (4.0 * sysParams.pi) * it->geometry().volume();
             }
@@ -279,8 +282,11 @@ class Ipbsolver
               {
                 Dune::FieldVector<ctype,dim> E_field(0.);
                 E_field = dist;
+#if GRIDDIM == 2
                 E_field /= dist.two_norm() * dist.two_norm();
-                          
+#elif GRIDDIM == 3
+                E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
+#endif                  
                 surfaceElem_flux = E_field * unitNormal;
                 surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
               }
@@ -709,10 +715,12 @@ class Ipbsolver
       typedef typename GV::IntersectionIterator IntersectionIterator;
     
       int counter = 0;
+      int elemcounter = 0;
       // loop over elements on this processor and get information on the iterated boundaries
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
+        elemcounter++;
         if (it->hasBoundaryIntersections() == true)
           for (IntersectionIterator ii = it->ileafbegin(); ii!=it->ileafend(); ++ii)
             if(ii->boundary()==true && boundaryIndexToEntity[ii->boundarySegmentIndex()] > 1) // check if IPBS boundary
@@ -849,6 +857,7 @@ class Ipbsolver
       communicator.broadcast(&ipbsType[0], countBoundElems, 0);
       communicator.broadcast(&ipbsVolumes[0], countBoundElems, 0);
       communicator.barrier();
+      std::cout << "Myrank: " << communicator.rank() << " Mylen: " << my_len << std::endl;
       return 0;
 #else
       my_len = ipbsType.size();

@@ -12,6 +12,8 @@
 
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
+#elif GRIDDIM == 3
+#include <dune/pdelab/finiteelementmap/pk3dfem.hh>
 #endif
 
 // pdelab includes
@@ -68,6 +70,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Create finite element map
 #if GRIDDIM == 2
   typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
+#elif GRIDDIM == 3
+  typedef Dune::PDELab::Pk3DLocalFiniteElementMap<GV, ctype, Real, 1> FEM;
 #endif
   FEM fem(gv);
 
