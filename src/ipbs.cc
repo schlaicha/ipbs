@@ -141,7 +141,7 @@ int main(int argc, char** argv)
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
 
  // Call problem driver
- ipbs_Pk<GridType, 3>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ ipbs_Pk<GridType, 2>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
   
  // done
  return 0;

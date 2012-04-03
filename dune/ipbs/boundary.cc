@@ -1,32 +1,31 @@
 #include "boundary.hh"
 #include <iostream>
 
-void Boundary::set_isPlane(bool value)
-{
-  isPlane = value;
-}
-
-bool Boundary::get_isPlane()
-{
-  return isPlane;
-}
 void Boundary::set_epsilons(double epsilonIn, double epsilonOut)
 {
     epsilon = epsilonIn;
     factor = 2. * epsilonIn / (epsilonIn + epsilonOut) ;
-    // std::cout << "Epsilon_material = " << epsilonIn << " espilon_solution = " << epsilonOut <<" Dielectric factor is " << factor << std::endl;
 }
 
-void Boundary::set_res_surface_pot(double _value)
+void Boundary::set_potential(double _value)
 {
-    res_surface_pot = _value;
+    potential = _value;
 }
 
-double Boundary::get_res_surface_pot()
+double Boundary::get_potential()
 {
-    return res_surface_pot;
+    return potential;
 }
 
+void Boundary::set_type(int _type)
+{
+    type = _type;
+}
+
+int Boundary::get_type()
+{
+    return type;
+}
 void Boundary::set_charge_density(double _value)
 {
     charge_density = _value;

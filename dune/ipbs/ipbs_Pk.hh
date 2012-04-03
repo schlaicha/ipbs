@@ -71,7 +71,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 #if GRIDDIM == 2
   typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
 #elif GRIDDIM == 3
-  typedef Dune::PDELab::Pk3DLocalFiniteElementMap<GV, ctype, Real, 1> FEM;
+  typedef Dune::PDELab::Pk3DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
 #endif
   FEM fem(gv);
 
@@ -274,7 +274,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
         }
       }
       sum /= nElems;
-      boundary[i-2]->set_res_surface_pot(sum);
+      boundary[i]->set_res_surface_pot(sum);
       std::cout << "Averaged surface potential: " << sum << std::endl;
     }
 #endif

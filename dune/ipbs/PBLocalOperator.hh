@@ -165,7 +165,7 @@ public:
         // evaluate boundary condition type
         typename B::Traits::RangeType bctype;
         b.evaluate(ig,it->position(),bctype);
- 
+        
         // skip rest if we are on Dirichlet boundary
         if (bctype>0) continue;
 
