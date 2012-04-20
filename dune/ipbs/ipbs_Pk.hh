@@ -13,14 +13,30 @@
 #include <dune/pdelab/gridoperator/gridoperator.hh>
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
+#elif GRIDDIM == 3
+#include <dune/pdelab/finiteelementmap/pk3dfem.hh>
 #endif
-#include <dune/grid/io/file/gnuplot.hh>
 
-#include "../dune/iPBS/datawriter.hh"
+// pdelab includes
+#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
+#include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
+#include<dune/pdelab/gridfunctionspace/interpolate.hh>
+#include<dune/pdelab/backend/istlvectorbackend.hh>
+#include<dune/pdelab/backend/istlmatrixbackend.hh>
+#include<dune/pdelab/backend/istlsolverbackend.hh>
 
-#include "ipbsolver.hh"
-#include "boundaries.hh"
-#include "PBLocalOperator.hh"
+#if HAVE_MPI
+#include <dune/pdelab/backend/novlpistlsolverbackend.hh>
+#endif
+
+#include <dune/ipbs/datawriter.hh>
+#include <dune/ipbs/ipbsolver.hh>
+#include <dune/ipbs/boundaries.hh>
+#include <dune/ipbs/PBLocalOperator.hh>
+
+// test some solvers
+//#include<dune/pdelab/stationary/linearproblem.hh>
+//#include <dune/pdelab/backend/seqistlsolverbackend.hh>
 
 template<class GridType, int k>
 void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
@@ -41,6 +57,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 
   // some typedef
   typedef typename GV::Grid::ctype ctype;
+  const int dim = GV::dimension;
 
   // <<<1>>> Setup the problem from mesh file
 
@@ -58,6 +75,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Create finite element map
 #if GRIDDIM == 2
   typedef Dune::PDELab::Pk2DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
+#elif GRIDDIM == 3
+  typedef Dune::PDELab::Pk3DLocalFiniteElementMap<GV, ctype, Real, k> FEM;
 #endif
   FEM fem(gv);
 
@@ -102,7 +121,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
-  ipbs.updateBC(u);
+  //ipbs.updateBC(u);
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
@@ -120,14 +139,23 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
-  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   //LS ls(gfs);
   LS ls(gfs, 20000, 1);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_CG_ILU0 LS;
+  //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_AMG_SOR<GOS> LS;
   LS ls(5000, true);
 #endif
+
+  //typedef Dune::PDELab::StationaryLinearProblemSolver<GOS,LS,U> SLP;
+  //SLP slp(gos, u, ls, 1e-10);
+  //slp.apply();
 
   // <<<5b>>> Solve nonlinear problem
   typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
@@ -136,9 +164,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());
   newton.setReduction(sysParams.get_newton_tolerance());
-  newton.setMinLinearReduction(5e-7); // seems to be low in parallel?
-  newton.setMaxIterations(20);
-  newton.setLineSearchMaxIterations(10);
+  newton.setMinLinearReduction(1e-10); // seems to be low in parallel?
+  newton.setMaxIterations(100);
+  newton.setLineSearchMaxIterations(50);
 
   typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
   
@@ -146,7 +174,11 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double solvertime = 0.;
   double itertime = 0.;
 
-  
+  double fluxError, icError;
+  int iterations = 0;
+
+  DataWriter<GV,dim> mydatawriter(gv, helper);
+
   // --- Here the iterative loop starts ---
 
   do
@@ -166,40 +198,26 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     }
     solvertime += timer.elapsed();
 
-//   // save snapshots of each iteration step
-//   std::stringstream out;
-//   out << "ipbs_step_" << sysParams.counter;
-//   std::string filename = out.str();
-//   DGF udgf_snapshot(gfs,u);
-//   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-//   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-//   vtkwriter.write(filename,Dune::VTK::appendedraw);
-//   // Prepare filename for sequential Gnuplot output
-//   if(helper.size()>1)
-//   {
-//     std::stringstream s;
-//     s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-//     s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
-//     s << filename;
-//     filename = s.str();
-//   }
-//   // Gnuplot output
-//   Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-//   gnuplotwriter.addVertexData(u,"solution");
-//   gnuplotwriter.write(filename + ".dat"); 
+   // save snapshots of each iteration step
+   //std::stringstream out;
+   //out << "ipbs_step_" << iterations;
+   //std::string filename = out.str();
+   //DGF udgf_snapshot(gfs,u);
+   //Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+   //vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+   //vtkwriter.write(filename,Dune::VTK::appendedraw);
+   //mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
-    timer.reset();
-    ipbs.updateBC(u);
-    ipbs.updateIC();
-    itertime += timer.elapsed();
+   timer.reset();
+   ipbs.updateBC(u);
+   ipbs.updateIC();
+   itertime += timer.elapsed();
   }
-  while (ipbs.next_step());
+  while (ipbs.next_step(fluxError,icError,iterations));
 
   // --- here the iterative loop ends! ---
 
 
-  double fluxError, icError;
-  int iterations;
   status << "# reached convergence criterion: " << std::boolalpha <<
     ipbs.next_step(fluxError, icError, iterations) << std::endl;
   status << "# in iteration " << iterations << std::endl
@@ -224,13 +242,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   s << filename << ".dat";
   filename = s.str();
   
-  DataWriter<GV> mydatawriter(gv, helper);
-  mydatawriter.writeIpbsCellData(gfs, u, "solution", "test", status);
-//  mydatawriter.write(filename);
-  // Gnuplot output  - not for higher order elements
-//  Dune::GnuplotWriter<GV> gnuplotwriter(gv);
-//  gnuplotwriter.addVertexData(u,"solution");
-//  gnuplotwriter.write(filename); 
+  mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
   // Calculate the forces
   ipbs.forces(u);
@@ -242,5 +254,44 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
     //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
     //runtime.close();
+    
+#ifdef SURFACE_POT
+    std::cout << "Now I would calculate the surface potential :-)" << std::endl;
+    typedef typename GV::template Codim<0>::template Partition
+              <Dune::Interior_Partition>::Iterator LeafIterator;
+    typedef typename GV::IntersectionIterator IntersectionIterator;
+    typedef typename DGF::Traits::RangeType RT;
+    // Do the loop for all boundaryIDs > 1 (all colloids)
+    for (int i = 2; i < sysParams.get_npart()+2; i++)
+    {
+      int nElems = 0;
+      double sum = 0.;
+      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+      {
+        if(it->hasBoundaryIntersections() == true) {
+          for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+            if(ii->boundary() == true) {
+              if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+              {
+                Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
+                    it->geometry().local(evalPos);
+                RT value;
+                // evaluate the potential
+                udgf.evaluate(*it, local, value);
+                sum += value;
+                nElems++;
+              }
+            }
+          }
+        }
+      }
+      sum /= nElems;
+      boundary[i]->set_res_surface_pot(sum);
+      std::cout << "Averaged surface potential: " << sum << std::endl;
+    }
+#endif
+    
  }
 }

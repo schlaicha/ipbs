@@ -1,3 +1,5 @@
+*.la
+*.lo
 *.msh
 *.kdev4
 .kdev4/
@@ -15,7 +17,6 @@
 Makefile
 Makefile.in
 .deps
-*.m4
 am
 configure
 config.*
@@ -27,11 +28,12 @@ doc/doxygen/doxygen-tag
 doc/doxygen/man
 doc/doxygen/latex
 doc/doxygen/html
-iPBS.pc
+ipbs.pc
 install-sh
 libtool
 ltmain.sh
 missing
-src/iPBS
+src/ipbs
 stamp-h1
-
+aclocal.m4
+dependencies.m4

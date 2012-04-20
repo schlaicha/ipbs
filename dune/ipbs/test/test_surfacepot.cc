@@ -1,20 +1,6 @@
-/** \file
-
-    \brief IPBS - An Iterative Poisson Boltzmann implementation using DUNE
-
-    Here goes some explanation on what is done :-)
-    \todo { Doc Me ! }   
-*/
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-// std includes
-//#include<math.h>
-//#include<iostream>
-//#include<vector>
-//#include<string>
 
 // global DUNE includes
 #include<dune/common/mpihelper.hh>
@@ -22,37 +8,19 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/timer.hh>
 
-//TODO: sort out
-//#include <dune/pdelab/adaptivity/adapt.hh>
-//#include <dune/grid/common/gridenums.hh>
-//#include <dune/common/dynmatrix.hh>
-//#include<dune/pdelab/gridfunctionspace/constraints.hh>
-//#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-//#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
-//#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
-
 /* include grid IO */
 #include<dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/utility/gridtype.hh>
 
-// pdelab includes
-#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include<dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
-#include<dune/pdelab/gridfunctionspace/interpolate.hh>
-#include<dune/pdelab/backend/istlvectorbackend.hh>
-#include<dune/pdelab/backend/istlmatrixbackend.hh>
-#include<dune/pdelab/backend/istlsolverbackend.hh>
-
-
 // global typedefs
 typedef double Real;
 
-#include "sysparams.hh"
-#include "boundary.hh"
-#include "parser.hh"
-#include "ipbs_Pk.hh"
+#include <dune/ipbs/ipbs.hh>
+#include <dune/ipbs/sysparams.hh>
+#include <dune/ipbs/boundary.hh>
+#include <dune/ipbs/ipbs_Pk.hh>
 
-// global access to particles
+// global access to particles and parameters
 std::vector<Boundary*> boundary;
 SysParams sysParams;
 
@@ -70,24 +38,38 @@ int main(int argc, char** argv)
   {
     if(helper.rank()==0)
     {
-       std::cout << "Hello World! This is iPBS." << std::endl;
+       std::cout << "Hello World! This is IPBS." << std::endl;
        std::cout << "parallel run on " << helper.size() << " process(es)" << std::endl;
     }
   }
+ 
+    // set the symmetry of the system
+  sysParams.set_symmetry(2);
   
-  // check arguments
-  if (argc!=2)
+  // Parse other options
+  sysParams.set_maxiter(100);
+  sysParams.set_alpha_ipbs(0.67);
+  sysParams.set_alpha_ic(0.2);
+  sysParams.set_newton_tolerance(1e-10);
+  sysParams.set_bjerrum(0.71);
+  sysParams.set_lambda(1);
+  sysParams.set_tolerance(1e-5);
+  sysParams.set_verbose(4);
+  sysParams.set_salt(0);
+  double epsilonOut = 1.;
+
+  // Create particles
+  int n_particle = 1;
+  sysParams.set_npart(n_particle);
+  for (int i = 0; i < n_particle; i++)
+    boundary.push_back(new Boundary());
+
+  for(int i = 0; i < n_particle; i++)
   {
-    if (helper.rank()==0)
-    {
-	std::cout << "usage: ./iPBS <configuration file>" << std::endl;
-	return 1;
-    }
+    boundary[i]->set_charge_density(1e-3);
+    double epsilonIn = 1.; 
+    boundary[i]->set_epsilons(epsilonIn, epsilonOut);
   }
-  
-  // Parse configuration file.
-  std::string config_file(argv[1]);
-  parser(config_file);
 
   
 //===============================================================
@@ -104,12 +86,13 @@ int main(int argc, char** argv)
   typedef Dune::GridSelector::GridType GridType;
   Dune::GridFactory<GridType> factory;
 
- 
   if(helper.rank() == 0)
   {
     // read a gmsh file
     Dune::GmshReader<GridType> gmshreader;
-    gmshreader.read(factory, sysParams.get_meshfile(), boundaryIndexToEntity, elementIndexToEntity, true, true);
+#if GRIDDIM == 2
+    gmshreader.read(factory, "sphere2d.msh", boundaryIndexToEntity, elementIndexToEntity, true, true);
+#endif
   }
 
   // MPIHelper ensures that this works for the sequential case
@@ -132,25 +115,30 @@ int main(int argc, char** argv)
       << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
   }
 
-
-  // Load balance the parallel grid
-  // grid->globalRefine(sysParams.get_refinement());
- 
   // Load balance the parallel grid
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
 
  // Call problem driver
- ipbs_Pk<GridType, 2>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
-  
+ ipbs_Pk<GridType, 1>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ 
+ double dhsurfacepot = 4.*sysParams.pi*sysParams.get_bjerrum()*(10./(1.+10.*1.));
+ for (int i = 0; i < sysParams.get_npart(); i++)
+ {
+    std::cout << "DH solution:\t" << dhsurfacepot << "\tipbs solution: " <<
+        boundary[i]->get_res_surface_pot() << std::endl;
+ } 
  // done
  return 0;
  }
+
  catch (Dune::Exception &e){
   std::cerr << "Dune reported error: " << e << std::endl;
+  return 1;
  }
  catch (...){
   std::cerr << "Unknown exception thrown!" << std::endl;
+  return 2;
  }
-} 
-
+ 
+}
 // ============================================================================

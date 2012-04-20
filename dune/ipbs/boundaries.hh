@@ -13,6 +13,10 @@
 #include<dune/common/fvector.hh>
 #include "p0layout.hh"
 #include "ipbsolver.hh"
+#include "boundary.hh"
+
+#include <dune/common/exceptions.hh>
+class BC_Error : public Dune::IOError {};
 
 // ============================================================================
 /** \brief class defining the inner elements */
@@ -46,6 +50,7 @@ public:
     switch ( physgroup_index )
     {
       default : y = 1.0;  break; // only one material here
+                                 // i.e. only one domain of computation
     }
   }
 
@@ -85,20 +90,16 @@ public:
   {
 
     /** use physical index to determine B.C.
-    *   values are specified in .geo file
+    *   values are specified in .geo file and compared to boundary type in the configuration
     *   \arg 0 is for Dirichlet surfaces
     *   \arg 1 for Neumann
-    *   \arg 2 for iPBS iterated boundaries  */
+    *   \arg 2 for IPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index == 0)// || physgroup_index > 1)
+    if (boundary[physgroup_index]->get_type() == 0)
       y = 1;
     else
       y = 0;
-    // if (physgroup_index > 0)
-    //   y = 0;  // All others are Neumann boundaries
-    // else
-    //   y = 1;  // only zero is Dirichlet
     return;
   }
 
@@ -115,7 +116,7 @@ private:
 
 /** \brief Set Dirichlet B.C.
 *
-*   This sets the potential to zero (Dirichlet B.C.) at the system outer boundaries */
+*   This sets the potential (Dirichlet B.C.) at the boundaries */
 
 template<typename GV, typename RF, typename PGMap>
 class BCExtension
@@ -136,14 +137,15 @@ public :
                         const typename Traits::DomainType& xlocal,
                         typename Traits::RangeType& y) const
   {
-    //! Set value for potential at outer domain boundaries
-    // const int dim = Traits::GridViewType::Grid::dimension;
-    // typedef typename Traits::GridViewType::Grid::ctype ctype;
-    // Dune::FieldVector<ctype,dim> x = e.geometry().global(xlocal) ;
-    // if (x.two_norm() < 21.)
-    //   y = 1.0;
-    // else
-      y = 0.0;
+    for (IntersectionIterator ii = gv.ibegin(e); ii != gv.iend(e); ++ii) {
+      if(ii->boundary() == true) {
+        int physgroup_index = pg[ii->boundarySegmentIndex()];
+        if (boundary[physgroup_index]->get_type() == 0)
+          y = boundary[physgroup_index]->get_potential();
+        else 
+          y=0;
+      }
+    }
     return;
   }
 
@@ -188,11 +190,14 @@ public:
     *   \arg 2 for iPBS iterated boundaries  */
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index > 1)
+    if (boundary[physgroup_index]->get_type() == 2)
       y = ipbsolver.get_flux(i);
-    else
-      y = 0;
-    //std::cout << i.geometry().center() << " " << y << std::endl;
+    else if (boundary[physgroup_index]->get_type() == 1)
+      y = -4. * sysParams.get_bjerrum() * sysParams.pi
+          * boundary[physgroup_index]->get_charge_density();
+    else {
+      DUNE_THROW(BC_Error, "Something went wrong in assigning the BC!");
+      y = 0;}
     return;
   }
 
@@ -202,109 +207,5 @@ private:
   const PGMap& pg;
   const Ipbssolver& ipbsolver;
 };
-
-
-// ============================================================================
-//! \brief class defining radiation and Neumann boundary conditions for reference solution
-
-template<typename GV, typename RF, typename PGMap>
-class RefBoundaryFlux
-  : public Dune::PDELab::BoundaryGridFunctionBase<
-           Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, RefBoundaryFlux<GV,RF,PGMap> >
-{
-public:
-
-  typedef Dune::PDELab::BoundaryGridFunctionTraits<
-          GV,RF,1,Dune::FieldVector<RF,1> > Traits;
-  typedef typename Traits::GridViewType::Grid::ctype ctype;
-
-  //! constructor
-  RefBoundaryFlux(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
-
-  //! evaluate flux boundary condition
-  template<typename I>
-  inline void evaluate(I& i,
-                       typename Traits::RangeType& y) const
-  {
-     /** use physical index to determine B.C.
-    *   values are specified in .geo file
-    *   \arg 0 is for Dirichlet surfaces
-    *   \arg 1 for Neumann
-    *   \arg 2 for surface flux given by charge density */
-
-    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index > 1)
-      // switch (sysParams.get_symmetry())
-      // {
-      //   case 2:
-           y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum() / boundary[physgroup_index-2]->get_epsilon();
-      //     break;
-      //   case 3:
-      //     y = boundary[physgroup_index-2]->get_charge_density()  * 4.0 * sysParams.pi * sysParams.get_bjerrum();
-      //     break;
-      // }
-    else y = 0;
-    return;
-  }
-  
-  private:
-
-  const GV&    gv;
-  const PGMap& pg;
-};
-
-// ============================================================================
-
-//! \brief class defining radiation and Neumann boundary conditions
-
-template<typename GV, typename RF, typename PGMap, typename IndexLookupMap>
-class OldBoundaryFlux
-  : public Dune::PDELab::BoundaryGridFunctionBase<
-           Dune::PDELab::BoundaryGridFunctionTraits<GV,RF,1,
-           Dune::FieldVector<RF,1> >, OldBoundaryFlux<GV,RF,PGMap, IndexLookupMap> >
-{
-public:
-
-  typedef Dune::PDELab::BoundaryGridFunctionTraits<
-          GV,RF,1,Dune::FieldVector<RF,1> > Traits;
-  typedef typename Traits::GridViewType::Grid::ctype ctype;
-
-  //! constructor
-  OldBoundaryFlux(const GV& gv_, const PGMap& pg_, const double fluxValues[],
-      const IndexLookupMap& indexLookupMap_, const int offset_) : gv(gv_), pg(pg_),
-      indexLookupMap(indexLookupMap_), offset(offset_), mapper(gv)
-  {fluxContainer = fluxValues;}
-
-  //! evaluate flux boundary condition
-  template<typename I>
-  inline void evaluate(I& i, typename Traits::RangeType& y) const
-  {
-    /** use physical index to determine B.C.
-* values are specified in .geo file
-* \arg 0 is for Dirichlet surfaces
-* \arg 1 for Neumann
-* \arg 2 for iPBS iterated boundaries */
-
-    int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
-    if (physgroup_index > 1)
-    {
-      int mappedIndex = indexLookupMap.find(mapper.map(*i.inside()))->second + offset;
-y = fluxContainer[mappedIndex];
-    }
-    else y = 0;
-    return;
-  }
-
-private:
-
-  const GV& gv;
-  const PGMap& pg;
-  const double* fluxContainer;
-  const IndexLookupMap& indexLookupMap;
-  const int offset;
-  const Dune::MultipleCodimMultipleGeomTypeMapper<GV,P0Layout> mapper;
-};
-
 
 #endif  // _BOUNDARIES_HH

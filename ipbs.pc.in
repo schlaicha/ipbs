@@ -8,7 +8,7 @@ DEPENDENCIES=@REQUIRES@
 
 Name: @PACKAGE_NAME@
 Version: @VERSION@
-Description: iPBS - An iterative Poisson Boltzmann Solver for regions with dielectric missmatch
+Description: IPBS - An iterative Poisson Boltzmann solver for regions with dielectric mismatch
 URL: http://www.icp.uni-stuttgart.de
 Requires: dune-common dune-grid dune-localfunctions dune-istl dune-pdelab
 Libs: -L

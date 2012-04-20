@@ -1,3 +1,3 @@
-SUBDIRS = iPBS
+SUBDIRS = ipbs
 
 include $(top_srcdir)/am/global-rules

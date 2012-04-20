@@ -1,29 +1,23 @@
 
 SUBDIRS =
 
-noinst_PROGRAMS = iPBS
+noinst_PROGRAMS = ipbs
 
-iPBS_SOURCES = iPBS.cc sysparams.cc parser.cc boundary.cc
+ipbs_SOURCES = ipbs.cc
 
-MY_GRIDDIM_CPPFLAGS = -DGRIDDIM=@MY_GRIDDIM@ -DWORLDDIM=@MY_GRIDDIM@ -DNOGRID
-#MY_GRIDTYPE_CPPFLAGS = -DGRIDTYPE=@MY_GRIDTYPE@
-
-iPBS_CPPFLAGS = $(AM_CPPFLAGS) \
+ipbs_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(DUNEMPICPPFLAGS) \
 	$(UG_CPPFLAGS) \
 	$(AMIRAMESH_CPPFLAGS) \
 	$(ALBERTA_CPPFLAGS) \
 	$(ALUGRID_CPPFLAGS) \
-	$(MY_GRIDDIM_CPPFLAGS)
-#	$(MY_GRIDTYPE_CPPFLAGS)
-#	-DGRIDDIM=2 -DWORLDDIM=2
-#	$(GRIDDIM_CPPFLAGS) 
+	$(GRIDDIM_CPPFLAGS) 
 
 # The libraries have to be given in reverse order (most basic libraries
 # last).  Also, due to some misunderstanding, a lot of libraries include the
 # -L option in LDFLAGS instead of LIBS -- so we have to include the LDFLAGS
 # here as well.
-iPBS_LDADD = \
+ipbs_LDADD = \
 	$(DUNE_LDFLAGS) $(DUNE_LIBS) \
 	$(ALUGRID_LDFLAGS) $(ALUGRID_LIBS) \
 	$(ALBERTA_LDFLAGS) $(ALBERTA_LIBS) \
@@ -31,8 +25,7 @@ iPBS_LDADD = \
 	$(UG_LDFLAGS) $(UG_LIBS) \
 	$(DUNEMPILIBS)	\
 	$(LDADD) 
-#  	-L/work/schlaich/gsl/lib/gsl -L/work/schlaich/gsl/lib/gslcblas
-iPBS_LDFLAGS = $(AM_LDFLAGS) \
+ipbs_LDFLAGS = $(AM_LDFLAGS) \
 	$(DUNEMPILDFLAGS) \
 	$(UG_LDFLAGS) \
 	$(AMIRAMESH_LDFLAGS) \

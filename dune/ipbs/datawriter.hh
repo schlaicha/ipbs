@@ -25,7 +25,7 @@ extern std::vector<Boundary*> boundary;
     \tparam GridView Level- or LeafGridView
 */
 
-template<class GridView>
+template<class GridView, int codim=0>
 class DataWriter {
     
   typedef typename GridView::Grid::ctype ctype;
@@ -43,7 +43,7 @@ class DataWriter {
         \param filename Filename for the output (*.dat)
     */
 
-    template <class GFS, class DataContainer, int codim=0>
+    template <class GFS, class DataContainer>
     void writeIpbsCellData(const GFS& gfs, const DataContainer& data, 
             const std::string& name, const std::string &filename,
             const std::stringstream& statusMessage = "")

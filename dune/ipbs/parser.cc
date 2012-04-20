@@ -45,7 +45,8 @@ void parser(std::string config_file)
 
   // set the symmetry of the system
   sysParams.set_symmetry(configuration.get<double>("mesh.symmetry"));
-  sysParams.set_boxLength(configuration.get<double>("mesh.boxLength",0.0));
+  // TODO remove if unnecessary
+  //sysParams.set_boxLength(configuration.get<double>("mesh.boxLength",0.0));
   
   // Parse other options
   sysParams.set_maxiter(configuration.get<int>("solver.maxiter",100));
@@ -72,14 +73,14 @@ void parser(std::string config_file)
   {
     std::string p_name = "boundary_";
     std::ostringstream s;
-    s << p_name << i+2; // we don't need to set 0 and 1
-                        // remember that vector starts with 0, so access the boundaries with -2
-                        // TODO find a clever way!
+    s << p_name << i; 
+                        
     p_name = s.str();
-    boundary[i]->set_charge_density(configuration.get<double>(p_name+".charge_density"));
-    double epsilonIn = configuration.get<double>(p_name+".epsilon"); 
+    boundary[i]->set_charge_density(configuration.get<double>(p_name+".charge_density",0));
+    double epsilonIn = configuration.get<double>(p_name+".epsilon",1); 
     boundary[i]->set_epsilons(epsilonIn, epsilonOut);
-    boundary[i]->set_isPlane(configuration.get<bool>(p_name+".isPlane", false));
+    boundary[i]->set_type(configuration.get<int>(p_name+".type",0));
+    boundary[i]->set_potential(configuration.get<double>(p_name+".potential",0));
   }
 
 }
