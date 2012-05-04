@@ -4,12 +4,12 @@
 #ifndef _PBLOP_H
 #define _PBLOP_H
 
-#include<dune/grid/common/genericreferenceelements.hh>
-#include<dune/grid/common/quadraturerules.hh>
-#include<dune/pdelab/common/geometrywrapper.hh>
-#include<dune/pdelab/localoperator/defaultimp.hh>
-#include<dune/pdelab/localoperator/pattern.hh>
-#include<dune/pdelab/localoperator/flags.hh>
+#include <dune/geometry/referenceelements.hh>
+#include <dune/geometry/quadraturerules.hh>
+#include <dune/pdelab/common/geometrywrapper.hh>
+#include <dune/pdelab/localoperator/defaultimp.hh>
+#include <dune/pdelab/localoperator/pattern.hh>
+#include <dune/pdelab/localoperator/flags.hh>
 
 #include "sysparams.hh"
 

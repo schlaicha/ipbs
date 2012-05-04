@@ -10,6 +10,7 @@
    \param boundaryIndexToEntity mapper defining the index of boundary elements
 */
 
+#include <dune/pdelab/gridoperator/gridoperator.hh>
 #if GRIDDIM == 2
 #include<dune/pdelab/finiteelementmap/pk2dfem.hh>	// Pk in 2 dimensions
 #elif GRIDDIM == 3
@@ -23,6 +24,10 @@
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
+
+#if HAVE_MPI
+#include <dune/pdelab/backend/novlpistlsolverbackend.hh>
+#endif
 
 #include <dune/ipbs/datawriter.hh>
 #include <dune/ipbs/ipbsolver.hh>
@@ -96,7 +101,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
 #endif
 
   // Create coefficient vector (with zero values)
-  typedef typename GFS::template VectorContainer<Real>::Type U;
+  typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
   U u(gfs,0.0);
   
   // <<<3>>> Make FE function extending Dirichlet boundary conditions
@@ -122,15 +127,24 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef PBLocalOperator<M,B,J> LOP;
   LOP lop(m,b,j,k+1);   // integration order
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,LOP,CC,CC,MBE,true> GOS;
-  GOS gos(gfs,cc,gfs,cc,lop);
+#if HAVE_MPI    // enable overlapping mode
+  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
+                                    Real,Real,Real,CC,CC,true> GO;
+#else
+  typedef Dune::PDELab::GridOperator<GFS,GFS,LOP,MBE,
+                                    Real,Real,Real,CC,CC> GO;
+#endif
+  GO go(gfs,cc,gfs,cc,lop);
 
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
-  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GOS,double> LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  LS ls(gfs);
+  //LS ls(gfs);
+  LS ls(gfs, 20000, 1);
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   //typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
@@ -144,8 +158,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   //slp.apply();
 
   // <<<5b>>> Solve nonlinear problem
-  typedef Dune::PDELab::Newton<GOS,LS,U> NEWTON;
-  NEWTON newton(gos,u,ls);
+  typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
+  NEWTON newton(go,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());

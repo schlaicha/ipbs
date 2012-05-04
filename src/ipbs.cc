@@ -27,7 +27,6 @@
 //#include <dune/grid/common/gridenums.hh>
 //#include <dune/common/dynmatrix.hh>
 //#include<dune/pdelab/gridfunctionspace/constraints.hh>
-//#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
 //#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 //#include<dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 //#include<dune/pdelab/finiteelementmap/p1fem.hh>	// P1 in 1,2,3 dimensions
