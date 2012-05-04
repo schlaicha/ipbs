@@ -213,3 +213,12 @@ int SysParams::get_refinement()
 {
   return refinement;
 }
+
+void SysParams::set_pH(double pH_) {
+    pH=pH_;
+}
+
+double SysParams::get_pH() 
+{
+    return pH;
+}

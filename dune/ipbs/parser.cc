@@ -61,6 +61,7 @@ void parser(std::string config_file)
   sysParams.set_tolerance(configuration.get<double>("solver.tolerance"));
   sysParams.set_verbose(configuration.get<int>("system.verbose",verbose));
   sysParams.set_salt(configuration.get<int>("system.salt"));
+  sysParams.set_pH(configuration.get<double>("system.pH", 7.));
   double epsilonOut = configuration.get<double>("system.epsilon");
 
   // Create particles
@@ -81,6 +82,9 @@ void parser(std::string config_file)
     boundary[i]->set_epsilons(epsilonIn, epsilonOut);
     boundary[i]->set_type(configuration.get<int>(p_name+".type",0));
     boundary[i]->set_potential(configuration.get<double>(p_name+".potential",0));
+    boundary[i]->set_sigma_max(configuration.get<double>(p_name+".sigma_max",0));
+    boundary[i]->set_Y(configuration.get<double>(p_name+".Y",0));
+    boundary[i]->set_pK(configuration.get<double>(p_name+".pK",0));
   }
 
 }
