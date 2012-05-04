@@ -1,8 +1,7 @@
-// Single Geometry Single Codim Mapper
-
 #ifndef _IPBSOLVER_HH
 #define _IPBSOLVER_HH
 
+// Single Geometry Single Codim Mapper
 #include <dune/grid/common/scsgmapper.hh>
 #include<dune/common/fvector.hh>
 #include <gsl/gsl_sf_ellint.h>
@@ -29,7 +28,7 @@ class Ipbsolver
   // Some typedef
   typedef typename GV::Grid::ctype ctype;
   static const int dim = GV::dimension;
-  typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
+  typedef typename GFS::template VectorContainer<Real>::Type U;
 
   public:
     Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
@@ -92,7 +91,6 @@ class Ipbsolver
     {
       int mappedIndex = indexLookupMap.find(boundaryElemMapper.map(*i.inside()))->second + my_offset;
       double y = bContainer[mappedIndex];
-      //std::cout << "rank " << helper.rank() << " returned flux " << y << std::endl;
       return y;
     }
 
@@ -113,12 +111,10 @@ class Ipbsolver
         ic[i] = -(eps_in - eps_out) / (eps_in+eps_out)
                                 * ( my_charge + eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
                                     * bEfield[i] );
-        //std::cout << "ic[" << i << "] = " << ic[i] << std::endl;
       }
-      //for (unsigned int i = 0; i < inducedChargeDensity.size(); i++)
-      //  std::cout << communicator.rank() << " induced charge density before " << i << " " << inducedChargeDensity[i] << std::endl;
       communicator.barrier();
       communicator.sum(&ic[0], ic.size());
+
       // Do the SOR 
       for (unsigned int i = 0; i < inducedChargeDensity.size(); i++) {
         inducedChargeDensity[i] = sysParams.get_alpha_ic() * ic[i]
@@ -129,10 +125,6 @@ class Ipbsolver
       }
       communicator.barrier();
       communicator.max(&icError, 1);
- 
-//      if (communicator.rank() == 0)
-//        for (unsigned int i = 0; i < inducedChargeDensity.size(); i++)
-//          std::cout << communicator.rank() << " induced charge density: " << i << " " << inducedChargeDensity[i] << std::endl;
     }
 
     // ------------------------------------------------------------------------
@@ -142,22 +134,23 @@ class Ipbsolver
     void updateBC(const U& u)
     {
       fluxError = 0;  // reset the fluxError for next iteration step
+      
       /// Construct a discrete grid function space for access to solution
       typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
       DGF udgf(gfs,u);
       typedef typename GV::template Codim<0>::template Partition
               <Dune::Interior_Partition>::Iterator LeafIterator;
+
       /// Store the new calculated values
       bContainerType fluxes(ipbsPositions.size(),0.);
       bEfield.assign(ipbsPositions.size(),0.);
-      //std::cout << "Flux length: " << fluxes.size() << std::endl;
 
       // Loop over all elements and calculate the volume integral contribution
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
         typedef typename DGF::Traits::RangeType RT;	// store potential during integration 
-                                  						      // (for calculating sinh-term)
+                       						        // (for calculating sinh-term)
         // Evaluate the potential at the elements center
    	    RT value;
         udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
@@ -181,10 +174,12 @@ class Ipbsolver
             {
               Dune::FieldVector<ctype,dim> E_field(0.);
               E_field = dist;
-#if GRIDDIM == 2
+#if     GRIDDIM == 2
                 E_field /= dist.two_norm() * dist.two_norm();
-#elif GRIDDIM == 3
+#elif   GRIDDIM == 3
                 E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
+#elif
+                DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
 #endif                  
                 volumeElem_flux = E_field * unitNormal;
                 volumeElem_flux *= sysParams.get_lambda2i() / (4.0 * sysParams.pi) * it->geometry().volume();
@@ -274,23 +269,26 @@ class Ipbsolver
                                                          on this particular surface element */
               Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
               Dune::FieldVector<ctype,dim> dist = r - r_prime;
+
               // Integration depends on symmetry!
               switch ( sysParams.get_symmetry() )
               {
-                case 0:
+                case 0:     // cartesian coordinates 
                 {
                   Dune::FieldVector<ctype,dim> E_field(0.);
                   E_field = dist;
-#if GRIDDIM == 2
+#if     GRIDDIM == 2
                   E_field /= dist.two_norm() * dist.two_norm();
-#elif GRIDDIM == 3
+#elif   GRIDDIM == 3
                   E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
+#elif
+                DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
 #endif                  
                   surfaceElem_flux = E_field * unitNormal;
                   surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
                 }
                 break;
-                case 1:  // mirror particle charge on y-axis
+                case 1:  // mirror particle charge on y-axis (sph. red. sym)
                 {
                   double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
                   double b = 4.0 * r[1] * r_prime[1];
@@ -319,7 +317,7 @@ class Ipbsolver
                   surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
                 }
                 break;
-                case 2: // "spherical symmetry"
+                case 2:     // spherical reduced symmetry
                 {
                   double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
                   double b = 4.0 * r[1] * r_prime[1];
@@ -374,17 +372,6 @@ class Ipbsolver
         communicator.sum(&fluxes[0], fluxes.size());
         communicator.sum(&bEfield[0], fluxes.size());
 
-        //for (int i = 0; i < bEfield.size(); i++) {
-        //  std::cout << "bEfield[" << i << "] = " << bEfield[i] << std::endl;
-        //}
-
-        // debuging :-)
-        //std::stringstream outname;
-        //outname << "rank_" << communicator.rank() << "_step_" << sysParams.counter << ".dat";
-        //std::string filename = outname.str();
-        //std::ofstream outfile;
-        //outfile.open(filename, std::ios::out);
-
         // Do the SOR 
         for (unsigned int i = my_offset; i < target; i++) {
           bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
@@ -392,7 +379,6 @@ class Ipbsolver
           double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
                         /(fluxes[i]+bContainer[i]));
           fluxError = std::max(fluxError, local_fluxError);
-          //outfile << ipbsPositions[i] << " " << bContainer[i] << std::endl;
         }
         communicator.barrier();
         communicator.max(&fluxError, 1);
@@ -420,270 +406,52 @@ class Ipbsolver
 
         // Do the loop for boundary type 2 (iterated b.c.)
         // TODO: implement that!
-      for (int i = 0; i < sysParams.get_npart(); i++)
-      {
-        std::cout << "Calculating the force acting on particle id " << i << std::endl;
-        Dune::FieldVector<Real, dim> F(0);
-
-        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-                 	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+        for (int i = 0; i < sysParams.get_npart(); i++)
         {
-          if(it->hasBoundaryIntersections() == true) {
-            for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-              if(ii->boundary() == true) {
-                if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-                {
-                  Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
-                  Dune::FieldVector<Real, dim> forcevec;
-                  normal *= -1.0 * ii->geometry().volume(); // Surface normal
-                  Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                  Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
-                  //sigma.umv(normal, F);
-                  sigma.mv(normal, forcevec);
-                  if (sysParams.get_symmetry() > 0) {
-                    // integration in theta
-                    forcevec *= 2.*sysParams.pi*evalPos[1]; 
+          std::cout << std::endl << "Calculating the force acting on particle id " << i << std::endl;
+          Dune::FieldVector<Real, dim> F(0);
+
+          for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+                   	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+          {
+            if(it->hasBoundaryIntersections() == true) {
+              for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+                if(ii->boundary() == true) {
+                  if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+                  {
+                    Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
+                    Dune::FieldVector<Real, dim> forcevec;
+                    normal *= -1.0 * ii->geometry().volume(); // Surface normal
+                    Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                    Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
+                    //sigma.umv(normal, F);
+                    sigma.mv(normal, forcevec);
+                    if (sysParams.get_symmetry() > 0) {
+                      // integration in theta
+                      forcevec *= 2.*sysParams.pi*evalPos[1]; 
+                    }
+                    F += forcevec;
+                    vector_force_file << evalPos << " " << forcevec << std::endl;
                   }
-                  F += forcevec;
-                  vector_force_file << evalPos << " " << forcevec << std::endl;
                 }
               }
             }
           }
+          // Sum up force of all nodes
+          communicator.barrier();
+          communicator.sum(&F[0], F.dim());
+          if (communicator.rank() == 0)
+            force_file << i << " " << F << std::endl;        
         }
-        // Sum up force of all nodes
-        communicator.barrier();
-        communicator.sum(&F[0], F.dim());
-        if (communicator.rank() == 0)
-          force_file << i << " " << F << std::endl;        
-      }
+    
+      // close output
       if (communicator.rank() == 0) {
         force_file.close();
         vector_force_file.close();
+        }
       }
-    }
 
-   
-//    // ------------------------------------------------------------------------
-//    /// Force computation -- alternative trial version
-//    // ------------------------------------------------------------------------
-//    
-//    void forces2(const U& u, const double del = 2e-2)
-//    {
-//      // Here we once more loop over all elements on this node (need of the element information
-//      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
-//      // (see Hsu06a, eq. 61)
-//
-//      // Open output file for force on particles
-//      std::ofstream force_file;
-//      if (communicator.rank() == 0) {
-//        force_file.open ("forces2.dat", std::ios::out);
-//      }
-//
-//      Dune::FieldVector<Real, dim> F;
-//      int evalRank = communicator.size();
-//      int myRank = communicator.rank();
-//
-//      Dune::FieldVector<ctype,dim> x, rightNormal, leftNormal;
-//      x[0] = 0;
-//      leftNormal[0] = -1.;
-//      rightNormal[0] = 1.;
-//      leftNormal[1] = rightNormal[1] = 0;
-//
-//      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
-//      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
-//      Ep null (NULL);
-//
-//      bool exit = false;  // stay in loop till upper boarder of the grid is reached
-//      for (double y = 0; ; y+=del) {
-//        x[1] = y;
-//
-//        Hsearch hsearch(gv.grid(), gv.indexSet());
-//        Ep ep(null);  // Initialize an empty entity pointer
-//        try{
-//          ep = hsearch.findEntity(x);
-//          if(ep->partitionType() == Dune::InteriorEntity)
-//            evalRank = myRank;
-//        }
-//        catch (const Dune::GridError&) { /* do nothing */ }
-//
-//        evalRank = communicator.min(evalRank);
-//          if(myRank == evalRank) {
-//            std::cout << "Detected element containing " << x << " on rank " << myRank << std::endl;
-//            Dune::FieldVector<Real, dim> forcevec, normal;
-//            normal = rightNormal;
-//            normal *= del; // Surface normal
-//            Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, x, u);
-//            //sigma.umv(normal, F);
-//            sigma.mv(normal, forcevec);
-//            forcevec *= 2.*sysParams.pi*x[1]; // integration in theta
-//            F += forcevec;
-//          }
-//        else
-//            ep = null;
-//        if(myRank == 0 && evalRank == communicator.size()) {
-//            Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-//                  << "the grid" << std::endl;
-//            exit = 1;
-//        }
-//        exit = communicator.max(exit);
-//        if (exit == 1)
-//          break;
-//        evalRank = communicator.size();
-//      }
-//
-//      std::cout << "Arrived at barrier." << std::endl;
-//
-//      // Sum up force of all nodes
-//      communicator.barrier();
-//      communicator.sum(&F[0], F.dim());
-//      if (communicator.rank() == 0) {
-//        force_file << F << std::endl;        
-//        force_file.close();
-//      }
-//    }
-//
-//    // ------------------------------------------------------------------------
-//    /// Force computation -- alternative trial version (SPHERE)
-//    // ------------------------------------------------------------------------
-////    void forces3(const U& u, const int steps = 1000)
-////    {
-////      // Here we once more loop over all elements on this node (need of the element information
-////      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
-////      // (see Hsu06a, eq. 61)
-////
-////      // Open output file for force on particles
-////      std::ofstream force_file, vector_force_file;
-////      vector_force_file.open (filename_helper("vector_forces3"), std::ios::out);
-////      if (communicator.rank() == 0) {
-////        force_file.open ("forces3.dat", std::ios::out);
-////      }
-////
-////      Dune::FieldVector<Real, dim> F;
-////      int evalRank = communicator.size();
-////      int myRank = communicator.rank();
-////
-////      typedef typename Dune::HierarchicSearch<typename GV::Grid, typename GV::IndexSet> Hsearch;
-////      typedef typename GV::Grid::Traits::template Codim<0>::EntityPointer Ep;
-////      Ep null(NULL);
-////      Dune::FieldVector<ctype,dim> x, normal;
-////      Hsearch hsearch(gv.grid(), gv.indexSet());
-////      Ep ep(null);  // Initialize an empty entity pointer
-////
-////      bool exit = false;  // stay in loop till upper boarder of the grid is reached
-////      double del = 1./sqrt(sysParams.get_lambda2i());
-////      double y_max = 0.;
-////      double x_max = 0.;
-////      x[0] = 0;
-////      for (;;y_max+=del) {
-////        x[1] = y_max;
-////        try{
-////          ep = hsearch.findEntity(x);
-////          if(ep->partitionType() == Dune::InteriorEntity)
-////            evalRank = myRank;
-////        }
-////        catch (const Dune::GridError&) { /* do nothing */ }
-////        evalRank = communicator.min(evalRank);
-////        if(myRank == evalRank) {
-////            std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
-////            Dune::FieldVector<Real, dim> forcevec, normal;
-////        }
-////        else
-////            ep = null;
-////        if(myRank == 0 && evalRank == communicator.size()) {
-////          Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-////                << "the grid" << std::endl;
-////        exit = 1;
-////      }
-////      exit = communicator.max(exit);
-////      if (exit == 1)
-////        break;
-////      evalRank = communicator.size();
-////    }
-////    communicator.barrier();
-////    y_max = communicator.max(y_max)-del;
-////    exit  = 0; 
-////    x[1] = y_max;
-////    for (;;x_max-=del) {
-////      x[0] = x_max;
-////      try{
-////        ep = hsearch.findEntity(x);
-////        if(ep->partitionType() == Dune::InteriorEntity)
-////          evalRank = myRank;
-////      }
-////      catch (const Dune::GridError&) { /* do nothing */ }
-////      evalRank = communicator.min(evalRank);
-////      if(myRank == evalRank) {
-////          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
-////          Dune::FieldVector<Real, dim> forcevec, normal;
-////      }
-////      else
-////          ep = null;
-////      if(myRank == 0 && evalRank == communicator.size()) {
-////        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-////              << "the grid" << std::endl;
-////      exit = 1;
-////    }
-////    exit = communicator.max(exit);
-////    if (exit == 1)
-////      break;
-////    evalRank = communicator.size();
-////    }
-////    
-////    communicator.barrier();
-////    x_max = communicator.max(x_max)-del;
-////    double radius = (fabs(x_max/2.) > y_max ? y_max : (fabs(x_max/2.)));
-////    del = 2.*radius / steps;
-////    double y_old = 0.;
-////    double x_old = 0.;
-////    for (double x = 0; x > x_max; x-=del)
-////    {
-////      double y = sqrt(radius*radius - (x+radius)*(x+radius));
-////      Dune::FieldVector<Real, dim> evalPos;
-////      evalPos[0] = x;
-////      evalPos[1] = y;
-////      double dx = x-x_old;
-////      double dy = y-y_old;
-////      Dune::FieldVector<Real, dim> normal(evalPos);
-////      normal /= radius;
-////      Dune::FieldVector<Real, dim> forcevec;
-////      normal *= sqrt(dx*dx+dy*dy); // Surface normal
-////      // detect element to evaluate on
-////      try{
-////        ep = hsearch.findEntity(evalPos);
-////        if(ep->partitionType() == Dune::InteriorEntity)
-////          evalRank = myRank;
-////      }
-////      catch (const Dune::GridError&) { /* do nothing */ }
-////      evalRank = communicator.min(evalRank);
-////      if(myRank == evalRank) {
-////          std::cout << "Detected element conatining " << x << " on rank " << myRank << std::endl;
-////          Dune::FieldVector<Real, dim> forcevec, normal;
-////      }
-////      if(myRank == 0 && evalRank == communicator.size()) {
-////        Dune::dwarn << "Warning: GridFunctionProbe at (" << x << ") is outside "
-////              << "the grid" << std::endl;
-////      }
-////
-////      Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, ep, evalPos, u);
-////      //sigma.umv(normal, F);
-////      sigma.mv(normal, forcevec);
-////      forcevec *= 2.*sysParams.pi*evalPos[1]; // integration in theta
-////      F += forcevec;
-////      vector_force_file << evalPos << " " << forcevec << std::endl;
-////    }
-////
-////    // Sum up force of all nodes
-////    communicator.barrier();
-////    communicator.sum(&F[0], F.dim());
-////    if (communicator.rank() == 0) {
-////      force_file << F << std::endl;        
-////      force_file.close();
-////    }
-////    vector_force_file.close();
-////  }
-//
-//  
+  
   // ------------------------------------------------------------------------
 
   private:
