@@ -15,10 +15,18 @@ class Boundary
     void set_charge_density(double _value);
     void set_type (int);
     void set_potential(double);
+    void set_sigma_max(double);
+    void set_pK(double);
+    void set_Y(double);
+
     double get_charge_density();
     double get_dielectric_factor();
     double get_epsilon();
     double get_potential();
+    double get_sigma_max();
+    double get_pK();
+    double get_Y();
+
     int get_type();
 
   private:
@@ -27,6 +35,10 @@ class Boundary
     double charge_density;
     int type;
     double potential;
+    
+    double sigma_max;
+    double pK;
+    double Y;
 };
 
 #endif  // _BOUNDARY_H
