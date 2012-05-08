@@ -1,6 +1,11 @@
 #ifndef _BCEXTENSION_HH
 #define _BCEXTENSION_HH
 
+#include "p0layout.hh"
+#include "ipbsolver.hh"
+#include "boundary.hh"
+
+
 /** \brief Set Dirichlet B.C.
 *
 *   This sets the potential (Dirichlet B.C.) at the boundaries */
