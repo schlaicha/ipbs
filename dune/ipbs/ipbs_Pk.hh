@@ -185,14 +185,14 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     solvertime += timer.elapsed();
 
    // save snapshots of each iteration step
-   //std::stringstream out;
-   //out << "ipbs_step_" << iterations;
-   //std::string filename = out.str();
-   //DGF udgf_snapshot(gfs,u);
-   //Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-   //vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-   //vtkwriter.write(filename,Dune::VTK::appendedraw);
-   //mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+   std::stringstream out;
+   out << "ipbs_step_" << iterations;
+   std::string filename = out.str();
+   DGF udgf_snapshot(gfs,u);
+   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+   vtkwriter.write(filename,Dune::VTK::appendedraw);
+   mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
    timer.reset();
    ipbs.updateBC(u);

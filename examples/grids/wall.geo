@@ -2,17 +2,17 @@
 // Creates a charged wall for iPBS using spherical symmetry
 // refinement is done via the characteristic length
 
-box_length = 150;
+box_length = 22;
 box_width = 30;
 wall_position = 0;
-wall_width = 2;
-wall_height = 140;
-wall_refinement = .1;
-lower_left_refinement =4.;
-upper_left_refinement = 10.;
-lower_right_refinement = 8.;
-upper_right_refinement = 10.;
-center_refinement = 0.1;
+wall_width = 1;
+wall_height = 16;
+wall_refinement = .3;
+lower_left_refinement =3.;
+upper_left_refinement = 3.;
+lower_right_refinement = 3.;
+upper_right_refinement = 3.;
+center_refinement = .3;
 
 // Define the geometry for the wall (iPBS)
 
@@ -48,10 +48,10 @@ Plane Surface(14) = {13};
 // 0 is for Dirichlet boundary elements
 // 1 for Neumann
 // 2 for iPBS
-Physical Line(1) = {9, 1, 2, 3, 4, 5, 6, 7};
-Physical Line(2) = {8};
-Physical Line(3) = {10};
-Physical Line(4) = {11, 12};
+Physical Line(0) = {9, 1, 2, 3, 4, 5, 6, 7};
+Physical Line(1) = {8};
+Physical Line(2) = {10};
+Physical Line(3) = {11, 12};
 
 // At least one physical surface (or physical volume
 // is needed by DUNE gmshreader (otherwise all elements
