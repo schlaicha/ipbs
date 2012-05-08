@@ -100,7 +100,7 @@ public:
 
     int physgroup_index = pg[i.intersection().boundarySegmentIndex()];
     if (boundary[physgroup_index]->get_type() == 2)
-      y = ipbsolver.get_flux(i);
+      y = -ipbsolver.get_flux(i);
     else if (boundary[physgroup_index]->get_type() == 1)
       y = -4. * sysParams.get_bjerrum() * sysParams.pi
           * boundary[physgroup_index]->get_charge_density();

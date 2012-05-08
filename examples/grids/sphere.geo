@@ -32,6 +32,7 @@ Plane Surface(9) = {8};
 // 0 is for Dirichlet boundary elements
 // 1 for Neumann
 // 2 for iPBS
+
 Physical Line(0) = {6,7,5};
 Physical Line(1) = {4, 3};
 Physical Line(2) = {2, 1};
