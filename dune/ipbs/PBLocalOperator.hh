@@ -162,12 +162,9 @@ public:
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); 
 	 it!=rule.end(); ++it)
       {
-        // evaluate boundary condition type
-        typename B::Traits::RangeType bctype;
-        b.evaluate(ig,it->position(),bctype);
-        
         // skip rest if we are on Dirichlet boundary
-        if (bctype>0) continue;
+        if ( b.isDirichlet( ig, it->position() ) ) 
+            continue;
 
         // position of quadrature point in local coordinates of element 
         Dune::FieldVector<DF,dim> local = ig.geometryInInside().global(it->position());

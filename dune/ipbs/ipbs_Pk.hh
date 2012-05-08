@@ -66,8 +66,8 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef Regions<GV,double,std::vector<int> > M;
   M m(gv, elementIndexToEntity);
   // boundary condition type
-  typedef BCType<GV,std::vector<int> > B;
-  B b(gv, boundaryIndexToEntity);
+  typedef BCTypeParam<std::vector<int> > B;
+  B b(boundaryIndexToEntity);
   // Class defining Dirichlet B.C.
   typedef BCExtension<GV,double,std::vector<int> > G;
   G g(gv, boundaryIndexToEntity);
