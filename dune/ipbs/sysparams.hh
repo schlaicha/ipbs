@@ -35,6 +35,7 @@ class SysParams {
   int get_salt();
   int get_npart();
   std::string get_meshfile();
+  double get_pH();
 
   // Functions setting the private members
   void add_error(double);
@@ -57,6 +58,7 @@ class SysParams {
 	void set_refinementSteps (int value);
 	void set_salt (int value);
   void set_npart (int value);
+  void set_pH(double value);
 	
   private:
 	double lambda;
@@ -80,6 +82,7 @@ class SysParams {
   int verbose;
   double refinementFraction;
   int refinementSteps;
+  double pH;
 };
 
 #endif  // _SYSPARAMS_H
