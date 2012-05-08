@@ -1,6 +1,8 @@
 #ifndef _BCEXTENSION_HH
 #define _BCEXTENSION_HH
 
+#include <dune/common/exceptions.hh>
+
 #include "p0layout.hh"
 #include "ipbsolver.hh"
 #include "boundary.hh"
@@ -20,24 +22,64 @@ public :
 
   typedef Dune::PDELab::GridFunctionTraits<GV,RF,1,Dune::FieldVector<RF,1> > Traits;
   typedef typename GV::IntersectionIterator IntersectionIterator;
+  typedef typename GV::ctype ctype;
 
   //! construct from grid view
   BCExtension(const GV& gv_, const PGMap& pg_) : gv(gv_), pg(pg_) {}
+
+  const inline bool global_on_intersection(Dune::FieldVector<ctype, GV::dimensionworld> 
+          integrationPointGlobal, IntersectionIterator& ii ) const 
+  {
+    ctype dist;
+    ctype this_dist;
+
+
+    if (GV::dimensionworld == 2) {
+      Dune::FieldVector<ctype,GV::dimensionworld> p_vec = 
+          ii->geometry().corner(1) - ii->geometry().corner(0);
+      p_vec/=p_vec.two_norm();
+      Dune::FieldVector<ctype,GV::dimensionworld> p2 = p_vec;
+      p2 *= ((integrationPointGlobal - ii->geometry().corner(0))*p_vec);
+      Dune::FieldVector<ctype,GV::dimensionworld> dist_vec = 
+          p2 - (integrationPointGlobal - ii->geometry().corner(0));
+
+      if (dist_vec.two_norm() < 1e-9)
+        return true;
+      return false;
+    }
+    else DUNE_THROW(Dune::NotImplemented,"Dirichlet interpolation for 3d still has to be done");
+  }
+
 
   //! evaluate extended function on element
   inline void evaluate (const typename Traits::ElementType& e,
                         const typename Traits::DomainType& xlocal,
                         typename Traits::RangeType& y) const
   {
-    for (IntersectionIterator ii = gv.ibegin(e); ii != gv.iend(e); ++ii) {
-      if(ii->boundary() == true) {
-        int physgroup_index = pg[ii->boundarySegmentIndex()];
-        if (boundary[physgroup_index]->get_type() == 0)
-          y = boundary[physgroup_index]->get_potential();
-        else 
-          y=0;
+     //! Set value for potential at outer domain boundaries
+    //
+
+    Dune::FieldVector<ctype,GV::dimensionworld> integrationPointGlobal =  e.geometry().global(xlocal);
+    int physgroup_index = -1;
+    for (IntersectionIterator ii = gv.ibegin(e); ii != gv.iend(e) ; ++ii) {
+      if (ii->boundary()) {
+        if (global_on_intersection(integrationPointGlobal, ii)) {
+          physgroup_index = pg[ii->boundarySegmentIndex()];
+        }
+      } else {
+        typename GV::Traits::Grid::template Codim<0>::EntityPointer o( ii->outside() );
+        for  (IntersectionIterator ii2 = gv.ibegin(*o); ii2 != gv.iend(*o) ; ++ii2) {
+          if (ii2->boundary()) {
+            if (global_on_intersection(integrationPointGlobal, ii2)) {
+              physgroup_index = pg[ii2->boundarySegmentIndex()];
+            }
+          }
+        }
       }
     }
+    if (physgroup_index > 0 )
+      if (boundary[physgroup_index]->get_type() == 0)
+        y = boundary[physgroup_index]->get_potential();
     return;
   }
 
