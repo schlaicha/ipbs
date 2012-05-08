@@ -178,7 +178,7 @@ class Ipbsolver
                 E_field /= dist.two_norm() * dist.two_norm();
 #elif   GRIDDIM == 3
                 E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
-#elif
+#else
                 DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
 #endif                  
                 volumeElem_flux = E_field * unitNormal;
@@ -281,7 +281,7 @@ class Ipbsolver
                   E_field /= dist.two_norm() * dist.two_norm();
 #elif   GRIDDIM == 3
                   E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
-#elif
+#else
                 DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
 #endif                  
                   surfaceElem_flux = E_field * unitNormal;

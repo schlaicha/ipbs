@@ -9,7 +9,7 @@
 #include<dune/common/timer.hh>
 
 /* include grid IO */
-#include<dune/grid/io/file/gmshreader.hh>
+#include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/utility/gridtype.hh>
 
 // global typedefs
