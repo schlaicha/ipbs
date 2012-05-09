@@ -35,9 +35,9 @@
 //#include<dune/pdelab/stationary/linearproblem.hh>
 //#include <dune/pdelab/backend/seqistlsolverbackend.hh>
 
-template<class GridType, int k>
-void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity)
+template<class GridType, typename PGMap, int k>
+void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
+             const PGMap& boundaryIndexToEntity)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
