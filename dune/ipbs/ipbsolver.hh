@@ -44,9 +44,13 @@ class Ipbsolver
     {
       init(); // Detect iterative elements
       communicateIpbsData(); 
+
       bContainer.resize(ipbsPositions.size(),0);
       inducedChargeDensity.resize(ipbsPositions.size(),0);
       E_ext.resize(ipbsPositions.size(),0);
+      /// Prepare container for storing the potential at each intersection
+      regulatedChargeDensity.resize(ipbsPositions.size(), 0.);
+
       if (use_guess) initial_guess();
     }
 
@@ -102,12 +106,15 @@ class Ipbsolver
     {
       icError = 0;  // reset the fluxError for next iteration step
       //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
-      bContainerType ic(inducedChargeDensity.size(), 0.);
+      ContainerType ic(inducedChargeDensity.size(), 0.);
       double eps_out = sysParams.get_epsilon();  
       unsigned int target = my_offset + my_len;
       for (unsigned int i = my_offset; i < target; i++) {
         double eps_in = boundary[ipbsType[i]]->get_epsilon();
-        double my_charge = boundary[ipbsType[i]]->get_charge_density();
+
+        // include charge regulation
+        double my_charge = boundary[ipbsType[i]]->get_charge_density() + regulatedChargeDensity[i];
+
         // calculate the induced charge in this surface element
         ic[i] = -(eps_in - eps_out) / (eps_in+eps_out)
                                 * ( my_charge + eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
@@ -138,12 +145,16 @@ class Ipbsolver
       
       /// Construct a discrete grid function space for access to solution
       typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      typedef typename DGF::Traits::RangeType RT;
+      typedef typename DGF::Traits::DomainFieldType DF;
+
       DGF udgf(gfs,u);
+
       typedef typename GV::template Codim<0>::template Partition
               <Dune::Interior_Partition>::Iterator LeafIterator;
 
       /// Store the new calculated values
-      bContainerType fluxes(ipbsPositions.size(),0.);
+      ContainerType fluxes(ipbsPositions.size(),0.);
 
       const int intorder = 5;
 
@@ -155,12 +166,6 @@ class Ipbsolver
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
-        typedef typename DGF::Traits::RangeType RT;	// store potential during integration 
-        typedef typename DGF::Traits::DomainFieldType DF;	// store potential during integration 
-                       						        // (for calculating sinh-term)
-        // Evaluate the potential at the elements center
-   	    RT value;
-
 
         // For each element on this processor calculate the contribution to volume integral part of the flux
         for (size_t i = 0; i < ipbsPositions.size(); i++)
@@ -180,6 +185,7 @@ class Ipbsolver
             // Get the position vector of the this element's center
             Dune::FieldVector<ctype,dim> r_prime = it->geometry().global(q_it->position());
                       
+            RT value;
             udgf.evaluate(*it,q_it->position(),value);
 
             Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
@@ -228,8 +234,9 @@ class Ipbsolver
         double surfaceElem_flux = 0.;
         for (size_t j = 0; j < ipbsPositions.size(); j++)
         {
-            double lcd = boundary[ipbsType[j]]->get_charge_density() 
-                          + inducedChargeDensity[j]; /**< The local charge density 
+          double lcd = boundary[ipbsType[j]]->get_charge_density() 
+                          + inducedChargeDensity[j]
+                          + regulatedChargeDensity[j]; /**< The local charge density 
                                                        on this particular surface element */
           if (i!=j)
           { 
@@ -238,7 +245,7 @@ class Ipbsolver
 
             e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
 
-            e_field *= ipbsVolumes[j]/2;
+            e_field *= ipbsVolumes[j];
       
             surfaceElem_flux = e_field * unitNormal;
 
@@ -246,31 +253,25 @@ class Ipbsolver
               surfaceElem_flux *= r_prime[1];
             }
             surfaceElem_flux *= lcd;
-            
-            E_ext[i] += surfaceElem_flux;
-
-
-          } else 
-          {  // if i==j
+          } 
+          else 
+          {  // if i==j - only contributes in case of mirroring
             if (sysParams.get_symmetry() == 2) {
-                 Dune::FieldVector<ctype,dim> r_prime2;
-                 r_prime2[0] = -ipbsPositions[i][0];
-                 r_prime2[1] = ipbsPositions[i][1];
-                 
-                 Dune::FieldVector<ctype,dim> e_field(0.);
-            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime2, sysParams.get_symmetry());
+              Dune::FieldVector<ctype,dim> r_prime2;
+              r_prime2[0] = -ipbsPositions[i][0];
+              r_prime2[1] = ipbsPositions[i][1];
+              
+              Dune::FieldVector<ctype,dim> e_field(0.);
+              e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime2, sysParams.get_symmetry());
+              e_field *= ipbsVolumes[j];
+              surfaceElem_flux = e_field * unitNormal;
 
-                 e_field *= ipbsVolumes[j];
-      
-                 surfaceElem_flux = e_field * unitNormal;
-
-                 if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {
-                   surfaceElem_flux *= r_prime2[1];
-                 }
-
-                 surfaceElem_flux *= lcd;
+              if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {  // TODO This is better using a mirror switch and a cylinder switch
+                surfaceElem_flux *= r_prime2[1];
               }
-          }  
+            }
+            surfaceElem_flux *= lcd;
+          }
           E_ext[i] += surfaceElem_flux;
         } // end of j loop
       } // end of i loop
@@ -281,7 +282,8 @@ class Ipbsolver
 
       /* Equation 3.4.4 DA Schlaich */
       for (unsigned int i = my_offset; i < target; i++) {
-        fluxes[i] = +E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()*boundary[ipbsType[i]]->get_charge_density();
+        fluxes[i] = E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()* 
+            ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] + regulatedChargeDensity[i] );
       } 
         
         
@@ -296,6 +298,35 @@ class Ipbsolver
       communicator.barrier();
       communicator.max(&fluxError, 1);
     }
+
+
+    // ------------------------------------------------------------------------
+    /// Charge regulation calculation
+    // ------------------------------------------------------------------------
+    void updateChargeRegulation(const U& u)
+    { 
+      /// Construct a discrete grid function space for access to solution
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      typedef typename DGF::Traits::RangeType RT;
+      typedef typename DGF::Traits::DomainFieldType DF;
+
+      DGF udgf(gfs,u);
+
+      for ( size_t i = 0; i < ipbsElemPointers.size(); i++)
+      {
+        // Calculate regulated charge density
+        RT value;
+        ElemPointer it = ipbsElemPointers[i];
+        Dune::FieldVector<ctype, dim> local = it->geometry().local( ipbsPositions[i] );
+        udgf.evaluate(*it, local,value);
+        double pK = boundary[ ipbsType[i] ]->get_pK();
+        double pH = sysParams.get_pH();
+        double exponential = std::exp ( std::log10(10)*( pH - pK ) - value );
+        regulatedChargeDensity[i] = boundary[ ipbsType[i] ]->get_sigma_max() * exponential / ( 1. + exponential);
+        // std::cout << "i: " << i << " pH " << pH << " pK " << pK << " Value: " << value << " exponential: " << exponential << " regulatedChargeDensity: " << regulatedChargeDensity[i] << std::endl;
+      }
+    }
+
 
 
   // ------------------------------------------------------------------------
@@ -331,7 +362,7 @@ class Ipbsolver
     
       int counter = 0;
       int elemcounter = 0;
-      // loop over elements on this processor and get information on the iterated boundaries
+      /// loop over elements on this processor and get information on the iterated boundaries
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
@@ -347,6 +378,7 @@ class Ipbsolver
               indexLookupMap.insert(std::pair<int, int>(boundaryElemMapper.map(*it),counter));
               ipbsType.push_back(boundaryIndexToEntity[ii->boundarySegmentIndex()]);
               ipbsVolumes.push_back(ii->geometry().volume());
+              ipbsElemPointers.push_back(it);   // Point to the IPBS elements local on each node
               counter++;
             }
       }
@@ -502,16 +534,24 @@ class Ipbsolver
     std::vector<Real> ipbsVolumes;
     /// Provide a vector storing the type of the iterative boundary @todo Maybe it's more reasonable to store its surface charge density
     std::vector<int> ipbsType;
+    /// Element pointers to local IPBS elements
+    typedef typename GV::template Codim<0>::EntityPointer ElemPointer;
+    std::vector<ElemPointer> ipbsElemPointers;
+
     /// For fast access to the precomputed fluxes we use binary tree  - only local index is needed :-)
     typedef std::map<int, int> IndexLookupMap;
     IndexLookupMap indexLookupMap;
-    typedef std::vector<double> bContainerType;
-    bContainerType bContainer;  // Store the electric field on the surface elements caused by explicit charges in the system
-    bContainerType inducedChargeDensity;  // Store the induced charge density
-    bContainerType E_ext;   /**< Store the electric field on boundary elements, 
+
+    typedef std::vector<double> ContainerType;
+    ContainerType bContainer;  /// Store the flux on the surface elements
+    ContainerType inducedChargeDensity;  // Store the induced charge density
+    ContainerType E_ext;   /**< Store the electric field on boundary elements, 
                                  which is calculated during updateBC(),
                                  \f[ \vec{E}(\vec{r}) \propto \int_V \sinh(\Phi(\vec{r}))
                                  \textnormal{d}\vec{r} \f] */
+    ContainerType regulatedChargeDensity;  /**< Store the regulatedChargeDensity
+                                                CAVE: Only local on each node! */
+    
     /// Offset and length of data stream on each node
     unsigned int my_offset, my_len;
     unsigned int iterationCounter;

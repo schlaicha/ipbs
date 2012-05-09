@@ -200,6 +200,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
    mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
    timer.reset();
+   ipbs.updateChargeRegulation(u);
    ipbs.updateBC(u);
    ipbs.updateIC();
    itertime += timer.elapsed();
