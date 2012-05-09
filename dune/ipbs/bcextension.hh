@@ -57,7 +57,6 @@ public :
                         typename Traits::RangeType& y) const
   {
      //! Set value for potential at outer domain boundaries
-    //
 
     Dune::FieldVector<ctype,GV::dimensionworld> integrationPointGlobal =  e.geometry().global(xlocal);
     int physgroup_index = -1;
@@ -66,7 +65,10 @@ public :
         if (global_on_intersection(integrationPointGlobal, ii)) {
           physgroup_index = pg[ii->boundarySegmentIndex()];
         }
-      } else {
+      } 
+      else if (ii->neighbor())     // !ii->boundary(), so we know this is a valid intersection
+                                    // with inner, overlap or ghost entity
+      {
         typename GV::Traits::Grid::template Codim<0>::EntityPointer o( ii->outside() );
         for  (IntersectionIterator ii2 = gv.ibegin(*o); ii2 != gv.iend(*o) ; ++ii2) {
           if (ii2->boundary()) {
