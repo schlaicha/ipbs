@@ -29,6 +29,8 @@
 #include <dune/ipbs/boundaries.hh>
 #include <dune/ipbs/PBLocalOperator.hh>
 
+#include <dune/ipbs/ipbsanalysis.hh>
+
 // test some solvers
 //#include<dune/pdelab/stationary/linearproblem.hh>
 //#include <dune/pdelab/backend/seqistlsolverbackend.hh>
@@ -234,6 +236,9 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
   // Calculate the forces
+  typedef IpbsAnalysis<GV,GFS,std::vector<int> > Analyzer;
+  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity);
+  analyzer.forces(u);
   
   if (communicator.rank() == 0) {
     std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;

@@ -8,7 +8,6 @@
 #include <gsl/gsl_sf_ellint.h>
 #include "sysparams.hh"
 #include "boundary.hh"
-#include "maxwelltensor.hh"
 #include "e_field.hh"
 
 extern SysParams sysParams;
@@ -494,7 +493,6 @@ class Ipbsolver
     /// The communicator decides weither to use MPI or fake
     typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
     const CollectiveCommunication & communicator;
-    // Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
 
     /// Store the center of boundary intersections of iterative type
     std::vector<Dune::FieldVector<ctype,dim> > ipbsPositions;
