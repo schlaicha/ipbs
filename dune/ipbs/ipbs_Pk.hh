@@ -241,49 +241,8 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   analyzer.forces(u);
   
   if (communicator.rank() == 0) {
-    std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;
-    //std::ofstream runtime;
-    //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
-    //runtime << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
-    //runtime.close();
-    
-#ifdef SURFACE_POT
-    std::cout << "Now I would calculate the surface potential :-)" << std::endl;
-    typedef typename GV::template Codim<0>::template Partition
-              <Dune::Interior_Partition>::Iterator LeafIterator;
-    typedef typename GV::IntersectionIterator IntersectionIterator;
-    typedef typename DGF::Traits::RangeType RT;
-    // Do the loop for all boundaryIDs > 1 (all colloids)
-    for (int i = 2; i < sysParams.get_npart()+2; i++)
-    {
-      int nElems = 0;
-      double sum = 0.;
-      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
-      {
-        if(it->hasBoundaryIntersections() == true) {
-          for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-            if(ii->boundary() == true) {
-              if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-              {
-                Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
-                    it->geometry().local(evalPos);
-                RT value;
-                // evaluate the potential
-                udgf.evaluate(*it, local, value);
-                sum += value;
-                nElems++;
-              }
-            }
-          }
-        }
-      }
-      sum /= nElems;
-      boundary[i]->set_res_surface_pot(sum);
-      std::cout << "Averaged surface potential: " << sum << std::endl;
-    }
-#endif
-    
- }
+    std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() 
+      << " init: " << inittime << " solver: " << solvertime/iterations 
+      << " boundary update " << itertime/iterations << std::endl;
+  }
 }

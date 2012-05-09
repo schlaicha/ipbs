@@ -30,6 +30,10 @@ class IpbsAnalysis
     IpbsAnalysis(const GV& _gv, const GFS& _gfs, const PGMap& _pgmap)
       : gv(_gv), gfs(_gfs), pgmap(_pgmap), communicator( gv.comm() ) {} 
 
+     typedef typename GV::template Codim<0>::template Partition
+              <Dune::Interior_Partition>::Iterator LeafIterator;
+     typedef typename GV::IntersectionIterator IntersectionIterator;
+
 
     // ------------------------------------------------------------------------
     /// Force computation
@@ -47,10 +51,7 @@ class IpbsAnalysis
       if (communicator.rank() == 0) {
         force_file.open ("forces.dat", std::ios::out);
       }
-      typedef typename GV::template Codim<0>::template Partition
-              <Dune::Interior_Partition>::Iterator LeafIterator;
-      typedef typename GV::IntersectionIterator IntersectionIterator;
-  
+       
       // Do the loop for boundary type 2 (iterated b.c.)
       // TODO: implement that!
       for (int i = 0; i < sysParams.get_npart(); i++)
@@ -98,6 +99,45 @@ class IpbsAnalysis
       }
     }
 
+    void surfacepot(const U& u) const
+    {
+      std::cout << "Now I would calculate the surface potential :-)" << std::endl;
+
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      DGF udgf(gfs,u);
+      
+      typedef typename DGF::Traits::RangeType RT;
+
+      for (int i = 0; i < sysParams.get_npart(); i++)
+      {
+        int nElems = 0;
+        double sum = 0.;
+        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+        {
+          if(it->hasBoundaryIntersections() == true) {
+            for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+              if(ii->boundary() == true) {
+                if (pgmap[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+                {
+                  Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                  Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
+                    it->geometry().local(evalPos);
+                  RT value;
+                  // evaluate the potential
+                  udgf.evaluate(*it, local, value);
+                  sum += value;
+                  nElems++;
+                }
+              }
+            }
+          }
+        }
+        sum /= nElems;
+        //boundary[i]->set_res_surface_pot(sum);
+        std::cout << "Averaged surface potential of surface " << i << ": " << sum << std::endl;
+      }
+    }
   
   private:
      
