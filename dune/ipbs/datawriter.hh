@@ -33,9 +33,9 @@ class DataWriter {
   enum {dim = GridView::dimension};
 
   public:
-    DataWriter (const GridView & _gv, Dune::MPIHelper & _helper)
-      : gv(_gv), helper(_helper)
-      {}
+
+    DataWriter (const GridView & _gv) : gv(_gv), 
+      communicator(gv.comm()) {}
     
     /** \brief Add cell data
         \param data An ISTL compliant vector type
@@ -114,16 +114,19 @@ class DataWriter {
   
   private:
     const GridView &gv;
-    const Dune::MPIHelper &helper;
+    
+    /// The communicator decides weither to use MPI or fake
+    typedef typename GridView::Traits::CollectiveCommunication CollectiveCommunication;
+    const CollectiveCommunication & communicator;
 
     std::string filename_helper(const std::string &name)
     {
       // generate filename for process data
       std::ostringstream pieceName;
-      if( helper.size() > 1 )
+      if( communicator.size() > 1 )
       {
-        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << helper.size() << ":";
-        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << helper.rank() << ":";
+        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << ":";
+        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << ":";
       }
       pieceName << name << ".dat";
       return pieceName.str();

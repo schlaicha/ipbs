@@ -1,15 +1,15 @@
 #ifndef _IPBSOLVER_HH
 #define _IPBSOLVER_HH
 
-// Single Geometry Single Codim Mapper
-#include <dune/grid/common/scsgmapper.hh>
-#include<dune/common/fvector.hh>
+#include <dune/grid/common/scsgmapper.hh> // Single Geometry Single Codim Mapper
+#include <dune/common/fvector.hh>
+#include <dune/grid/common/quadraturerules.hh>
+
 #include <gsl/gsl_sf_ellint.h>
 #include "sysparams.hh"
 #include "boundary.hh"
 #include "maxwelltensor.hh"
 #include "e_field.hh"
-#include<dune/grid/common/quadraturerules.hh>
 
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
@@ -33,10 +33,10 @@ class Ipbsolver
   typedef typename GFS::template VectorContainer<Real>::Type U;
 
   public:
-    Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
+    Ipbsolver(const GV& gv_, const GFS& gfs_,
         const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
-      gv(gv_), gfs(gfs_), helper(helper_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
+      gv(gv_), gfs(gfs_), boundaryIndexToEntity(boundaryIndexToEntity_),
+      boundaryElemMapper(gv), communicator(gv.comm()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
      
     /*!
        \param gv the view on the leaf grid
@@ -298,75 +298,9 @@ class Ipbsolver
       communicator.max(&fluxError, 1);
     }
 
-    // ------------------------------------------------------------------------
-    /// Force computation
-    // ------------------------------------------------------------------------
-    void forces(const U& u)
-    {
-      // Here we once more loop over all elements on this node (need of the element information
-      // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
-      // (see Hsu06a, eq. 61)
 
-      // Open output file for force on particles
-      std::ofstream force_file, vector_force_file;
-
-      vector_force_file.open (filename_helper("vector_forces").c_str(), std::ios::out);
-      if (communicator.rank() == 0) {
-        force_file.open ("forces.dat", std::ios::out);
-      }
-      typedef typename GV::template Codim<0>::template Partition
-              <Dune::Interior_Partition>::Iterator LeafIterator;
-      typedef typename GV::IntersectionIterator IntersectionIterator;
-
-      // Do the loop for boundary type 2 (iterated b.c.)
-      // TODO: implement that!
-      for (int i = 0; i < sysParams.get_npart(); i++)
-      {
-        std::cout << std::endl << "Calculating the force acting on particle id " << i << std::endl;
-        Dune::FieldVector<Real, dim> F(0);
-
-        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-                 	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
-        {
-          if(it->hasBoundaryIntersections() == true) {
-            for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-              if(ii->boundary() == true) {
-                if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-                {
-                  Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
-                  Dune::FieldVector<Real, dim> forcevec;
-                  normal *= -1.0 * ii->geometry().volume(); // Surface normal
-                  Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                  Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
-                  //sigma.umv(normal, F);
-                  sigma.mv(normal, forcevec);
-                  if (sysParams.get_symmetry() > 0) {
-                    // integration in theta
-                    forcevec *= 2.*sysParams.pi*evalPos[1]; 
-                  }
-                  F += forcevec;
-                  vector_force_file << evalPos << " " << forcevec << std::endl;
-                }
-              }
-            }
-          }
-        }
-        // Sum up force of all nodes
-        communicator.barrier();
-        communicator.sum(&F[0], F.dim());
-        if (communicator.rank() == 0)
-          force_file << i << " " << F << std::endl;        
-      }
-    
-      // close output
-      if (communicator.rank() == 0) {
-        force_file.close();
-        vector_force_file.close();
-      }
-    }
-
-  
   // ------------------------------------------------------------------------
+
 
   private:
     void initial_guess()
@@ -550,34 +484,17 @@ class Ipbsolver
 #endif
     }
  
-    // ------------------------------------------------------------------------
-    /// Filenamehelper for parallel output
-    // ------------------------------------------------------------------------
-
-    std::string filename_helper(const std::string &name)
-    {
-      // generate filename for process data
-      std::ostringstream pieceName;
-      if( communicator.size() > 1 )
-      {
-        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << ":";
-        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << ":";
-      }
-      pieceName << name << ".dat";
-      return pieceName.str();
-    }
-
-
     const GV& gv;
     /// The grid function space
     const GFS& gfs;
-    Dune::MPIHelper& helper;
     const std::vector<int>& boundaryIndexToEntity;
     // provide a mapper for getting indices of iterated boundary elements
     typedef Dune::SingleCodimSingleGeomTypeMapper<GV, 0> BoundaryElemMapper;
     BoundaryElemMapper boundaryElemMapper;
     /// The communicator decides weither to use MPI or fake
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
+    typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
+    const CollectiveCommunication & communicator;
+    // Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
 
     /// Store the center of boundary intersections of iterative type
     std::vector<Dune::FieldVector<ctype,dim> > ipbsPositions;

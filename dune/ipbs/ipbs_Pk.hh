@@ -35,8 +35,7 @@
 
 template<class GridType, int k>
 void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity,
-             Dune::MPIHelper& helper)
+             const std::vector<int>& boundaryIndexToEntity)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -50,6 +49,10 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef typename GridType::LeafGridView GV;
   const GV& gv = grid->leafView();
 
+  // Obtain a reference to the communicator
+  typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
+  const CollectiveCommunication & communicator = gv.comm();
+    
   // some typedef
   typedef typename GV::Grid::ctype ctype;
   const int dim = GV::dimension;
@@ -112,7 +115,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
 
   typedef Ipbsolver<GV, GFS> Ipbs;
-  Ipbs ipbs(gv, gfs, helper, boundaryIndexToEntity);
+  Ipbs ipbs(gv, gfs, boundaryIndexToEntity);
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
@@ -163,7 +166,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double fluxError, icError;
   int iterations = 0;
 
-  DataWriter<GV,dim> mydatawriter(gv, helper);
+  DataWriter<GV,dim> mydatawriter(gv);
 
   // --- Here the iterative loop starts ---
 
@@ -220,10 +223,10 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Prepare filename for sequential Gnuplot output
   std::string filename = "ipbs_solution";
   std::ostringstream s;
-  if(helper.size() > 1)
+  if(communicator.size() > 1)
   {
-    s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-    s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
+    s << 's' << std::setw(4) << std::setfill('0') << communicator.size() << ':';
+    s << 'p' << std::setw(4) << std::setfill('0') << communicator.rank() << ':';
   }
   s << filename << ".dat";
   filename = s.str();
@@ -231,14 +234,12 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
   // Calculate the forces
-  ipbs.forces(u);
-//  ipbs.forces2(u);
   
-  if (helper.rank() == 0) {
-    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;
+  if (communicator.rank() == 0) {
+    std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;
     //std::ofstream runtime;
     //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
-    //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
+    //runtime << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
     //runtime.close();
     
 #ifdef SURFACE_POT
