@@ -59,12 +59,12 @@ class Ipbsolver
       return ipbsPositions.size();
     }
 
-    bool next_step()
+    bool converged()
     {
-        iterationCounter++;
+      iterationCounter++;
       std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
-      if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
+      if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
       else
@@ -76,7 +76,7 @@ class Ipbsolver
      * \param _icError return the current maximum relative change in induced charge computation
      */
 
-    bool next_step(double& _fluxError, double& _icError, int& _iterations)
+    bool converged(double& _fluxError, double& _icError, int& _iterations)
     {
       iterationCounter++;
       _fluxError = fluxError;
@@ -84,7 +84,7 @@ class Ipbsolver
       _iterations = iterationCounter;
       std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
-      if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
+      if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
       else

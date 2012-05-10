@@ -205,13 +205,13 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
    ipbs.updateIC();
    itertime += timer.elapsed();
   }
-  while (ipbs.next_step(fluxError,icError,iterations));
+  while (!ipbs.converged(fluxError,icError,iterations));
 
   // --- here the iterative loop ends! ---
 
 
   status << "# reached convergence criterion: " << std::boolalpha <<
-    ipbs.next_step(fluxError, icError, iterations) << std::endl;
+    ipbs.converged(fluxError, icError, iterations) << std::endl;
   status << "# in iteration " << iterations << std::endl
       << "# maximum relative change in boundary condition calculation is " <<  fluxError << std::endl
       << "# maximum relative change in induced charge density is " << icError << std::endl;
