@@ -212,7 +212,7 @@ class Ipbsolver
             switch (sysParams.get_salt())
             {
                 case 0:
-                    E_ext_ions *= std::sinh(value);
+                    E_ext_ions *= -std::sinh(value);
                     break;
                 case 1:
                     E_ext_ions *= std::exp(value); // Counterions have opposite sign!
@@ -248,29 +248,23 @@ class Ipbsolver
             e_field *= ipbsVolumes[j];
       
             surfaceElem_flux = e_field * unitNormal;
-
-            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {
+            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {  // TODO This is better using a mirror switch and a cylinder switch
               surfaceElem_flux *= r_prime[1];
             }
             surfaceElem_flux *= lcd;
           } 
-          else 
-          {  // if i==j - only contributes in case of mirroring
+          else // if i==j - only contributes in case of mirroring
             if (sysParams.get_symmetry() == 2) {
-              Dune::FieldVector<ctype,dim> r_prime2;
-              r_prime2[0] = -ipbsPositions[i][0];
-              r_prime2[1] = ipbsPositions[i][1];
+              Dune::FieldVector<ctype,dim> r_prime2(ipbsPositions[i]);
+              r_prime2[0] *= -1;
               
               Dune::FieldVector<ctype,dim> e_field(0.);
-              e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime2, sysParams.get_symmetry());
+              e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime2, 1);
               e_field *= ipbsVolumes[j];
               surfaceElem_flux = e_field * unitNormal;
-
-              if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {  // TODO This is better using a mirror switch and a cylinder switch
-                surfaceElem_flux *= r_prime2[1];
-              }
-            }
-            surfaceElem_flux *= lcd;
+              // cylindrical coordinates
+              surfaceElem_flux *= r_prime2[1];
+              surfaceElem_flux *= lcd;
           }
           E_ext[i] += surfaceElem_flux;
         } // end of j loop
@@ -323,7 +317,7 @@ class Ipbsolver
         double pH = sysParams.get_pH();
         double exponential = std::exp ( std::log10(10)*( pH - pK ) - value );
         regulatedChargeDensity[i] = boundary[ ipbsType[i] ]->get_sigma_max() * exponential / ( 1. + exponential);
-        // std::cout << "i: " << i << " pH " << pH << " pK " << pK << " Value: " << value << " exponential: " << exponential << " regulatedChargeDensity: " << regulatedChargeDensity[i] << std::endl;
+        //std::cout << "i: " << i << " pH " << pH << " pK " << pK << " Value: " << value << " exponential: " << exponential << " regulatedChargeDensity: " << regulatedChargeDensity[i] << std::endl;
       }
     }
 
@@ -342,7 +336,7 @@ class Ipbsolver
       for (unsigned int i = my_offset; i < target; i++)
       {
         // initialize with constant surface charge density
-        bContainer[i] = +1*4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
+        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
       }
     }
  

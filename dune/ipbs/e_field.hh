@@ -37,11 +37,11 @@ W E_field_cylinder(V r, V r_prime) {
 
 template<class V, class W>
 W E_field_cylinder_with_mirror(V r, V r_prime) {
-    V r_prime2(0.);
-    r_prime2[0] = -r_prime[0];
-    r_prime2[1] = r_prime[1];
+    V r_prime2 = r_prime;
+    r_prime2[0] *= -1;
 
-    return E_field_cylinder<V, W>(r, r_prime) + E_field_cylinder<V, W>(r, r_prime2);
+    //std::cout << "r " << r << " r' " << r_prime << " r2' " << r_prime2 << " E_field: " <<  E_field_cylinder<V, W>(r, r_prime)  << " mirrored: " <<  E_field_cylinder<V, W>(r, r_prime2) << std::endl;
+    return ( E_field_cylinder<V, W>(r, r_prime)  + E_field_cylinder<V, W>(r, r_prime2) );
 }
 
 template< class V, class W> 
