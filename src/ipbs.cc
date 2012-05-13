@@ -98,8 +98,9 @@ int main(int argc, char** argv)
   // <<<1>>> Setup the problem from mesh file
   
   // define vectors to store boundary and element mapping
-  std::vector<int> boundaryIndexToEntity;
-  std::vector<int> elementIndexToEntity;
+  typedef std::vector<int> PGMap;
+  PGMap boundaryIndexToEntity;
+  PGMap elementIndexToEntity;
   
   typedef Dune::GridSelector::GridType GridType;
   Dune::GridFactory<GridType> factory;
@@ -140,7 +141,7 @@ int main(int argc, char** argv)
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
 
  // Call problem driver
- ipbs_Pk<GridType, 2>(grid, elementIndexToEntity, boundaryIndexToEntity, helper);
+ ipbs_Pk<GridType, PGMap, 2>(grid, elementIndexToEntity, boundaryIndexToEntity);
   
  // done
  return 0;

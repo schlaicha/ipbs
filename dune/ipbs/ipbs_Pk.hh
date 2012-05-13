@@ -34,14 +34,15 @@
 #include <dune/ipbs/boundaries.hh>
 #include <dune/ipbs/PBLocalOperator.hh>
 
+#include <dune/ipbs/ipbsanalysis.hh>
+
 // test some solvers
 //#include<dune/pdelab/stationary/linearproblem.hh>
 //#include <dune/pdelab/backend/seqistlsolverbackend.hh>
 
-template<class GridType, int k>
-void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
-             const std::vector<int>& boundaryIndexToEntity,
-             Dune::MPIHelper& helper)
+template<class GridType, typename PGMap, int k>
+void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
+             const PGMap& boundaryIndexToEntity)
 {
   // We want to know the total calulation time
   Dune::Timer timer;
@@ -55,6 +56,10 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   typedef typename GridType::LeafGridView GV;
   const GV& gv = grid->leafView();
 
+  // Obtain a reference to the communicator
+  typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
+  const CollectiveCommunication & communicator = gv.comm();
+    
   // some typedef
   typedef typename GV::Grid::ctype ctype;
   const int dim = GV::dimension;
@@ -117,7 +122,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
 
   typedef Ipbsolver<GV, GFS> Ipbs;
-  Ipbs ipbs(gv, gfs, helper, boundaryIndexToEntity);
+  Ipbs ipbs(gv, gfs, boundaryIndexToEntity);
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
@@ -177,7 +182,7 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   double fluxError, icError;
   int iterations = 0;
 
-  DataWriter<GV,dim> mydatawriter(gv, helper);
+  DataWriter<GV,dim> mydatawriter(gv);
 
   // --- Here the iterative loop starts ---
 
@@ -199,27 +204,28 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
     solvertime += timer.elapsed();
 
    // save snapshots of each iteration step
-   //std::stringstream out;
-   //out << "ipbs_step_" << iterations;
-   //std::string filename = out.str();
-   //DGF udgf_snapshot(gfs,u);
-   //Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-   //vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-   //vtkwriter.write(filename,Dune::VTK::appendedraw);
-   //mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+   std::stringstream out;
+   out << "ipbs_step_" << iterations;
+   std::string filename = out.str();
+   DGF udgf_snapshot(gfs,u);
+   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+   vtkwriter.write(filename,Dune::VTK::appendedraw);
+   mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
 
    timer.reset();
+   ipbs.updateChargeRegulation(u);
    ipbs.updateBC(u);
    ipbs.updateIC();
    itertime += timer.elapsed();
   }
-  while (ipbs.next_step(fluxError,icError,iterations));
+  while (!ipbs.converged(fluxError,icError,iterations));
 
   // --- here the iterative loop ends! ---
 
 
   status << "# reached convergence criterion: " << std::boolalpha <<
-    ipbs.next_step(fluxError, icError, iterations) << std::endl;
+    ipbs.converged(fluxError, icError, iterations) << std::endl;
   status << "# in iteration " << iterations << std::endl
       << "# maximum relative change in boundary condition calculation is " <<  fluxError << std::endl
       << "# maximum relative change in induced charge density is " << icError << std::endl;
@@ -234,10 +240,10 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   // Prepare filename for sequential Gnuplot output
   std::string filename = "ipbs_solution";
   std::ostringstream s;
-  if(helper.size() > 1)
+  if(communicator.size() > 1)
   {
-    s << 's' << std::setw(4) << std::setfill('0') << helper.size() << ':';
-    s << 'p' << std::setw(4) << std::setfill('0') << helper.rank() << ':';
+    s << 's' << std::setw(4) << std::setfill('0') << communicator.size() << ':';
+    s << 'p' << std::setw(4) << std::setfill('0') << communicator.rank() << ':';
   }
   s << filename << ".dat";
   filename = s.str();
@@ -245,53 +251,13 @@ void ipbs_Pk(GridType* grid, const std::vector<int>& elementIndexToEntity,
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
   // Calculate the forces
-  ipbs.forces(u);
-//  ipbs.forces2(u);
+  typedef IpbsAnalysis<GV,GFS,std::vector<int> > Analyzer;
+  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity);
+  analyzer.forces(u);
   
-  if (helper.rank() == 0) {
-    std::cout << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/iterations << " boundary update " << itertime/iterations << std::endl;
-    //std::ofstream runtime;
-    //runtime.open ("runtime.dat", std::ios::out | std::ios::app); 
-    //runtime << "P " << helper.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() << " init: " << inittime << " solver: " << solvertime/sysParams.counter << " boundary update " << itertime/sysParams.counter << std::endl;
-    //runtime.close();
-    
-#ifdef SURFACE_POT
-    std::cout << "Now I would calculate the surface potential :-)" << std::endl;
-    typedef typename GV::template Codim<0>::template Partition
-              <Dune::Interior_Partition>::Iterator LeafIterator;
-    typedef typename GV::IntersectionIterator IntersectionIterator;
-    typedef typename DGF::Traits::RangeType RT;
-    // Do the loop for all boundaryIDs > 1 (all colloids)
-    for (int i = 2; i < sysParams.get_npart()+2; i++)
-    {
-      int nElems = 0;
-      double sum = 0.;
-      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
-      {
-        if(it->hasBoundaryIntersections() == true) {
-          for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-            if(ii->boundary() == true) {
-              if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-              {
-                Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
-                    it->geometry().local(evalPos);
-                RT value;
-                // evaluate the potential
-                udgf.evaluate(*it, local, value);
-                sum += value;
-                nElems++;
-              }
-            }
-          }
-        }
-      }
-      sum /= nElems;
-      boundary[i]->set_res_surface_pot(sum);
-      std::cout << "Averaged surface potential: " << sum << std::endl;
-    }
-#endif
-    
- }
+  if (communicator.rank() == 0) {
+    std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() 
+      << " init: " << inittime << " solver: " << solvertime/iterations 
+      << " boundary update " << itertime/iterations << std::endl;
+  }
 }

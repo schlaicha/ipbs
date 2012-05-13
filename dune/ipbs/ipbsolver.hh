@@ -1,13 +1,14 @@
 #ifndef _IPBSOLVER_HH
 #define _IPBSOLVER_HH
 
-// Single Geometry Single Codim Mapper
-#include <dune/grid/common/scsgmapper.hh>
-#include<dune/common/fvector.hh>
+#include <dune/grid/common/scsgmapper.hh> // Single Geometry Single Codim Mapper
+#include <dune/common/fvector.hh>
+#include <dune/geometry/quadraturerules.hh>
+
 #include <gsl/gsl_sf_ellint.h>
 #include "sysparams.hh"
 #include "boundary.hh"
-#include "maxwelltensor.hh"
+#include "e_field.hh"
 
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
@@ -31,10 +32,10 @@ class Ipbsolver
   typedef typename Dune::PDELab::BackendVectorSelector<GFS,Real>::Type U;
 
   public:
-    Ipbsolver(const GV& gv_, const GFS& gfs_, Dune::MPIHelper& helper_, 
+    Ipbsolver(const GV& gv_, const GFS& gfs_,
         const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
-      gv(gv_), gfs(gfs_), helper(helper_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(helper.getCommunicator()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
+      gv(gv_), gfs(gfs_), boundaryIndexToEntity(boundaryIndexToEntity_),
+      boundaryElemMapper(gv), communicator(gv.comm()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
      
     /*!
        \param gv the view on the leaf grid
@@ -43,9 +44,13 @@ class Ipbsolver
     {
       init(); // Detect iterative elements
       communicateIpbsData(); 
+
       bContainer.resize(ipbsPositions.size(),0);
       inducedChargeDensity.resize(ipbsPositions.size(),0);
-      bEfield.resize(ipbsPositions.size(),0);
+      E_ext.resize(ipbsPositions.size(),0);
+      /// Prepare container for storing the potential at each intersection
+      regulatedChargeDensity.resize(ipbsPositions.size(), 0.);
+
       if (use_guess) initial_guess();
     }
 
@@ -54,12 +59,12 @@ class Ipbsolver
       return ipbsPositions.size();
     }
 
-    bool next_step()
+    bool converged()
     {
+      iterationCounter++;
       std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
-      if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        iterationCounter++;
+      if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
       else
@@ -71,15 +76,15 @@ class Ipbsolver
      * \param _icError return the current maximum relative change in induced charge computation
      */
 
-    bool next_step(double& _fluxError, double& _icError, int& _iterations)
+    bool converged(double& _fluxError, double& _icError, int& _iterations)
     {
+      iterationCounter++;
       _fluxError = fluxError;
       _icError = icError;
       _iterations = iterationCounter;
       std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
         << " relative error in induced charge density is " << icError << std::endl;
-      if (fluxError > sysParams.get_tolerance() || icError > 1e-3) {
-        iterationCounter++;
+      if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
       else
@@ -101,16 +106,19 @@ class Ipbsolver
     {
       icError = 0;  // reset the fluxError for next iteration step
       //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
-      bContainerType ic(inducedChargeDensity.size(), 0.);
+      ContainerType ic(inducedChargeDensity.size(), 0.);
       double eps_out = sysParams.get_epsilon();  
       unsigned int target = my_offset + my_len;
       for (unsigned int i = my_offset; i < target; i++) {
         double eps_in = boundary[ipbsType[i]]->get_epsilon();
-        double my_charge = boundary[ipbsType[i]]->get_charge_density();
+
+        // include charge regulation
+        double my_charge = boundary[ipbsType[i]]->get_charge_density() + regulatedChargeDensity[i];
+
         // calculate the induced charge in this surface element
         ic[i] = -(eps_in - eps_out) / (eps_in+eps_out)
                                 * ( my_charge + eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
-                                    * bEfield[i] );
+                                    * E_ext[i] );
       }
       communicator.barrier();
       communicator.sum(&ic[0], ic.size());
@@ -137,322 +145,186 @@ class Ipbsolver
       
       /// Construct a discrete grid function space for access to solution
       typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      typedef typename DGF::Traits::RangeType RT;
+      typedef typename DGF::Traits::DomainFieldType DF;
+
       DGF udgf(gfs,u);
+
       typedef typename GV::template Codim<0>::template Partition
               <Dune::Interior_Partition>::Iterator LeafIterator;
 
       /// Store the new calculated values
-      bContainerType fluxes(ipbsPositions.size(),0.);
-      bEfield.assign(ipbsPositions.size(),0.);
+      ContainerType fluxes(ipbsPositions.size(),0.);
+
+      const int intorder = 5;
+
+      for (int i =0; i<E_ext.size(); i++) {
+          E_ext[i]=0;
+      }
 
       // Loop over all elements and calculate the volume integral contribution
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
-        typedef typename DGF::Traits::RangeType RT;	// store potential during integration 
-                       						        // (for calculating sinh-term)
-        // Evaluate the potential at the elements center
-   	    RT value;
-        udgf.evaluate(*it,it->geometry().local(it->geometry().center()),value);
-
-         // Get the position vector of the this element's center
-        Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
 
         // For each element on this processor calculate the contribution to volume integral part of the flux
         for (size_t i = 0; i < ipbsPositions.size(); i++)
         {
-          Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
-          Dune::FieldVector<ctype,dim> dist = r - r_prime;
-          Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
-          unitNormal *= -1.;
-          double volumeElem_flux = 0.;
 
-          // integration depends on symmetry
-          switch( sysParams.get_symmetry() )
+          // select quadrature rule
+          Dune::GeometryType gt = it->geometry().type();
+          const Dune::QuadratureRule<DF,dim>& 
+            rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
+
+          double totalweight=0;
+          // loop over quadrature points
+          for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
+                     q_it=rule.begin(); q_it!=rule.end(); ++q_it)
           {
-            case 0: // cartesian coordinates 
-            {
-              Dune::FieldVector<ctype,dim> E_field(0.);
-              E_field = dist;
-#if     GRIDDIM == 2
-                E_field /= dist.two_norm() * dist.two_norm();
-#elif   GRIDDIM == 3
-                E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
-#else
-                DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
-#endif                  
-                volumeElem_flux = E_field * unitNormal;
-                volumeElem_flux *= sysParams.get_lambda2i() / (4.0 * sysParams.pi) * it->geometry().volume();
-              }
-              break;
+            double E_ext_ions = 0.;
+            // Get the position vector of the this element's center
+            Dune::FieldVector<ctype,dim> r_prime = it->geometry().global(q_it->position());
+                      
+            RT value;
+            udgf.evaluate(*it,q_it->position(),value);
 
-              case 1:   // mirror particle charge on y-axis (sph. red. sym)
-              {
-                double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                double b = 4.0 * r[1] * r_prime[1];
-                double k = sqrt(b/a);
-                double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                Dune::FieldVector<ctype,dim> E_field(0.);
-                E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                               / ((a-b)*sqrt(a)*b) * E
-                             + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                // now mirror
-                Dune::FieldVector<ctype,dim> tmpr_prime(r_prime);
-                tmpr_prime[0] *= -1.;
-                Dune::FieldVector<ctype,dim> tmpdist = r - tmpr_prime;
-                a = tmpdist[0]*tmpdist[0] + r[1]*r[1] + tmpr_prime[1]*tmpr_prime[1] + 2.0 * r[1] * tmpr_prime[1];
-                b = 4.0 * r[1] * tmpr_prime[1];
-                k = sqrt(b/a);
-                E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                E_field[0] += -2.0 * tmpdist[0] / ((a-b)*sqrt(a)) * E;
-                E_field[1] += 2.0 * ( 2.0 * tmpr_prime[1] * a - b * tmpr_prime[1] - b * r[1])
-                               / ((a-b)*sqrt(a)*b) * E
-                             + 2.0 * (-2.0 * tmpr_prime[1] * a + 2.0 * b * tmpr_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                volumeElem_flux = E_field * unitNormal;
-                volumeElem_flux *= -2.0 / (4.0*sysParams.pi) * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-              }
-              break;
-          
-              case 2:   // spherical reduced symmetry
-              {
-                double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                double b = 4.0 * r[1] * r_prime[1];
-                double k = sqrt(b/a);
-                double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                Dune::FieldVector<ctype,dim> E_field(0.);
-                E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                               / ((a-b)*sqrt(a)*b) * E
-                             + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                volumeElem_flux = E_field * unitNormal;
-                volumeElem_flux *= -2.0 / (4.0*sysParams.pi) * sysParams.get_lambda2i() * it->geometry().volume() * r_prime[1];
-              }
-              break;
+            Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
+            Dune::FieldVector<ctype,dim> dist = r - r_prime;
+            Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
+            unitNormal *= -1.;
 
-           }
+            Dune::FieldVector<ctype,dim> e_field(0.);
+
+            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
+
+            e_field *= q_it->weight() * it->geometry().integrationElement(q_it->position());
+            totalweight +=  q_it->weight() * it->geometry().integrationElement(q_it->position());
+              
+            E_ext_ions = e_field * unitNormal;
+
+            E_ext_ions *= 1./ (4.0*sysParams.pi) * sysParams.get_lambda2i();
+
+            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {
+                E_ext_ions *= r_prime[1];
+            }
 
             // Now get the counterion distribution and calculate flux
             switch (sysParams.get_salt())
             {
-              case 0:
-                volumeElem_flux *= std::sinh(value);
-                break;
-              case 1:
-                volumeElem_flux *= std::exp(value); // Counterions have opposite sign!
-                break;
+                case 0:
+                    E_ext_ions *= -std::sinh(value);
+                    break;
+                case 1:
+                    E_ext_ions *= std::exp(value); // Counterions have opposite sign!
+                    break;
             }
 
-            /// Integrate
-            fluxes[i] += volumeElem_flux;
-            bEfield[i] += volumeElem_flux;
+            E_ext[i] += E_ext_ions;
           }
         }
-
-        unsigned int target = my_offset + my_len;
-        // For each element on this processor calculate the contribution to surface integral part of the flux
-        for (unsigned int i = my_offset; i < target; i++)
-        {
-          Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
-          Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
-          unitNormal *= -1.;
-          double surfaceElem_flux = 0.;
-          for (size_t j = 0; j < ipbsPositions.size(); j++)
-          {
-            if (i!=j)
-            { 
-              double lcd = boundary[ipbsType[j]]->get_charge_density() 
-                            + inducedChargeDensity[j]; /**< The local charge density 
-                                                         on this particular surface element */
-              Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
-              Dune::FieldVector<ctype,dim> dist = r - r_prime;
-
-              // Integration depends on symmetry!
-              switch ( sysParams.get_symmetry() )
-              {
-                case 0:     // cartesian coordinates 
-                {
-                  Dune::FieldVector<ctype,dim> E_field(0.);
-                  E_field = dist;
-#if     GRIDDIM == 2
-                  E_field /= dist.two_norm() * dist.two_norm();
-#elif   GRIDDIM == 3
-                  E_field /= dist.two_norm() * dist.two_norm() * dist.two_norm();
-#else
-                DUNE_THROW(Dune::NotImplemented, "IPBS only knows about dim=2 and dim=3");
-#endif                  
-                  surfaceElem_flux = E_field * unitNormal;
-                  surfaceElem_flux *= -2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * lcd;
-                }
-                break;
-                case 1:  // mirror particle charge on y-axis (sph. red. sym)
-                {
-                  double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                  double b = 4.0 * r[1] * r_prime[1];
-                  double k = sqrt(b/a);
-                  double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                  double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                  Dune::FieldVector<ctype,dim> E_field(0.);
-                  E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                  E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                                          / ((a-b)*sqrt(a)*b) * E
-                          + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                  // now mirror
-                  Dune::FieldVector<ctype,dim> tmpr_prime(r_prime);
-                  tmpr_prime[0] *= -1.;
-                  Dune::FieldVector<ctype,dim> tmpdist = r - tmpr_prime;
-                  a = tmpdist[0]*tmpdist[0] + r[1]*r[1] + tmpr_prime[1]*tmpr_prime[1] + 2.0 * r[1] * tmpr_prime[1];
-                  b = 4.0 * r[1] * tmpr_prime[1];
-                  k = sqrt(b/a);
-                  E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                  K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                  E_field[0] += -2.0 * tmpdist[0] / ((a-b)*sqrt(a)) * E;
-                  E_field[1] += 2.0 * ( 2.0 * tmpr_prime[1] * a - b * tmpr_prime[1] - b * r[1])
-                                          / ((a-b)*sqrt(a)*b) * E
-                          + 2.0 * (-2.0 * tmpr_prime[1] * a + 2.0 * b * tmpr_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                  surfaceElem_flux = E_field * unitNormal;
-                  surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
-                }
-                break;
-                case 2:     // spherical reduced symmetry
-                {
-                  double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                  double b = 4.0 * r[1] * r_prime[1];
-                  double k = sqrt(b/a);
-                  double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                  double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                  Dune::FieldVector<ctype,dim> E_field(0.);
-                  E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                  E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                                   / ((a-b)*sqrt(a)*b) * E
-                              + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                  surfaceElem_flux = E_field * unitNormal;
-                  surfaceElem_flux *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[j] * r_prime[1] * lcd;
-                }
-                break;
-             }
-              bEfield[i] += surfaceElem_flux;
-            }
-            else {
-              surfaceElem_flux = -2. * sysParams.get_bjerrum() * sysParams.pi 
-                                * ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] );
-              // in case of mirroring also include mirrored element
-              if (sysParams.get_symmetry() == 1)
-              {
-                double lcd = boundary[ipbsType[i]]->get_charge_density() 
-                              + inducedChargeDensity[i]; /**< The local charge density 
-                                                           on this particular surface element */
-                Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[i]);
-                r_prime[0] *= -1.;
-                Dune::FieldVector<ctype,dim> dist = r - r_prime;
-                Dune::FieldVector<ctype,dim> E_field(0.);
-                double a = dist[0]*dist[0] + r[1]*r[1] + r_prime[1]*r_prime[1] + 2.0 * r[1] * r_prime[1];
-                double b = 4.0 * r[1] * r_prime[1];
-                double k = sqrt(b/a);
-                double E = gsl_sf_ellint_Ecomp (k, GSL_PREC_DOUBLE);
-                double K = gsl_sf_ellint_Kcomp (k, GSL_PREC_DOUBLE);
-                E_field[0] = -2.0 * dist[0] / ((a-b)*sqrt(a)) * E;
-                E_field[1] = 2.0 * ( 2.0 * r_prime[1] * a - b * r_prime[1] - b * r[1])
-                                  / ((a-b)*sqrt(a)*b) * E
-                  + 2.0 * (-2.0 * r_prime[1] * a + 2.0 * b * r_prime[1]) /  ((a-b)*sqrt(a)*b) * K;
-                double tmp = E_field * unitNormal;
-                tmp *= 2.0 * sysParams.get_bjerrum() * ipbsVolumes[i] * r_prime[1] * lcd;
-                surfaceElem_flux += tmp;
-              }
-            }
-            fluxes[i] += surfaceElem_flux;
-          }
-       }
-
-        // Collect results from all nodes
-        communicator.barrier();
-        communicator.sum(&fluxes[0], fluxes.size());
-        communicator.sum(&bEfield[0], fluxes.size());
-
-        // Do the SOR 
-        for (unsigned int i = my_offset; i < target; i++) {
-          bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
-                            + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
-          double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
-                        /(fluxes[i]+bContainer[i]));
-          fluxError = std::max(fluxError, local_fluxError);
-        }
-        communicator.barrier();
-        communicator.max(&fluxError, 1);
       }
 
-      // ------------------------------------------------------------------------
-      /// Force computation
-      // ------------------------------------------------------------------------
-      void forces(const U& u)
+      unsigned int target = my_offset + my_len;
+      // For each element on this processor calculate the contribution to surface integral part of the flux
+      for (unsigned int i = my_offset; i < target; i++)
       {
-        // Here we once more loop over all elements on this node (need of the element information
-        // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
-        // (see Hsu06a, eq. 61)
-
-        // Open output file for force on particles
-        std::ofstream force_file, vector_force_file;
-
-        vector_force_file.open (filename_helper("vector_forces").c_str(), std::ios::out);
-        if (communicator.rank() == 0) {
-          force_file.open ("forces.dat", std::ios::out);
-        }
-        typedef typename GV::template Codim<0>::template Partition
-                <Dune::Interior_Partition>::Iterator LeafIterator;
-        typedef typename GV::IntersectionIterator IntersectionIterator;
-
-        // Do the loop for boundary type 2 (iterated b.c.)
-        // TODO: implement that!
-        for (int i = 0; i < sysParams.get_npart(); i++)
+        Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
+        Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
+        unitNormal *= -1.;
+        double surfaceElem_flux = 0.;
+        for (size_t j = 0; j < ipbsPositions.size(); j++)
         {
-          std::cout << std::endl << "Calculating the force acting on particle id " << i << std::endl;
-          Dune::FieldVector<Real, dim> F(0);
+          double lcd = boundary[ipbsType[j]]->get_charge_density() 
+                          + inducedChargeDensity[j]
+                          + regulatedChargeDensity[j]; /**< The local charge density 
+                                                       on this particular surface element */
+          if (i!=j)
+          { 
+            Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
+            Dune::FieldVector<ctype,dim> e_field(0.);
 
-          for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-                   	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
-          {
-            if(it->hasBoundaryIntersections() == true) {
-              for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-                if(ii->boundary() == true) {
-                  if (boundaryIndexToEntity[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-                  {
-                    Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
-                    Dune::FieldVector<Real, dim> forcevec;
-                    normal *= -1.0 * ii->geometry().volume(); // Surface normal
-                    Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                    Dune::FieldMatrix<Real, dim, dim> sigma = maxwelltensor(gfs, it, evalPos, u);
-                    //sigma.umv(normal, F);
-                    sigma.mv(normal, forcevec);
-                    if (sysParams.get_symmetry() > 0) {
-                      // integration in theta
-                      forcevec *= 2.*sysParams.pi*evalPos[1]; 
-                    }
-                    F += forcevec;
-                    vector_force_file << evalPos << " " << forcevec << std::endl;
-                  }
-                }
-              }
+            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
+
+            e_field *= ipbsVolumes[j];
+      
+            surfaceElem_flux = e_field * unitNormal;
+            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {  // TODO This is better using a mirror switch and a cylinder switch
+              surfaceElem_flux *= r_prime[1];
             }
+            surfaceElem_flux *= lcd;
+          } 
+          else // if i==j - only contributes in case of mirroring
+            if (sysParams.get_symmetry() == 2) {
+              Dune::FieldVector<ctype,dim> r_prime2(ipbsPositions[i]);
+              r_prime2[0] *= -1;
+              
+              Dune::FieldVector<ctype,dim> e_field(0.);
+              e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime2, 1);
+              e_field *= ipbsVolumes[j];
+              surfaceElem_flux = e_field * unitNormal;
+              // cylindrical coordinates
+              surfaceElem_flux *= r_prime2[1];
+              surfaceElem_flux *= lcd;
           }
-          // Sum up force of all nodes
-          communicator.barrier();
-          communicator.sum(&F[0], F.dim());
-          if (communicator.rank() == 0)
-            force_file << i << " " << F << std::endl;        
-        }
-    
-      // close output
-      if (communicator.rank() == 0) {
-        force_file.close();
-        vector_force_file.close();
-        }
-      }
+          E_ext[i] += surfaceElem_flux;
+        } // end of j loop
+      } // end of i loop
+      
+      // Collect results from all nodes
+      communicator.barrier();
+      communicator.sum(&E_ext[0], fluxes.size());
 
-  
+      /* Equation 3.4.4 DA Schlaich */
+      for (unsigned int i = my_offset; i < target; i++) {
+        fluxes[i] = E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()* 
+            ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] + regulatedChargeDensity[i] );
+      } 
+        
+        
+      // Do the SOR 
+      for (unsigned int i = my_offset; i < target; i++) {
+        bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
+                        + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
+        double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
+                     /(fluxes[i]+bContainer[i]));
+        fluxError = std::max(fluxError, local_fluxError);
+      }
+      communicator.barrier();
+      communicator.max(&fluxError, 1);
+    }
+
+
+    // ------------------------------------------------------------------------
+    /// Charge regulation calculation
+    // ------------------------------------------------------------------------
+    void updateChargeRegulation(const U& u)
+    { 
+      /// Construct a discrete grid function space for access to solution
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      typedef typename DGF::Traits::RangeType RT;
+      typedef typename DGF::Traits::DomainFieldType DF;
+
+      DGF udgf(gfs,u);
+
+      for ( size_t i = 0; i < ipbsElemPointers.size(); i++)
+      {
+        // Calculate regulated charge density
+        RT value;
+        ElemPointer it = ipbsElemPointers[i];
+        Dune::FieldVector<ctype, dim> local = it->geometry().local( ipbsPositions[i] );
+        udgf.evaluate(*it, local,value);
+        double pK = boundary[ ipbsType[i] ]->get_pK();
+        double pH = sysParams.get_pH();
+        double exponential = std::exp ( std::log10(10)*( pH - pK ) - value );
+        regulatedChargeDensity[i] = boundary[ ipbsType[i] ]->get_sigma_max() * exponential / ( 1. + exponential);
+        //std::cout << "i: " << i << " pH " << pH << " pK " << pK << " Value: " << value << " exponential: " << exponential << " regulatedChargeDensity: " << regulatedChargeDensity[i] << std::endl;
+      }
+    }
+
+
+
   // ------------------------------------------------------------------------
+
 
   private:
     void initial_guess()
@@ -464,7 +336,7 @@ class Ipbsolver
       for (unsigned int i = my_offset; i < target; i++)
       {
         // initialize with constant surface charge density
-        bContainer[i] = -4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
+        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
       }
     }
  
@@ -484,7 +356,7 @@ class Ipbsolver
     
       int counter = 0;
       int elemcounter = 0;
-      // loop over elements on this processor and get information on the iterated boundaries
+      /// loop over elements on this processor and get information on the iterated boundaries
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
@@ -500,6 +372,7 @@ class Ipbsolver
               indexLookupMap.insert(std::pair<int, int>(boundaryElemMapper.map(*it),counter));
               ipbsType.push_back(boundaryIndexToEntity[ii->boundarySegmentIndex()]);
               ipbsVolumes.push_back(ii->geometry().volume());
+              ipbsElemPointers.push_back(*it);   // Point to the IPBS elements local on each node
               counter++;
             }
       }
@@ -636,34 +509,16 @@ class Ipbsolver
 #endif
     }
  
-    // ------------------------------------------------------------------------
-    /// Filenamehelper for parallel output
-    // ------------------------------------------------------------------------
-
-    std::string filename_helper(const std::string &name)
-    {
-      // generate filename for process data
-      std::ostringstream pieceName;
-      if( communicator.size() > 1 )
-      {
-        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << ":";
-        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << ":";
-      }
-      pieceName << name << ".dat";
-      return pieceName.str();
-    }
-
-
     const GV& gv;
     /// The grid function space
     const GFS& gfs;
-    Dune::MPIHelper& helper;
     const std::vector<int>& boundaryIndexToEntity;
     // provide a mapper for getting indices of iterated boundary elements
     typedef Dune::SingleCodimSingleGeomTypeMapper<GV, 0> BoundaryElemMapper;
     BoundaryElemMapper boundaryElemMapper;
     /// The communicator decides weither to use MPI or fake
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> communicator;
+    typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
+    const CollectiveCommunication & communicator;
 
     /// Store the center of boundary intersections of iterative type
     std::vector<Dune::FieldVector<ctype,dim> > ipbsPositions;
@@ -673,20 +528,29 @@ class Ipbsolver
     std::vector<Real> ipbsVolumes;
     /// Provide a vector storing the type of the iterative boundary @todo Maybe it's more reasonable to store its surface charge density
     std::vector<int> ipbsType;
+    /// Element pointers to local IPBS elements
+    typedef typename GV::template Codim<0>::EntityPointer ElemPointer;
+    std::vector<ElemPointer> ipbsElemPointers;
+
     /// For fast access to the precomputed fluxes we use binary tree  - only local index is needed :-)
     typedef std::map<int, int> IndexLookupMap;
     IndexLookupMap indexLookupMap;
-    typedef std::vector<double> bContainerType;
-    bContainerType bContainer;  // Store the electric field on the surface elements caused by explicit charges in the system
-    bContainerType inducedChargeDensity;  // Store the induced charge density
-    bContainerType bEfield;   /**< Store the electric field on boundary elements, 
+
+    typedef std::vector<double> ContainerType;
+    ContainerType bContainer;  /// Store the flux on the surface elements
+    ContainerType inducedChargeDensity;  // Store the induced charge density
+    ContainerType E_ext;   /**< Store the electric field on boundary elements, 
                                  which is calculated during updateBC(),
                                  \f[ \vec{E}(\vec{r}) \propto \int_V \sinh(\Phi(\vec{r}))
                                  \textnormal{d}\vec{r} \f] */
+    ContainerType regulatedChargeDensity;  /**< Store the regulatedChargeDensity
+                                                CAVE: Only local on each node! */
+    
     /// Offset and length of data stream on each node
     unsigned int my_offset, my_len;
     unsigned int iterationCounter;
     double fluxError,  icError;
 };
+
 
 #endif  /* _IPBSOLVER_HH */
