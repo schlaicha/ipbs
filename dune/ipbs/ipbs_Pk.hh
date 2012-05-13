@@ -148,8 +148,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  //LS ls(gfs);
-  LS ls(gfs, 20000, 1);
+  LS ls( gfs, 5000, 5, sysParams.get_verbose() );
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   //typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
@@ -166,10 +165,8 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   typedef Dune::PDELab::Newton<GO,LS,U> NEWTON;
   NEWTON newton(go,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
-  newton.setReassembleThreshold(0.0);
   newton.setVerbosityLevel(sysParams.get_verbose());
-  newton.setReduction(sysParams.get_newton_tolerance());
-  newton.setMinLinearReduction(1e-10); // seems to be low in parallel?
+  newton.setMinLinearReduction(1e-10);
   newton.setMaxIterations(100);
   newton.setLineSearchMaxIterations(50);
 

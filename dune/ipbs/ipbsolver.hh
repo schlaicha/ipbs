@@ -156,7 +156,7 @@ class Ipbsolver
       /// Store the new calculated values
       ContainerType fluxes(ipbsPositions.size(),0.);
 
-      const int intorder = 5;
+      const int intorder = 2;
 
       for (int i =0; i<E_ext.size(); i++) {
           E_ext[i]=0;

@@ -127,11 +127,11 @@ int main(int argc, char** argv)
   GridType* grid = factory.createGrid();
  
   // refine grid
-  if(helper.rank()==0) {
-    std::cout << "Using " << sysParams.get_refinement() << " global refinement steps and" << std::endl;
-    std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
-      << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
-  }
+  //if(helper.rank()==0) {
+  //  std::cout << "Using " << sysParams.get_refinement() << " global refinement steps and" << std::endl;
+  //  std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
+  //    << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
+  //}
 
 
   // Load balance the parallel grid
