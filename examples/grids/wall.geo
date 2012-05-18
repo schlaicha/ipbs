@@ -8,11 +8,11 @@ wall_position = 0;
 wall_width = 1;
 wall_height = 16;
 wall_refinement = .3;
-lower_left_refinement =3.;
-upper_left_refinement = 3.;
-lower_right_refinement = 3.;
-upper_right_refinement = 3.;
-center_refinement = .3;
+lower_left_refinement =     1.5;
+upper_left_refinement =     1.5;
+lower_right_refinement =    1.5;
+upper_right_refinement =    1.5;
+center_refinement =         1.5;
 
 // Define the geometry for the wall (iPBS)
 

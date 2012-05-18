@@ -10,6 +10,8 @@
 #include "boundary.hh"
 #include "e_field.hh"
 
+#include <time.h>
+
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
 
@@ -176,7 +178,6 @@ class Ipbsolver
           const Dune::QuadratureRule<DF,dim>& 
             rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
 
-          double totalweight=0;
           // loop over quadrature points
           for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
                      q_it=rule.begin(); q_it!=rule.end(); ++q_it)
@@ -184,9 +185,11 @@ class Ipbsolver
             double E_ext_ions = 0.;
             // Get the position vector of the this element's center
             Dune::FieldVector<ctype,dim> r_prime = it->geometry().global(q_it->position());
+            //Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
                       
             RT value;
             udgf.evaluate(*it,q_it->position(),value);
+            //udgf.evaluate(*it,it->geometry().local(r_prime),value);
 
             Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
             Dune::FieldVector<ctype,dim> dist = r - r_prime;
@@ -198,7 +201,7 @@ class Ipbsolver
             e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
 
             e_field *= q_it->weight() * it->geometry().integrationElement(q_it->position());
-            totalweight +=  q_it->weight() * it->geometry().integrationElement(q_it->position());
+            //e_field *= it->geometry().volume();
               
             E_ext_ions = e_field * unitNormal;
 
@@ -231,9 +234,9 @@ class Ipbsolver
         Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
         Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
         unitNormal *= -1.;
-        double surfaceElem_flux = 0.;
         for (size_t j = 0; j < ipbsPositions.size(); j++)
         {
+          double surfaceElem_flux = 0.;
           double lcd = boundary[ipbsType[j]]->get_charge_density() 
                           + inducedChargeDensity[j]
                           + regulatedChargeDensity[j]; /**< The local charge density 
@@ -241,7 +244,7 @@ class Ipbsolver
           if (i!=j)
           { 
             Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
-            Dune::FieldVector<ctype,dim> e_field(0.);
+            Dune::FieldVector<ctype,dim> e_field(1.);
 
             e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
 
@@ -273,7 +276,7 @@ class Ipbsolver
       // Collect results from all nodes
       communicator.barrier();
       communicator.sum(&E_ext[0], fluxes.size());
-
+      
       /* Equation 3.4.4 DA Schlaich */
       for (unsigned int i = my_offset; i < target; i++) {
         fluxes[i] = E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()* 
@@ -331,12 +334,14 @@ class Ipbsolver
     {
       /** \brief Get an inital guess for the iterative boundaries */
 
+      srand ( time(NULL) );
       unsigned int target = my_offset + my_len;
       // For each element on this processor calculate the contribution to surface integral part of the flux
       for (unsigned int i = my_offset; i < target; i++)
       {
         // initialize with constant surface charge density
-        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
+        //bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
+        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density() * ( rand()/RAND_MAX*.4 + .8);
       }
     }
  

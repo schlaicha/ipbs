@@ -5,14 +5,14 @@
 box_length = 15;
 box_width = 18;
 wall_width = 1;
-wall_height = 7;
+wall_height = 12;
 wall_refinement = .1;
-wall_distance = 1.55555;
+wall_distance = 1.;
 lower_left_refinement =1;
 upper_left_refinement = 1;
 lower_right_refinement = 1.;
 upper_right_refinement = 1;
-center_refinement = .5;
+center_refinement = .1;
 middle_refinement = 1;
 
 // Define the geometry for the wall (iPBS)
@@ -62,9 +62,9 @@ Plane Surface(23) = {22};
 // 0 is for Dirichlet boundary elements
 // 1 for Neumann
 // 2 for iPBS
-Physical Line(2) = {9, 10, 15, 16};
-Physical Line(3) = {12, 17, 18, 13};
-Physical Line(1) = {14, 8, 2, 3, 4, 5, 6, 7, 11, 21};
+Physical Line(1) = {9, 10, 15, 16};
+Physical Line(2) = {12, 17, 18, 13};
+Physical Line(0) = {14, 8, 2, 3, 4, 5, 6, 7, 11, 21};
 
 // At least one physical surface (or physical volume
 // is needed by DUNE gmshreader (otherwise all elements

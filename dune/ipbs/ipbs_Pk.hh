@@ -143,8 +143,8 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
 
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
-  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
+  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
   //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
