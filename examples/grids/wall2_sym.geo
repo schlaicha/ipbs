@@ -2,17 +2,17 @@
 // Creates 2 charged walls for iPBS using spherical symmetry
 // refinement is done via the characteristic length
 
-box_length = 10;
+box_length = 15;
 box_width = 30;
 wall_width = 1;
-wall_height = 7;
-wall_refinement = .03;
+wall_height = 9;
+wall_refinement = .02;
 wall_distance = 1;
 lower_left_refinement =1;
 upper_left_refinement = 1;
 lower_right_refinement = 1.;
 upper_right_refinement = 1;
-center_refinement = .03;
+center_refinement = .02;
 middle_refinement = .2;
 
 // Define the geometry for the wall (iPBS)
