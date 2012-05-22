@@ -44,6 +44,12 @@ class Ipbsolver
        \param boundaryIndexToEntity physical property of boundary elements
     */
     {
+      // Resize the containers specific to each physical surface
+      physArea.resize( sysParams.get_npart() );
+      physQTot.resize( sysParams.get_npart() );
+      physQIpbs.resize( sysParams.get_npart() );
+      physShift.resize( sysParams.get_npart() );
+
       init(); // Detect iterative elements
       communicateIpbsData(); 
 
@@ -158,10 +164,13 @@ class Ipbsolver
       /// Store the new calculated values
       ContainerType fluxes(ipbsPositions.size(),0.);
 
-      const int intorder = 2;
+      const int intorder = 1;
 
-      for (int i =0; i<E_ext.size(); i++) {
+      for (size_t i =0; i<E_ext.size(); i++) {
           E_ext[i]=0;
+      }
+      for (size_t i = 0; i < sysParams.get_npart(); i++){
+          physQIpbs[i] = 0;
       }
 
       // Loop over all elements and calculate the volume integral contribution
@@ -190,6 +199,9 @@ class Ipbsolver
             RT value;
             udgf.evaluate(*it,q_it->position(),value);
             //udgf.evaluate(*it,it->geometry().local(r_prime),value);
+            
+            double weight = q_it->weight() * it->geometry().integrationElement(q_it->position());
+            //double weight = it->geometry().volume();
 
             Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
             Dune::FieldVector<ctype,dim> dist = r - r_prime;
@@ -198,16 +210,14 @@ class Ipbsolver
 
             Dune::FieldVector<ctype,dim> e_field(0.);
 
-            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
+            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > 
+                        (r, r_prime, sysParams.get_symmetry());
 
-            e_field *= q_it->weight() * it->geometry().integrationElement(q_it->position());
-            //e_field *= it->geometry().volume();
-              
+            e_field *= weight;
             E_ext_ions = e_field * unitNormal;
-
             E_ext_ions *= 1./ (4.0*sysParams.pi) * sysParams.get_lambda2i();
 
-            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {
+            if ( sysParams.get_symmetry() > 0) {
                 E_ext_ions *= r_prime[1];
             }
 
@@ -221,11 +231,11 @@ class Ipbsolver
                     E_ext_ions *= std::exp(value); // Counterions have opposite sign!
                     break;
             }
-
             E_ext[i] += E_ext_ions;
           }
         }
       }
+
 
       unsigned int target = my_offset + my_len;
       // For each element on this processor calculate the contribution to surface integral part of the flux
@@ -246,12 +256,13 @@ class Ipbsolver
             Dune::FieldVector<ctype,dim> r_prime (ipbsPositions[j]);
             Dune::FieldVector<ctype,dim> e_field(1.);
 
-            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > (r, r_prime, sysParams.get_symmetry());
+            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > 
+                        (r, r_prime, sysParams.get_symmetry());
 
             e_field *= ipbsVolumes[j];
       
             surfaceElem_flux = e_field * unitNormal;
-            if ( sysParams.get_symmetry() == 1 || sysParams.get_symmetry() == 2 ) {  // TODO This is better using a mirror switch and a cylinder switch
+            if ( sysParams.get_symmetry() > 0 ) {  // TODO This is better using a mirror switch and a cylinder switch
               surfaceElem_flux *= r_prime[1];
             }
             surfaceElem_flux *= lcd;
@@ -272,20 +283,52 @@ class Ipbsolver
           E_ext[i] += surfaceElem_flux;
         } // end of j loop
       } // end of i loop
+
       
       // Collect results from all nodes
       communicator.barrier();
       communicator.sum(&E_ext[0], fluxes.size());
       
-      /* Equation 3.4.4 DA Schlaich */
       for (unsigned int i = my_offset; i < target; i++) {
+      
+        /* Equation 3.4.4 DA Schlaich */
         fluxes[i] = E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()* 
-            ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] + regulatedChargeDensity[i] );
-      } 
+            ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] 
+              + regulatedChargeDensity[i] );
         
+        if (sysParams.get_symmetry() > 0)
+          physQIpbs[ ipbsType[i] ] += ipbsPositions[i][1] * ipbsVolumes[i] * fluxes[i]
+                                    / (2.*sysParams.get_bjerrum());
+        else physQIpbs[ ipbsType[i] ] += ipbsVolumes[i] * fluxes[i]
+                                    / (4.*sysParams.pi*sysParams.get_bjerrum());
+
+      }  
         
+      communicator.sum( &physQIpbs[0], physQIpbs.size() );
+      if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
+        std::cout << "Init detected the following physical iterative surfaces:" << std::endl;
+        for (size_t i = 0; i < sysParams.get_npart(); i++) {
+          if (ipbsType[i] == 2)
+            std::cout << i << "\t area: " << physArea[i] << "\tQ': " << physQIpbs[i] << std::endl;
+        }
+      }
+      
+      // Shift the fluxes for charge neutrallity
+      std::vector<double> physFluxShift( sysParams.get_npart() );
+      for (size_t i = 0; i < physQIpbs.size(); i++) {
+        double shift =  ( physQTot[i] - physQIpbs[i] ) / physArea[i];
+        physFluxShift[i] += shift;
+        if (communicator.rank() == 0 && sysParams.get_verbose() > 0)
+          if (ipbsType[i] == 2)
+            std::cout << "Flux on surface " << i << " shifted by " << physFluxShift[i] << std::endl;
+      }
+
       // Do the SOR 
       for (unsigned int i = my_offset; i < target; i++) {
+
+        // do the shift
+        fluxes[i] += physFluxShift[ ipbsType[i] ];
+
         bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
                         + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
         double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
@@ -294,6 +337,7 @@ class Ipbsolver
       }
       communicator.barrier();
       communicator.max(&fluxError, 1);
+ 
     }
 
 
@@ -340,8 +384,8 @@ class Ipbsolver
       for (unsigned int i = my_offset; i < target; i++)
       {
         // initialize with constant surface charge density
-        //bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
-        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density() * ( rand()/RAND_MAX*.4 + .8);
+        bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density();
+        //bContainer[i] = 4. * sysParams.get_bjerrum() * sysParams.pi * boundary[ipbsType[i]]->get_charge_density() * ( rand()/RAND_MAX*.4 + .8);
       }
     }
  
@@ -367,19 +411,39 @@ class Ipbsolver
       {
         elemcounter++;
         if (it->hasBoundaryIntersections() == true)
-          for (IntersectionIterator ii = it->ileafbegin(); ii!=it->ileafend(); ++ii)
+          for (IntersectionIterator ii = it->ileafbegin(); ii!=it->ileafend(); ++ii) {
             if(ii->boundary()==true && 
                 boundary[ boundaryIndexToEntity[ii->boundarySegmentIndex()] ]->get_type() == 2)
-                // check if IPBS boundary
-            {
-              ipbsPositions.push_back(ii->geometry().center());
-              ipbsNormals.push_back(ii->centerUnitOuterNormal());
-              indexLookupMap.insert(std::pair<int, int>(boundaryElemMapper.map(*it),counter));
-              ipbsType.push_back(boundaryIndexToEntity[ii->boundarySegmentIndex()]);
-              ipbsVolumes.push_back(ii->geometry().volume());
-              ipbsElemPointers.push_back(*it);   // Point to the IPBS elements local on each node
-              counter++;
-            }
+                //boundary[physType]->get_type() == 2)        // check if IPBS boundary
+              {
+                int physType = boundaryIndexToEntity[ii->boundarySegmentIndex()];
+                double volume = ii->geometry().volume();
+                Dune::FieldVector<ctype, dim> center = ii->geometry().center();
+
+                ipbsPositions.push_back(center);
+                ipbsNormals.push_back(ii->centerUnitOuterNormal());
+                indexLookupMap.insert(std::pair<int, int>(boundaryElemMapper.map(*it),counter));
+                ipbsType.push_back( physType );
+                ipbsVolumes.push_back(volume);
+                ipbsElemPointers.push_back(*it);   // Point to the IPBS elements local on each node
+                counter++;
+                // charge neutralisation stuff
+                if (sysParams.get_symmetry() > 0)
+                  volume *= 2. * sysParams.pi * center[1];
+                physArea[physType] += volume;
+                physQTot[physType] += boundary[physType]->get_charge_density() * volume;
+              }
+          }
+      }
+
+      communicator.sum( &physArea[0], physArea.size() );
+      communicator.sum( &physQTot[0], physQTot.size() );
+      if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
+        std::cout << "Init detected the following physical iterative surfaces:" << std::endl;
+        for (size_t i = 0; i < sysParams.get_npart(); i++) {
+          if (ipbsType[i] == 2)
+            std::cout << i << "\t area: " << physArea[i] << "\tQ: " << physQTot[i] << std::endl;
+        }
       }
     }
 
@@ -555,6 +619,10 @@ class Ipbsolver
     unsigned int my_offset, my_len;
     unsigned int iterationCounter;
     double fluxError,  icError;
+
+
+    /// Charge neutrallity constraint
+    std::vector<double> physArea, physQTot, physQIpbs, physShift;
 };
 
 
