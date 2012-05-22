@@ -72,6 +72,7 @@ class DataWriter {
         out << std::left << std::setw(12) << "potential\t";
         out << std::left << std::setw(dim*12+1) << "electric field\t";
         out << std::left << std::setw(12) << "|E|\t" << "total ion density";
+        out << std::left << std::setw(12) << "element volume";
         out << std::endl << std::endl;
 
         typedef typename GridView::template Codim<0>::template Partition
@@ -99,14 +100,16 @@ class DataWriter {
               < GFS, DataContainer > grads(gfs,data);
             grads.evaluate(*it, local, gradphi);
 
+            double density = ( sysParams.get_lambda2i() / 
+                  (4.*sysParams.pi * sysParams.get_bjerrum()) 
+                  * std::sinh(- value) );
+
             out << std::left << std::scientific << evalPos << "\t";
             out << std::left << value << "\t";
             out << std::left << gradphi << "\t";
-            out << std::left << gradphi.two_norm() 
-              << "\t" 
-              << ( sysParams.get_lambda2i() / 
-                  (4.*sysParams.pi * sysParams.get_bjerrum()) 
-                  * std::sinh(- value) ) << "\n";
+            out << std::left << gradphi.two_norm() << "\t";
+            out << std::left << density << "\t";
+            out << std::left << it->geometry().volume() << "\n";
         }
         
         out.close();

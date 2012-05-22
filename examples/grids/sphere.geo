@@ -4,9 +4,9 @@
 
 radius = 3;
 position = 0;  // Center position of the sphere
-box_size = 15;
+box_size = 20;
 outer_refinement = 1;
-inner_refinement = 0.15;
+inner_refinement = 0.1;
 
 // Define the geometry for 2d-sphere (iPBS)
 
@@ -16,16 +16,14 @@ Point(3) = {position-radius, 0, 0, inner_refinement};
 Point(4) = {position+radius, 0, 0, inner_refinement};
 Point(5) = {-box_size, 0, 0, outer_refinement};
 Point(6) = {box_size, 0, 0, outer_refinement};
-Point(7) = {-box_size, box_size, 0, outer_refinement};
-Point(8) = {box_size, box_size, 0, outer_refinement};
+Point(7) = {0, box_size, 0, outer_refinement};
 Circle(1) = {4, 1, 2};
 Circle(2) = {2, 1, 3};
-Line(3) = {4, 6};
 Line(4) = {3, 5};
-Line(5) = {5, 7};
-Line(6) = {7, 8};
-Line(7) = {8, 6};
-Line Loop(8) = {6, 7, -3, 1, 2, 4, 5};
+Line(5) = {4, 6};
+Circle(6) = {5, 1, 7};
+Circle(7) = {7, 1, 6};
+Line Loop(8) = {7, -5, 1, 2, 4, 6};
 Plane Surface(9) = {8};
 
 // Define physical groups for assigning B.C.
@@ -33,8 +31,8 @@ Plane Surface(9) = {8};
 // 1 for Neumann
 // 2 for iPBS
 
-Physical Line(0) = {6,7,5};
-Physical Line(1) = {4, 3};
+Physical Line(0) = {6,7};
+Physical Line(1) = {4, 5};
 Physical Line(2) = {2, 1};
 
 
