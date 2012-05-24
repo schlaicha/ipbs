@@ -35,9 +35,11 @@ class Ipbsolver
 
   public:
     Ipbsolver(const GV& gv_, const GFS& gfs_,
-        const std::vector<int>& boundaryIndexToEntity_, const bool use_guess=true) :
+        const std::vector<int>& boundaryIndexToEntity_, const int intorder_=1,
+        const bool use_guess=true) :
       gv(gv_), gfs(gfs_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      boundaryElemMapper(gv), communicator(gv.comm()), my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
+      intorder(intorder_),  boundaryElemMapper(gv), communicator(gv.comm()), 
+      my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
      
     /*!
        \param gv the view on the leaf grid
@@ -163,11 +165,10 @@ class Ipbsolver
 
       /// Store the new calculated values
       ContainerType fluxes(ipbsPositions.size(),0.);
-
-      const int intorder = 1;
+      ContainerType physFluxShift( sysParams.get_npart(), 0 );
 
       for (size_t i =0; i<E_ext.size(); i++) {
-          E_ext[i]=0;
+          E_ext[i] = 0;
       }
       for (size_t i = 0; i < sysParams.get_npart(); i++){
           physQIpbs[i] = 0;
@@ -232,6 +233,10 @@ class Ipbsolver
                     break;
             }
             E_ext[i] += E_ext_ions;
+            if (sysParams.get_symmetry() == 0)
+              physFluxShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i];
+            else
+              physFluxShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i]*2*sysParams.pi*r[1];
           }
         }
       }
@@ -281,6 +286,10 @@ class Ipbsolver
               surfaceElem_flux *= lcd;
           }
           E_ext[i] += surfaceElem_flux;
+          if (sysParams.get_symmetry() == 0)
+            physFluxShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i];
+          else
+            physFluxShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i]*2*sysParams.pi*r[1];
         } // end of j loop
       } // end of i loop
 
@@ -290,44 +299,41 @@ class Ipbsolver
       communicator.sum(&E_ext[0], fluxes.size());
       
       for (unsigned int i = my_offset; i < target; i++) {
+        
+        double thisChargeDensity = boundary[ipbsType[i]]->get_charge_density() 
+                                  + inducedChargeDensity[i] + regulatedChargeDensity[i];
       
         /* Equation 3.4.4 DA Schlaich */
-        fluxes[i] = E_ext[i] + 2*sysParams.pi*sysParams.get_bjerrum()* 
-            ( boundary[ipbsType[i]]->get_charge_density() + inducedChargeDensity[i] 
-              + regulatedChargeDensity[i] );
-        
-        if (sysParams.get_symmetry() > 0)
-          physQIpbs[ ipbsType[i] ] += ipbsPositions[i][1] * ipbsVolumes[i] * fluxes[i]
-                                    / (2.*sysParams.get_bjerrum());
-        else physQIpbs[ ipbsType[i] ] += ipbsVolumes[i] * fluxes[i]
-                                    / (4.*sysParams.pi*sysParams.get_bjerrum());
+        fluxes[i] = E_ext[i] + 2. * sysParams.pi*sysParams.get_bjerrum() * thisChargeDensity;
 
+        double thisCharge = 0;
+        if (sysParams.get_symmetry() > 0)
+          thisCharge = 2 * sysParams.pi * ipbsPositions[i][1] * ipbsVolumes[i] * thisChargeDensity;
+        else
+          thisCharge = ipbsVolumes[i] * thisChargeDensity;
+
+        physQIpbs[ ipbsType[i] ] += thisCharge;
+        physFluxShift[ ipbsType[i] ] += 2. * sysParams.get_bjerrum()* sysParams.pi * thisCharge; 
       }  
         
+      // Collect results from all nodes
+      communicator.barrier();
       communicator.sum( &physQIpbs[0], physQIpbs.size() );
+      communicator.sum( &physFluxShift[0], physFluxShift.size() );
+
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
-        std::cout << "Init detected the following physical iterative surfaces:" << std::endl;
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
-          if (ipbsType[i] == 2)
-            std::cout << i << "\t area: " << physArea[i] << "\tQ': " << physQIpbs[i] << std::endl;
+          if (boundary[i]->get_type() == 2)
+            std::cout << "Charge on surface " << i << ": " << physQIpbs[i] << ", flux shifted by " 
+              << physFluxShift[i] / physArea[ ipbsType[i] ] << std::endl;
         }
       }
       
-      // Shift the fluxes for charge neutrallity
-      std::vector<double> physFluxShift( sysParams.get_npart() );
-      for (size_t i = 0; i < physQIpbs.size(); i++) {
-        double shift =  ( physQTot[i] - physQIpbs[i] ) / physArea[i];
-        physFluxShift[i] += shift;
-        if (communicator.rank() == 0 && sysParams.get_verbose() > 0)
-          if (ipbsType[i] == 2)
-            std::cout << "Flux on surface " << i << " shifted by " << physFluxShift[i] << std::endl;
-      }
-
       // Do the SOR 
       for (unsigned int i = my_offset; i < target; i++) {
 
         // do the shift
-        fluxes[i] += physFluxShift[ ipbsType[i] ];
+        //fluxes[i] += physFluxShift[ ipbsType[i] ] / physArea[ ipbsType[i] ];
 
         bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
                         + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
@@ -414,7 +420,6 @@ class Ipbsolver
           for (IntersectionIterator ii = it->ileafbegin(); ii!=it->ileafend(); ++ii) {
             if(ii->boundary()==true && 
                 boundary[ boundaryIndexToEntity[ii->boundarySegmentIndex()] ]->get_type() == 2)
-                //boundary[physType]->get_type() == 2)        // check if IPBS boundary
               {
                 int physType = boundaryIndexToEntity[ii->boundarySegmentIndex()];
                 double volume = ii->geometry().volume();
@@ -441,7 +446,7 @@ class Ipbsolver
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
         std::cout << "Init detected the following physical iterative surfaces:" << std::endl;
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
-          if (ipbsType[i] == 2)
+          if (boundary[i]->get_type() == 2)
             std::cout << i << "\t area: " << physArea[i] << "\tQ: " << physQTot[i] << std::endl;
         }
       }
@@ -620,6 +625,7 @@ class Ipbsolver
     unsigned int iterationCounter;
     double fluxError,  icError;
 
+    const int intorder; 
 
     /// Charge neutrallity constraint
     std::vector<double> physArea, physQTot, physQIpbs, physShift;

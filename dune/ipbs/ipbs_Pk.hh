@@ -122,11 +122,10 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
 
   typedef Ipbsolver<GV, GFS> Ipbs;
-  Ipbs ipbs(gv, gfs, boundaryIndexToEntity);
+  Ipbs ipbs(gv, gfs, boundaryIndexToEntity, k);
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
-  //ipbs.updateBC(u);
 
   // <<<4>>> Make Grid Operator Space
   typedef PBLocalOperator<M,B,J> LOP;
