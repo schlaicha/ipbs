@@ -50,7 +50,7 @@ class Ipbsolver
       physArea.resize( sysParams.get_npart() );
       physQTot.resize( sysParams.get_npart() );
       physQIpbs.resize( sysParams.get_npart() );
-      physShift.resize( sysParams.get_npart() );
+      efieldShift.assign( sysParams.get_npart(), 0 );
 
       init(); // Detect iterative elements
       communicateIpbsData(); 
@@ -124,11 +124,12 @@ class Ipbsolver
 
         // include charge regulation
         double my_charge = boundary[ipbsType[i]]->get_charge_density() + regulatedChargeDensity[i];
+        double delta = (eps_out - eps_in) / (eps_out + eps_in);
 
         // calculate the induced charge in this surface element
-        ic[i] = -(eps_in - eps_out) / (eps_in+eps_out)
-                                * ( my_charge + eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
-                                    * E_ext[i] );
+        double shift =  efieldShift[ ipbsType[i] ] / physArea [ ipbsType[i] ];
+        ic[i] = delta * ( my_charge - eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
+                * ( E_ext[i] + shift ) ); // Include neutrality constraint
       }
       communicator.barrier();
       communicator.sum(&ic[0], ic.size());
@@ -165,13 +166,13 @@ class Ipbsolver
 
       /// Store the new calculated values
       ContainerType fluxes(ipbsPositions.size(),0.);
-      ContainerType physFluxShift( sysParams.get_npart(), 0 );
 
       for (size_t i =0; i<E_ext.size(); i++) {
           E_ext[i] = 0;
       }
       for (size_t i = 0; i < sysParams.get_npart(); i++){
           physQIpbs[i] = 0;
+          efieldShift[i] = 0;
       }
 
       // Loop over all elements and calculate the volume integral contribution
@@ -234,9 +235,9 @@ class Ipbsolver
             }
             E_ext[i] += E_ext_ions;
             if (sysParams.get_symmetry() == 0)
-              physFluxShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i];
+              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i];
             else
-              physFluxShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i]*2*sysParams.pi*r[1];
+              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i]*2*sysParams.pi*r[1];
           }
         }
       }
@@ -287,17 +288,16 @@ class Ipbsolver
           }
           E_ext[i] += surfaceElem_flux;
           if (sysParams.get_symmetry() == 0)
-            physFluxShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i];
+            efieldShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i];
           else
-            physFluxShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i]*2*sysParams.pi*r[1];
+            efieldShift[ ipbsType[i] ] -= surfaceElem_flux*ipbsVolumes[i]*2*sysParams.pi*r[1];
         } // end of j loop
       } // end of i loop
 
-      
       // Collect results from all nodes
       communicator.barrier();
       communicator.sum(&E_ext[0], fluxes.size());
-      
+     
       for (unsigned int i = my_offset; i < target; i++) {
         
         double thisChargeDensity = boundary[ipbsType[i]]->get_charge_density() 
@@ -313,19 +313,20 @@ class Ipbsolver
           thisCharge = ipbsVolumes[i] * thisChargeDensity;
 
         physQIpbs[ ipbsType[i] ] += thisCharge;
-        physFluxShift[ ipbsType[i] ] += 2. * sysParams.get_bjerrum()* sysParams.pi * thisCharge; 
-      }  
+        efieldShift[ ipbsType[i] ] += 2. * sysParams.get_bjerrum()* sysParams.pi * thisCharge; 
+      }
+
         
       // Collect results from all nodes
       communicator.barrier();
       communicator.sum( &physQIpbs[0], physQIpbs.size() );
-      communicator.sum( &physFluxShift[0], physFluxShift.size() );
+      communicator.sum( &efieldShift[0], efieldShift.size() );
 
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
           if (boundary[i]->get_type() == 2)
             std::cout << "Charge on surface " << i << ": " << physQIpbs[i] << ", flux shifted by " 
-              << physFluxShift[i] / physArea[ ipbsType[i] ] << std::endl;
+              << efieldShift[i] / physArea[ ipbsType[i] ] << std::endl;
         }
       }
       
@@ -333,7 +334,7 @@ class Ipbsolver
       for (unsigned int i = my_offset; i < target; i++) {
 
         // do the shift
-        //fluxes[i] += physFluxShift[ ipbsType[i] ] / physArea[ ipbsType[i] ];
+        fluxes[i] += efieldShift[ ipbsType[i] ] / physArea[ ipbsType[i] ];
 
         bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
                         + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
@@ -620,15 +621,18 @@ class Ipbsolver
     ContainerType regulatedChargeDensity;  /**< Store the regulatedChargeDensity
                                                 CAVE: Only local on each node! */
     
+    /// Charge neutrallity constraint
+    ContainerType physArea, physQTot, physQIpbs;
+    ContainerType efieldShift;    /** Shift in the electric field,
+                                                                * neccessary for IC neutrality */  
+
+    
     /// Offset and length of data stream on each node
     unsigned int my_offset, my_len;
     unsigned int iterationCounter;
     double fluxError,  icError;
 
     const int intorder; 
-
-    /// Charge neutrallity constraint
-    std::vector<double> physArea, physQTot, physQIpbs, physShift;
 };
 
 
