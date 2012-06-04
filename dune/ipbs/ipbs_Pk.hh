@@ -24,6 +24,7 @@
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include<dune/pdelab/backend/istlmatrixbackend.hh>
 #include<dune/pdelab/backend/istlsolverbackend.hh>
+#include<dune/pdelab/newton/newton.hh>
 
 #if HAVE_MPI
 #include <dune/pdelab/backend/novlpistlsolverbackend.hh>
@@ -212,7 +213,6 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
    timer.reset();
    ipbs.updateChargeRegulation(u);
    ipbs.updateBC(u);
-   ipbs.updateIC();
    itertime += timer.elapsed();
   }
   while (!ipbs.converged(fluxError,icError,iterations));
