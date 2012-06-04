@@ -11,12 +11,12 @@ SysParams::SysParams()
   epsilon  = 1.;
 }
 
-int SysParams::get_npart()
+size_t SysParams::get_npart()
 {
   return npart;
 }
 
-void SysParams::set_npart(int value)
+void SysParams::set_npart(size_t value)
 {
   npart = value;
 }
@@ -79,11 +79,6 @@ void SysParams::set_boxLength(double value)
 void SysParams::set_tolerance(double value)
 {
   tolerance = value;
-}
-
-void SysParams::set_newton_tolerance(double value)
-{
-  newton_tolerance = value;
 }
 
 void SysParams::set_charge_density(double value)
@@ -169,10 +164,6 @@ double SysParams::get_tolerance()
 	return tolerance;
 }
 
-double SysParams::get_newton_tolerance()
-{
-	return newton_tolerance;
-}
 double SysParams::get_charge_density()
 {
 	return charge_density;

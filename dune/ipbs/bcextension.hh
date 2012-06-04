@@ -30,9 +30,6 @@ public :
   const inline bool global_on_intersection(Dune::FieldVector<ctype, GV::dimensionworld> 
           integrationPointGlobal, IntersectionIterator& ii ) const 
   {
-    ctype dist;
-    ctype this_dist;
-
 
     if (GV::dimensionworld == 2) {
       Dune::FieldVector<ctype,GV::dimensionworld> p_vec = 

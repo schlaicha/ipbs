@@ -54,7 +54,7 @@ class IpbsAnalysis
        
       // Do the loop for boundary type 2 (iterated b.c.)
       // TODO: implement that!
-      for (int i = 0; i < sysParams.get_npart(); i++)
+      for (size_t i = 0; i < sysParams.get_npart(); i++)
       {
         std::cout << std::endl << "Calculating the force acting on particle id " << i << std::endl;
         Dune::FieldVector<Real, dim> F(0);
@@ -65,7 +65,7 @@ class IpbsAnalysis
           if(it->hasBoundaryIntersections() == true) {
             for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
               if(ii->boundary() == true) {
-                if (pgmap[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
+                if ( pgmap[ii->boundarySegmentIndex()] == (int)i ) // check if IPBS boundary
                 {
                   Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
                   Dune::FieldVector<Real, dim> forcevec;

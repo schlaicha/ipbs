@@ -71,7 +71,7 @@ public:
         // compute u at integration point
         RF u=0.0;
         for (size_type i=0; i<lfsu.size(); i++)
-          u += x[i]*phi[i];
+          u += x(lfsu,i)*phi[i];
 
         // evaluate gradient of basis functions on reference element
         std::vector<JacobianType> js(lfsu.size());
@@ -87,7 +87,7 @@ public:
         // compute gradient of u
         Dune::FieldVector<RF,dim> gradu(0.0);
         for (size_type i=0; i<lfsu.size(); i++)
-          gradu.axpy(x[i],gradphi[i]);
+          gradu.axpy( x(lfsu,i),gradphi[i] );
 
         // evaluate parameters; 
         Dune::FieldVector<RF,dim> 
@@ -114,23 +114,14 @@ public:
 
         // choose correct metric for integration
         // Integration with added term for metric
-        switch ( sysParams.get_symmetry() )
+        for (size_type i=0; i<lfsv.size(); i++)
         {
-                case 0:  for (size_type i=0; i<lfsu.size(); i++)
-                           r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
-                          break;
-                case 1: for (size_type i=0; i<lfsu.size(); i++)
-                        r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1] ) *factor;
-                        break;   // "2D_sphere mirrored"
-                case 2: for (size_type i=0; i<lfsu.size(); i++)
-                    //    r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1]
-                    //            - gradu[1]*phi[i] ) * factor;
-                        r[i] += 2.0 * sysParams.pi * ( ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * globalpos[1] ) *factor;
-                        break;   // "2D_sphere"
-               default:  for (size_type i=0; i<lfsu.size(); i++)
-                          r[i] += ( gradu*gradphi[i] + a*u*phi[i] - f*phi[i] )*factor;
-                          break;
+          double thisResidual =  (gradu*gradphi[i] + a*u*phi[i] - f*phi[i] ) * factor;
+          if (sysParams.get_symmetry() > 0)
+            thisResidual *=  2.0 * sysParams.pi * globalpos[1];
+          r.accumulate(lfsv,i,thisResidual); 
         }
+        
       }
   }
 
@@ -192,7 +183,10 @@ public:
        
         // Integration with added term for metric
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[i] += y*phi[i]*factor*metric;
+        {
+          double thisResidual_s = y*phi[i]*factor*metric;
+          r_s.accumulate(lfsv_s, i, thisResidual_s);
+        }
       }
   }
   

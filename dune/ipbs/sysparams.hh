@@ -25,7 +25,6 @@ class SysParams {
 	double get_alpha_ipbs();
 	int get_maxiter();
 	double get_tolerance();
-	double get_newton_tolerance();
  	int get_symmetry();
  	double get_boxLength();
  	double get_refinementFraction();
@@ -33,7 +32,7 @@ class SysParams {
     int get_refinement();
     int get_verbose();
     int get_salt();
-    int get_npart();
+    size_t get_npart();
     std::string get_meshfile();
     double get_pH();
 
@@ -49,7 +48,6 @@ class SysParams {
     void set_meshfile(std::string filename);
     void set_refinement(int level);
     void set_tolerance(double value);
-    void set_newton_tolerance(double value);
     void set_verbose(int value);
     void set_charge_density (double value);
     void set_symmetry (int value);
@@ -57,7 +55,7 @@ class SysParams {
     void set_refinementFraction (double value);
     void set_refinementSteps (int value);
     void set_salt (int value);
-    void set_npart (int value);
+    void set_npart (size_t value);
     void set_pH(double value);
 	
   private:
@@ -68,7 +66,6 @@ class SysParams {
 	double charge;
 	double epsilon;
     double tolerance;
-    double newton_tolerance;
     double totalError;
 	int symmetry;
     int npart;

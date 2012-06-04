@@ -38,8 +38,8 @@ class Ipbsolver
         const std::vector<int>& boundaryIndexToEntity_, const int intorder_=1,
         const bool use_guess=true) :
       gv(gv_), gfs(gfs_), boundaryIndexToEntity(boundaryIndexToEntity_),
-      intorder(intorder_),  boundaryElemMapper(gv), communicator(gv.comm()), 
-      my_offset(0), my_len(0), iterationCounter(0), fluxError(0)
+      boundaryElemMapper(gv), communicator(gv.comm()), 
+      my_offset(0), my_len(0), iterationCounter(0), fluxError(0), intorder(intorder_)
      
     /*!
        \param gv the view on the leaf grid
@@ -206,7 +206,6 @@ class Ipbsolver
             //double weight = it->geometry().volume();
 
             Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
-            Dune::FieldVector<ctype,dim> dist = r - r_prime;
             Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
             unitNormal *= -1.;
 

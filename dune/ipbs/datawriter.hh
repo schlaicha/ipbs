@@ -58,7 +58,7 @@ class DataWriter {
           << "# kappa = " << sqrt(1./sysParams.get_lambda2i()) << std::endl
           << "# bjerrum = " << sysParams.get_bjerrum() << std::endl
           << "# epsilon = " << sysParams.get_epsilon() << std::endl;
-        for (int i = 0; i < sysParams.get_npart(); i++)
+        for (size_t i = 0; i < sysParams.get_npart(); i++)
           out << "# boundary " << i << ":\tsigma = " 
             << boundary[i]->get_charge_density() 
             << "\tepsilon = " << boundary[i]->get_epsilon() << std::endl;
