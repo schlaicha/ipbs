@@ -123,7 +123,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   Dune::PDELab::set_nonconstrained_dofs(cc,0.0,u);
 
   typedef Ipbsolver<GV, GFS> Ipbs;
-  Ipbs ipbs(gv, gfs, boundaryIndexToEntity, k);
+  Ipbs ipbs(gv, gfs, boundaryIndexToEntity, 1);
   // instanciate boundary fluxes
   typedef BoundaryFlux<GV,double,std::vector<int>, Ipbs > J;
   J j(gv, boundaryIndexToEntity, ipbs);
@@ -200,20 +200,22 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
     }
     solvertime += timer.elapsed();
 
-   // save snapshots of each iteration step
-   std::stringstream out;
-   out << "ipbs_step_" << iterations;
-   std::string filename = out.str();
-   DGF udgf_snapshot(gfs,u);
-   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
-   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
-   vtkwriter.write(filename,Dune::VTK::appendedraw);
-   mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+    // save snapshots every N step
+    if(iterations % sysParams.get_outStep() == 0) {
+      std::stringstream out;
+      out << "ipbs_step_" << iterations;
+      std::string filename = out.str();
+      DGF udgf_snapshot(gfs,u);
+      Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
+      vtkwriter.write(filename,Dune::VTK::appendedraw);
+      mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+    }
 
-   timer.reset();
-   ipbs.updateChargeRegulation(u);
-   ipbs.updateBC(u);
-   itertime += timer.elapsed();
+    timer.reset();
+    ipbs.updateChargeRegulation(u);
+    ipbs.updateBC(u);
+    itertime += timer.elapsed();
   }
   while (!ipbs.converged(fluxError,icError,iterations));
 
@@ -225,7 +227,6 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   status << "# in iteration " << iterations << std::endl
       << "# maximum relative change in boundary condition calculation is " <<  fluxError << std::endl
       << "# maximum relative change in induced charge density is " << icError << std::endl;
-  //status.close();
 
   // <<<6>>> graphical output
   DGF udgf(gfs,u);
@@ -238,8 +239,8 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   std::ostringstream s;
   if(communicator.size() > 1)
   {
-    s << 's' << std::setw(4) << std::setfill('0') << communicator.size() << ':';
-    s << 'p' << std::setw(4) << std::setfill('0') << communicator.rank() << ':';
+    s << 's' << std::setw(4) << std::setfill('0') << communicator.size() << '-';
+    s << 'p' << std::setw(4) << std::setfill('0') << communicator.rank() << '-';
   }
   s << filename << ".dat";
   filename = s.str();

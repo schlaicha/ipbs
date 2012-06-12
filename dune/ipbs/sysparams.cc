@@ -11,6 +11,16 @@ SysParams::SysParams()
   epsilon  = 1.;
 }
 
+int SysParams::get_outStep()
+{
+  return outstep;
+}
+
+void SysParams::set_outStep(int value)
+{
+  outstep = value;
+}
+
 size_t SysParams::get_npart()
 {
   return npart;
@@ -49,31 +59,6 @@ void SysParams::set_maxiter(int _maxiter)
 int SysParams::get_maxiter()
 {
   return maxiter;
-}
-
-int SysParams::get_refinementSteps()
-{
-  return refinementSteps;
-}
-
-void SysParams::set_refinementSteps(int value)
-{
-  refinementSteps = value;
-}
-
-double SysParams::get_refinementFraction()
-{
-  return refinementFraction;
-}
-
-void SysParams::set_refinementFraction(double value)
-{
-  refinementFraction = value;
-}
-
-void SysParams::set_boxLength(double value)
-{
-  boxLength = value;
 }
 
 void SysParams::set_tolerance(double value)
@@ -180,11 +165,6 @@ int SysParams::get_symmetry()
     return symmetry;
 }
 
-double SysParams::get_boxLength()
-{
-    return boxLength;
-}
-
 void SysParams::set_meshfile(std::string filename)
 {
   meshfile = filename;
@@ -193,16 +173,6 @@ void SysParams::set_meshfile(std::string filename)
 std::string SysParams::get_meshfile()
 {
   return meshfile;
-}
-
-void SysParams::set_refinement(int level)
-{
-  refinement = level;
-}
-
-int SysParams::get_refinement()
-{
-  return refinement;
 }
 
 void SysParams::set_pH(double pH_) {
