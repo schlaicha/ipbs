@@ -8,6 +8,7 @@ dnl -*- autoconf -*-
 # well as by IPBS itself
 AC_DEFUN([IPBS_CHECKS],[
   IPBS_CHECK_GRID
+  IPBS_CHECK_GSL
 ])
 
 # Additional checks needed to find ipbs

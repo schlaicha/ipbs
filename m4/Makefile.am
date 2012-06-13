@@ -1,4 +1,4 @@
-M4FILES = ipbs.m4 ipbs_grid.m4
+M4FILES = ipbs.m4 ipbs_grid.m4 ipbs_gsl.m4
 
 aclocaldir = $(datadir)/aclocal
 aclocal_DATA = $(M4FILES)
