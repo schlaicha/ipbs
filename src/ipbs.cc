@@ -105,7 +105,6 @@ int main(int argc, char** argv)
   typedef Dune::GridSelector::GridType GridType;
   Dune::GridFactory<GridType> factory;
 
- 
   if(helper.rank() == 0)
   {
     // read a gmsh file
@@ -125,17 +124,6 @@ int main(int argc, char** argv)
   
   // create the grid
   GridType* grid = factory.createGrid();
- 
-  // refine grid
-  //if(helper.rank()==0) {
-  //  std::cout << "Using " << sysParams.get_refinement() << " global refinement steps and" << std::endl;
-  //  std::cout << sysParams.get_refinementSteps() << " adaptive refinement steps with "
-  //    << sysParams.get_refinementFraction() << " percent refinement." << std::endl;
-  //}
-
-
-  // Load balance the parallel grid
-  // grid->globalRefine(sysParams.get_refinement());
  
   // Load balance the parallel grid
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
