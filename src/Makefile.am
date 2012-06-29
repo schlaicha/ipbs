@@ -11,27 +11,30 @@ ipbs_CPPFLAGS = $(AM_CPPFLAGS) \
 	$(AMIRAMESH_CPPFLAGS) \
 	$(ALBERTA_CPPFLAGS) \
 	$(ALUGRID_CPPFLAGS) \
-	$(GRIDDIM_CPPFLAGS) 
+	$(GRIDDIM_CPPFLAGS) \
+	$(GSL_CPPFLAGS)
 
 # The libraries have to be given in reverse order (most basic libraries
 # last).  Also, due to some misunderstanding, a lot of libraries include the
 # -L option in LDFLAGS instead of LIBS -- so we have to include the LDFLAGS
 # here as well.
 ipbs_LDADD = \
+	$(GSL_LIBS) \
 	$(DUNE_LDFLAGS) $(DUNE_LIBS) \
 	$(ALUGRID_LDFLAGS) $(ALUGRID_LIBS) \
 	$(ALBERTA_LDFLAGS) $(ALBERTA_LIBS) \
 	$(AMIRAMESH_LDFLAGS) $(AMIRAMESH_LIBS) \
 	$(UG_LDFLAGS) $(UG_LIBS) \
 	$(DUNEMPILIBS)	\
-	$(LDADD) 
+	$(LDADD)
 ipbs_LDFLAGS = $(AM_LDFLAGS) \
 	$(DUNEMPILDFLAGS) \
 	$(UG_LDFLAGS) \
 	$(AMIRAMESH_LDFLAGS) \
 	$(ALBERTA_LDFLAGS) \
 	$(ALUGRID_LDFLAGS) \
-	$(DUNE_LDFLAGS)
+	$(DUNE_LDFLAGS) \
+	$(GSL_LDFLAGS)
 
 # don't follow the full GNU-standard
 # we need automake 1.5

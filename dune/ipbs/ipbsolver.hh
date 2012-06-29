@@ -5,7 +5,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/geometry/quadraturerules.hh>
 
-#include <gsl/gsl_sf_ellint.h>
 #include "sysparams.hh"
 #include "boundary.hh"
 #include "e_field.hh"

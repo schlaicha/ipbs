@@ -1,3 +1,4 @@
+#include <gsl/gsl_sf_ellint.h>
 
 template<class V, class W> 
 W E_field_cartesian(V r, V r_prime) {

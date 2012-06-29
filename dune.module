@@ -7,4 +7,4 @@ Module: ipbs
 Version: 0.1
 Maintainer: schlaich@icp.uni-stuttgart.de
 #depending on 
-Depends: dune-common (> 2.1) dune-geometry (> 2.1) dune-grid (> 2.1) dune-localfunctions (> 2.1) dune-istl (> 2.1) dune-pdelab (>= 0.1)
+Depends: dune-common (>= 2.2) dune-geometry (>= 2.2) dune-grid (>= 2.2) dune-localfunctions (>= 2.2) dune-istl (>= 2.2) dune-pdelab (>= 0.1)
