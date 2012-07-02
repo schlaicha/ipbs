@@ -34,7 +34,6 @@ void parser(std::string config_file)
  
   /// default values
   const double alpha_sor = 0.7;
-  const int level = 0;
   const int verbose = 1;
   const double lambda = 1.0;
   const double bjerrum = 0.7;
@@ -63,6 +62,9 @@ void parser(std::string config_file)
   sysParams.set_salt(configuration.get<int>("system.salt"));
   sysParams.set_pH(configuration.get<double>("system.pH", 7.));
   double epsilonOut = configuration.get<double>("system.epsilon");
+
+  // Output
+  sysParams.set_outStep(configuration.get<int>("output.steps",0));
 
   // Create particles
   size_t n_particle = configuration.get<size_t>("system.NPart");

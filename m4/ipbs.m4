@@ -7,7 +7,9 @@ dnl -*- autoconf -*-
 # This macro should be invoked by every module which depends on IPBS, as
 # well as by IPBS itself
 AC_DEFUN([IPBS_CHECKS],[
-  IPBS_CHECK_GRID
+    AC_REQUIRE([DUNE_PATH_GSL])
+    IPBS_CHECK_GRID
+    #IPBS_CHECK_GSL
 ])
 
 # Additional checks needed to find ipbs
