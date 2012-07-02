@@ -110,43 +110,6 @@ class Ipbsolver
     }
 
     // ------------------------------------------------------------------------
-    /// Induced charge computation
-    // ------------------------------------------------------------------------
-    void updateIC()
-    {
-      icError = 0;  // reset the fluxError for next iteration step
-      //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
-      ContainerType ic(inducedChargeDensity.size(), 0.);
-      double eps_out = sysParams.get_epsilon();  
-      unsigned int target = my_offset + my_len;
-      for (unsigned int i = my_offset; i < target; i++) {
-        double eps_in = boundary[ipbsType[i]]->get_epsilon();
-
-        // include charge regulation
-        double my_charge = boundary[ipbsType[i]]->get_charge_density() + regulatedChargeDensity[i];
-        double delta = (eps_out - eps_in) / (eps_out + eps_in);
-
-        // calculate the induced charge in this surface element
-        double shift =  efieldShift[ ipbsType[i] ] / physArea [ ipbsType[i] ];
-        ic[i] = delta * ( my_charge - eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
-                * ( E_ext[i] + shift ) ); // Include neutrality constraint
-      }
-      communicator.barrier();
-      communicator.sum(&ic[0], ic.size());
-
-      // Do the SOR 
-      for (unsigned int i = 0; i < inducedChargeDensity.size(); i++) {
-        inducedChargeDensity[i] = sysParams.get_alpha_ic() * ic[i]
-                          + ( 1 - sysParams.get_alpha_ic()) * inducedChargeDensity[i];
-        double local_icError = fabs(2.0*(ic[i]-inducedChargeDensity[i])
-                      /(ic[i]+inducedChargeDensity[i]));
-        icError = std::max(icError, local_icError);
-      }
-      communicator.barrier();
-      communicator.max(&icError, 1);
-    }
-
-    // ------------------------------------------------------------------------
     /// This method will do the update on the boundary conditions
     // ------------------------------------------------------------------------
 
@@ -297,14 +260,11 @@ class Ipbsolver
       communicator.barrier();
       communicator.sum(&E_ext[0], fluxes.size());
      
-      for (unsigned int i = my_offset; i < target; i++) {
-        
+      // precalculate the shift for the induced charges 
+      for (unsigned int i = my_offset; i < target; i++) 
+      {
         double thisChargeDensity = boundary[ipbsType[i]]->get_charge_density() 
                                   + inducedChargeDensity[i] + regulatedChargeDensity[i];
-      
-        /* Equation 3.4.4 DA Schlaich */
-        fluxes[i] = E_ext[i] + 2. * sysParams.pi*sysParams.get_bjerrum() * thisChargeDensity;
-
         double thisCharge = 0;
         if (sysParams.get_symmetry() > 0)
           thisCharge = 2 * sysParams.pi * ipbsPositions[i][1] * ipbsVolumes[i] * thisChargeDensity;
@@ -312,7 +272,21 @@ class Ipbsolver
           thisCharge = ipbsVolumes[i] * thisChargeDensity;
 
         physQIpbs[ ipbsType[i] ] += thisCharge;
+
+        // This assumes we can use the induced charges of the previous iteration
         efieldShift[ ipbsType[i] ] += 2. * sysParams.get_bjerrum()* sysParams.pi * thisCharge; 
+      }
+      
+      // update the induced charge
+      updateIC();
+        
+      for (unsigned int i = my_offset; i < target; i++) {
+
+        double thisChargeDensity = boundary[ipbsType[i]]->get_charge_density() 
+                                  + inducedChargeDensity[i] + regulatedChargeDensity[i];
+      
+        /* Equation 3.4.4 DA Schlaich */
+        fluxes[i] = E_ext[i] + 2. * sysParams.pi*sysParams.get_bjerrum() * thisChargeDensity;
       }
 
         
@@ -380,6 +354,47 @@ class Ipbsolver
 
 
   private:
+
+    // ------------------------------------------------------------------------
+    /// Induced charge computation
+    // ------------------------------------------------------------------------
+    void updateIC()
+    {
+      icError = 0;  // reset the fluxError for next iteration step
+      //std::cout << "in updateIC() my_offset = " << my_offset << " my_len = " << my_len << std::endl;
+      ContainerType ic(inducedChargeDensity.size(), 0.);
+      double eps_out = sysParams.get_epsilon();  
+      unsigned int target = my_offset + my_len;
+      for (unsigned int i = my_offset; i < target; i++) {
+        double eps_in = boundary[ipbsType[i]]->get_epsilon();
+
+        // include charge regulation
+        double my_charge = boundary[ipbsType[i]]->get_charge_density() + regulatedChargeDensity[i];
+        double delta = (eps_out - eps_in) / (eps_out + eps_in);
+
+        // calculate the induced charge in this surface element
+        double shift =  efieldShift[ ipbsType[i] ] / physArea [ ipbsType[i] ];
+        ic[i] = delta * ( my_charge - eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
+                * ( E_ext[i] + shift ) ); // Include neutrality constraint
+      }
+      communicator.barrier();
+      communicator.sum(&ic[0], ic.size());
+
+      // Do the SOR 
+      for (unsigned int i = 0; i < inducedChargeDensity.size(); i++) {
+        inducedChargeDensity[i] = sysParams.get_alpha_ic() * ic[i]
+                          + ( 1 - sysParams.get_alpha_ic()) * inducedChargeDensity[i];
+        double local_icError = fabs(2.0*(ic[i]-inducedChargeDensity[i])
+                      /(ic[i]+inducedChargeDensity[i]));
+        icError = std::max(icError, local_icError);
+      }
+      communicator.barrier();
+      communicator.max(&icError, 1);
+    }
+
+
+
+
     void initial_guess()
     {
       /** \brief Get an inital guess for the iterative boundaries */
