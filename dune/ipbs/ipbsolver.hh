@@ -297,8 +297,8 @@ class Ipbsolver
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
           if (boundary[i]->get_type() == 2)
-            std::cout << "Charge on surface " << i << ": " << physQIpbs[i] << ", flux shifted by " 
-              << efieldShift[i] / physArea[ ipbsType[i] ] << std::endl;
+            std::cout << "Flux on surface " << i << ": " << 2.*sysParams.pi*boundary[i]->get_charge_density()
+              << "is shifted by " << efieldShift[i] / physArea[ ipbsType[i] ] << std::endl;
         }
       }
       
@@ -372,7 +372,9 @@ class Ipbsolver
         double delta = (eps_out - eps_in) / (eps_out + eps_in);
 
         // calculate the induced charge in this surface element
-        double shift =  efieldShift[ ipbsType[i] ] / physArea [ ipbsType[i] ];
+        double shift = 0;
+        if (boundary[ ipbsType[i] ]->doShift() == true)
+          shift =  efieldShift[ ipbsType[i] ] / physArea [ ipbsType[i] ];
         ic[i] = delta * ( my_charge - eps_out/(2.*sysParams.pi*sysParams.get_bjerrum())
                 * ( E_ext[i] + shift ) ); // Include neutrality constraint
       }

@@ -87,6 +87,7 @@ void parser(std::string config_file)
     boundary[i]->set_sigma_max(configuration.get<double>(p_name+".sigma_max",0));
     boundary[i]->set_Y(configuration.get<double>(p_name+".Y",0));
     boundary[i]->set_pK(configuration.get<double>(p_name+".pK",0));
+    boundary[i]->set_ifShift(configuration.get<bool>(p_name+".shifted",true));
   }
 
 }

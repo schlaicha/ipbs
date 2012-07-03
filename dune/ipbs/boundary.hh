@@ -18,6 +18,7 @@ class Boundary
     void set_sigma_max(double);
     void set_pK(double);
     void set_Y(double);
+    void set_ifShift(bool);
 
     double get_charge_density();
     double get_dielectric_factor();
@@ -26,6 +27,8 @@ class Boundary
     double get_sigma_max();
     double get_pK();
     double get_Y();
+
+    bool doShift();
 
     int get_type();
 
@@ -39,6 +42,8 @@ class Boundary
     double sigma_max;
     double pK;
     double Y;
+
+    bool shift;
 };
 
 #endif  // _BOUNDARY_H

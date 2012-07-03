@@ -75,3 +75,13 @@ void Boundary::set_pK(double pK_)
 {
     pK = pK_;
 }
+
+void Boundary::set_ifShift(bool value)
+{
+  shift = value;
+}
+
+bool Boundary::doShift()
+{
+  return shift;
+}
