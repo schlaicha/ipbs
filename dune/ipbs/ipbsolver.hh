@@ -297,8 +297,7 @@ class Ipbsolver
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
           if (boundary[i]->get_type() == 2)
-            std::cout << "Flux on surface " << i << ": " << 2.*sysParams.pi*boundary[i]->get_charge_density()
-              << "is shifted by " << efieldShift[i] / physArea[ ipbsType[i] ] << std::endl;
+            std::cout << "Surface " << i << ": 2*pi*lb*sigma=" << 2.*sysParams.pi*sysParams.get_bjerrum()* physQIpbs[i] / physArea[ ipbsType[i] ] << " fluxshifted=" << efieldShift[i] / physArea[ ipbsType[i] ] << " ("<<efieldShift[i]/(2.*sysParams.pi*sysParams.get_bjerrum()*physQIpbs[i])*100<<"%)"<<   std::endl;
         }
       }
       
