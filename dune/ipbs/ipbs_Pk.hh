@@ -143,12 +143,41 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
 
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
+#if LINEARSOLVER == BCGS_SSORk
   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
-  //typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
   LS ls( gfs, 5000, 5, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == BCGS_NOPREC
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
+  LS ls( gfs, 5000, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == CG_SSORk
+  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
+  LS ls( gfs, 5000, 5, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == CG_NOPREC
+  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
+  LS ls( gfs, 5000, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == CG_Jacobi
+  typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
+  LS ls( gfs, 5000, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == CG_AMG_SSOR
+    typedef Dune::PDELab::ISTLBackend_NOVLP_CG_AMG_SSOR<GO> LS;
+    LS ls( gfs, 5, 5000, sysParams.get_verbose() );
+#endif
+
+#if LINEARSOLVER == BCGS_AMG_SSOR
+  typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_AMG_SSOR<GO> LS;
+  LS ls( gfs, 5000, sysParams.get_verbose() );
+#endif
+
 #else
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   //typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
@@ -166,7 +195,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   NEWTON newton(go,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setVerbosityLevel(sysParams.get_verbose());
-  newton.setMinLinearReduction(1e-10);
+  newton.setMinLinearReduction(1e-6);
   newton.setMaxIterations(100);
   newton.setLineSearchMaxIterations(50);
 

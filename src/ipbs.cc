@@ -10,6 +10,22 @@
 #include "config.h"
 #endif
 
+#define BCGS_SSORk    1
+#define BCGS_NOPREC   2
+#define CG_SSORk      3
+#define CG_NOPREC     4
+#define CG_Jacobi     5
+#define CG_AMG_SSOR   6
+#define BCGS_AMG_SSOR 7
+
+// default values
+#ifndef PDEGREE 
+#define PDEGREE 1
+#endif
+#ifndef LINEARSOLVER
+#define LINEARSOLVER BCGS_SSORk
+#endif
+
 // std includes
 //#include<math.h>
 //#include<iostream>
@@ -129,7 +145,7 @@ int main(int argc, char** argv)
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
 
  // Call problem driver
- ipbs_Pk<GridType, PGMap, 2>(grid, elementIndexToEntity, boundaryIndexToEntity);
+ ipbs_Pk<GridType, PGMap, PDEGREE>(grid, elementIndexToEntity, boundaryIndexToEntity);
   
  // done
  return 0;
