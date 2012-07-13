@@ -15,7 +15,7 @@
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
 
-template <class GV, class GFS, typename PGMap>
+template <class GV, class GFS, typename PGMap, class IPBSolver>
 class IpbsAnalysis
 {
 
@@ -27,8 +27,8 @@ class IpbsAnalysis
 
   public:
 
-    IpbsAnalysis(const GV& _gv, const GFS& _gfs, const PGMap& _pgmap)
-      : gv(_gv), gfs(_gfs), pgmap(_pgmap), communicator( gv.comm() ) {} 
+    IpbsAnalysis(const GV& _gv, const GFS& _gfs, const PGMap& _pgmap, const IPBSolver& ipbsolver_)
+      : gv(_gv), gfs(_gfs), pgmap(_pgmap), communicator( gv.comm() ), ipbsolver(ipbsolver_) {} 
 
      typedef typename GV::template Codim<0>::template Partition
               <Dune::Interior_Partition>::Iterator LeafIterator;
@@ -99,44 +99,54 @@ class IpbsAnalysis
       }
     }
 
-    void surfacepot(const U& u) const
+    void surfacepot(const U& u, std::string filename) const
     {
-      std::cout << "Now I would calculate the surface potential :-)" << std::endl;
+      std::ofstream pot_file;
 
-      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
-      DGF udgf(gfs,u);
-      
-      typedef typename DGF::Traits::RangeType RT;
-
-      for (int i = 0; i < sysParams.get_npart(); i++)
-      {
-        int nElems = 0;
-        double sum = 0.;
-        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
-               	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
+      if (gv.comm().rank() ==0) {
+        pot_file.open(filename);
+        
+        typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+        DGF udgf(gfs,u);
+        
+        typedef typename DGF::Traits::RangeType RT;
+  
+        for (int i = 0; i < sysParams.get_npart(); i++)
         {
-          if(it->hasBoundaryIntersections() == true) {
-            for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
-              if(ii->boundary() == true) {
-                if (pgmap[ii->boundarySegmentIndex()] == i) // check if IPBS boundary
-                {
-                  Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
-                  Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
-                    it->geometry().local(evalPos);
-                  RT value;
-                  // evaluate the potential
-                  udgf.evaluate(*it, local, value);
-                  sum += value;
-                  nElems++;
+          int nElems = 0;
+          double sum = 0.;
+          for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+                 	it!=gv.template end<0,Dune::Interior_Partition>(); ++it) {
+            if(it->hasBoundaryIntersections() == true) {
+              for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+                if(ii->boundary() == true) {
+                  if (pgmap[ii->boundarySegmentIndex()] == i) {
+                    Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
+                    Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
+                      it->geometry().local(evalPos);
+                    RT value;
+                    // evaluate the potential
+                    udgf.evaluate(*it, local, value);
+                    sum += value;
+                    nElems++;
+                  }
                 }
               }
             }
           }
+          sum /= nElems;
+          //boundary[i]->set_res_surface_pot(sum);
+          pot_file << i << " " << sum << std::endl;
         }
-        sum /= nElems;
-        //boundary[i]->set_res_surface_pot(sum);
-        std::cout << "Averaged surface potential of surface " << i << ": " << sum << std::endl;
       }
+    }
+
+    void E_ext(const U& u, std::string filename) const {
+        std::ofstream E_ext_file;
+        E_ext_file.open(filename);
+        for (int i=0; i<ipbsolver.ipbsPositions.size(); i++) {
+            E_ext_file << ipbsolver.ipbsPositions[i] << " " << ipbsolver.E_ext[i] << std::endl;
+        }
     }
   
   private:
@@ -167,6 +177,8 @@ class IpbsAnalysis
     /// The communicator decides weither to use MPI or fake
     typedef typename GV::Traits::CollectiveCommunication CollectiveCommunication;
     const CollectiveCommunication & communicator;
+
+    const IPBSolver ipbsolver;
 };
 
 

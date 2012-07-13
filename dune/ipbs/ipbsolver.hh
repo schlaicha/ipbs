@@ -10,11 +10,12 @@
 #include "e_field.hh"
 
 #include <time.h>
-
+#include <dune/ipbs/ipbsanalysis.hh>
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
 
-
+//template <class GV, class GFS, typename PGMap, class IPBSolver>
+//class IpbsAnalysis;
 
 template <class GV, class GFS>
 class Ipbsolver
@@ -26,6 +27,8 @@ class Ipbsolver
 */
 
 {
+
+  friend class IpbsAnalysis<GV, GFS, std::vector<int>, Ipbsolver<GV, GFS> >;
 
   // Some typedef
   typedef typename GV::Grid::ctype ctype;
@@ -148,8 +151,9 @@ class Ipbsolver
 
           // select quadrature rule
           Dune::GeometryType gt = it->geometry().type();
+          unsigned int io = (int) ceil( 10*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
           const Dune::QuadratureRule<DF,dim>& 
-            rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
+            rule = Dune::QuadratureRules<DF,dim>::rule(gt,io);
 
           // loop over quadrature points
           for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
