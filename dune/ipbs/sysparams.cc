@@ -180,15 +180,6 @@ std::string SysParams::get_meshfile()
   return meshfile;
 }
 
-void SysParams::set_pH(double pH_) {
-    pH=pH_;
-}
-
-double SysParams::get_pH() 
-{
-    return pH;
-}
-
 void SysParams::set_integration_l(double value) {
     integration_l = value;
 }
@@ -203,4 +194,13 @@ void SysParams::set_integration_d(double value) {
 
 double SysParams::get_integration_d() {
     return integration_d;
+}
+
+void SysParams::set_pH(double pH_) {
+    pH=pH_;
+}
+
+double SysParams::get_pH() 
+{
+    return pH;
 }

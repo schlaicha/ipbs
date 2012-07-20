@@ -78,9 +78,11 @@ class SysParams {
   int maxiter;
   std::string meshfile;
   int verbose;
-  double pH;
   double integration_d;
   double integration_l;
+  double refinementFraction;
+  int refinementSteps;
+  double pH;
 };
 
 #endif  // _SYSPARAMS_H
