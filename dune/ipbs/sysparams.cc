@@ -5,9 +5,10 @@
 /** Constructor
 /  Debye and Bjerrum length in [nm], colloid charge in [e], radius in Bjerrum length */
 
-SysParams::SysParams()
+SysParams::SysParams() : 
+  pi(3.14159265358979323846)
 {
-	totalError = 1E8;
+  totalError = 1E8;
   epsilon  = 1.;
 }
 

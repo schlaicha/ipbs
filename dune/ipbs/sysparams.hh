@@ -12,7 +12,7 @@ class SysParams {
   public:
     SysParams();	// We now only need a default constructor
 
-	static constexpr double pi = 3.14159265358979323846;
+	const double pi;
   
     // Return parameters needed during runtime
 	double get_bjerrum();
