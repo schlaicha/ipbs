@@ -104,14 +104,14 @@ class IpbsAnalysis
       std::ofstream pot_file;
 
       if (gv.comm().rank() ==0) {
-        pot_file.open(filename);
+        pot_file.open( filename.c_str() );
         
         typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
         DGF udgf(gfs,u);
         
         typedef typename DGF::Traits::RangeType RT;
   
-        for (int i = 0; i < sysParams.get_npart(); i++)
+        for (unsigned int i = 0; i < sysParams.get_npart(); i++)
         {
           int nElems = 0;
           double sum = 0.;
@@ -143,8 +143,8 @@ class IpbsAnalysis
 
     void E_ext(const U& u, std::string filename) const {
         std::ofstream E_ext_file;
-        E_ext_file.open(filename);
-        for (int i=0; i<ipbsolver.ipbsPositions.size(); i++) {
+        E_ext_file.open( filename.c_str() );
+        for (unsigned int i=0; i<ipbsolver.ipbsPositions.size(); i++) {
             E_ext_file << ipbsolver.ipbsPositions[i] << " " << ipbsolver.E_ext[i] << std::endl;
         }
     }
