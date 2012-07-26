@@ -18,6 +18,7 @@ class SysParams {
 	double get_bjerrum();
 	double get_epsilon();
 	double get_lambda2i();
+	double get_lambda();
 	double get_charge_density();
 	double get_error();
 	double get_alpha_ic();
@@ -31,6 +32,8 @@ class SysParams {
   size_t get_npart();
   std::string get_meshfile();
   double get_pH();
+  double get_integration_d();
+  double get_integration_l();
 
   // Functions setting the private members
   void add_error(double);
@@ -54,6 +57,8 @@ class SysParams {
   void set_outStep (int value);
   void set_npart (size_t value);
   void set_pH(double value);
+  void set_integration_d(double value);
+  void set_integration_l(double value);
 	
   private:
 	double lambda;
@@ -73,6 +78,10 @@ class SysParams {
   int maxiter;
   std::string meshfile;
   int verbose;
+  double integration_d;
+  double integration_l;
+  double refinementFraction;
+  int refinementSteps;
   double pH;
 };
 

@@ -29,7 +29,6 @@ class Boundary
     double get_Y();
 
     bool doShift();
-
     int get_type();
 
   private:

@@ -62,6 +62,9 @@ void parser(std::string config_file)
   sysParams.set_salt(configuration.get<int>("system.salt"));
   sysParams.set_pH(configuration.get<double>("system.pH", 7.));
   double epsilonOut = configuration.get<double>("system.epsilon");
+  
+  sysParams.set_integration_l(configuration.get<double>("solver.l", 0.15*sysParams.get_lambda()));
+  sysParams.set_integration_d(configuration.get<double>("solver.d", 0.075*sysParams.get_lambda()));
 
   // Output
   sysParams.set_outStep(configuration.get<int>("output.steps",0));

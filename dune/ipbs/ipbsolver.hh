@@ -10,11 +10,12 @@
 #include "e_field.hh"
 
 #include <time.h>
-
+#include <dune/ipbs/ipbsanalysis.hh>
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
 
-
+//template <class GV, class GFS, typename PGMap, class IPBSolver>
+//class IpbsAnalysis;
 
 template <class GV, class GFS>
 class Ipbsolver
@@ -26,6 +27,8 @@ class Ipbsolver
 */
 
 {
+
+  friend class IpbsAnalysis<GV, GFS, std::vector<int>, Ipbsolver<GV, GFS> >;
 
   // Some typedef
   typedef typename GV::Grid::ctype ctype;
@@ -114,6 +117,15 @@ class Ipbsolver
 
     void updateBC(const U& u)
     {
+
+      double d = sysParams.get_integration_d();
+      double l = sysParams.get_integration_l();
+
+      std::vector<double> nearFieldCharge;
+      std::vector<double> nearFieldChargeArea;
+      nearFieldCharge.resize(ipbsPositions.size(),0);
+      nearFieldChargeArea.resize(ipbsPositions.size(),0);
+
       fluxError = 0;  // reset the fluxError for next iteration step
       
       /// Construct a discrete grid function space for access to solution
@@ -148,8 +160,11 @@ class Ipbsolver
 
           // select quadrature rule
           Dune::GeometryType gt = it->geometry().type();
+          unsigned int io = (int) ceil( 10*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
+          if (io>51)
+              io=51;
           const Dune::QuadratureRule<DF,dim>& 
-            rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
+            rule = Dune::QuadratureRules<DF,dim>::rule(gt,io);
 
           // loop over quadrature points
           for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
@@ -189,10 +204,29 @@ class Ipbsolver
             {
                 case 0:
                     E_ext_ions *= -std::sinh(value);
+
                     break;
                 case 1:
                     E_ext_ions *= std::exp(value); // Counterions have opposite sign!
                     break;
+            }
+            double normaldist = (r_prime-r)*unitNormal;
+            double scalaerdistsq =  (r_prime-r)* (r_prime-r);
+            if (normaldist < d && scalaerdistsq - normaldist*normaldist < l*l) {
+//            if (r_prime[0] < d && abs(r[1]-r_prime[1])<l) {
+                if (i==0 && sysParams.get_verbose() > 1)
+                    std::cout << "innerboxpoint " << l << " " << r_prime << std::endl;
+                E_ext_ions *= 0;
+//                double nf =  sysParams.get_lambda2i()*0.0001*4*sysParams.pi*exp(-r_prime[0])*weight;
+                double nf =  sysParams.get_lambda2i()*std::sinh(value)*weight;
+                if ( sysParams.get_symmetry() > 0) {
+//                  nf *= r_prime[1];
+                }
+                nearFieldCharge[i] += nf;
+                nearFieldChargeArea[i] += weight;
+            } else {
+                if (i==0 && sysParams.get_verbose() > 1)
+                    std::cout << "integrationpoint " << r_prime << std::endl;
             }
             E_ext[i] += E_ext_ions;
             if (sysParams.get_symmetry() == 0)
@@ -255,6 +289,11 @@ class Ipbsolver
         } // end of j loop
       } // end of i loop
 
+      for (unsigned int i = 0; i<ipbsVolumes.size(); i++) {
+          if (d>0 && l>0)
+              E_ext[i] +=sysParams.pi/sysParams.get_bjerrum()*nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
+      }
+
       // Collect results from all nodes
       communicator.barrier();
       communicator.sum(&E_ext[0], fluxes.size());
@@ -297,8 +336,7 @@ class Ipbsolver
       if (communicator.rank() == 0 && sysParams.get_verbose() > 0) {
         for (size_t i = 0; i < sysParams.get_npart(); i++) {
           if (boundary[i]->get_type() == 2)
-            std::cout << "Flux on surface " << i << ": " << 2.*sysParams.pi*boundary[i]->get_charge_density()
-              << "is shifted by " << efieldShift[i] / physArea[ ipbsType[i] ] << std::endl;
+            std::cout << "Surface " << i << ": 2*pi*lb*sigma=" << 2.*sysParams.pi*sysParams.get_bjerrum()* physQIpbs[i] / physArea[ ipbsType[i] ] << " fluxshifted=" << efieldShift[i] / physArea[ ipbsType[i] ] << " ("<<efieldShift[i]/(2.*sysParams.pi*sysParams.get_bjerrum()*physQIpbs[i])*100<<"%)"<<   std::endl;
         }
       }
       

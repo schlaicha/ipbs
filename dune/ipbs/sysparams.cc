@@ -145,6 +145,11 @@ double SysParams::get_lambda2i()
   return lambda2i;
 }
 
+double SysParams::get_lambda()
+{
+  return lambda;
+}
+
 double SysParams::get_tolerance()
 {
 	return tolerance;
@@ -174,6 +179,22 @@ void SysParams::set_meshfile(std::string filename)
 std::string SysParams::get_meshfile()
 {
   return meshfile;
+}
+
+void SysParams::set_integration_l(double value) {
+    integration_l = value;
+}
+
+double SysParams::get_integration_l() {
+    return integration_l;
+}
+
+void SysParams::set_integration_d(double value) {
+    integration_d = value;
+}
+
+double SysParams::get_integration_d() {
+    return integration_d;
 }
 
 void SysParams::set_pH(double pH_) {

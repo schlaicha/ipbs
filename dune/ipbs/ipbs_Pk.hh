@@ -212,6 +212,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
 
   // --- Here the iterative loop starts ---
 
+  unsigned int counter = 0;
   do
   {
     timer.reset();
@@ -245,8 +246,9 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
     ipbs.updateChargeRegulation(u);
     ipbs.updateBC(u);
     itertime += timer.elapsed();
+    counter++;
   }
-  while (!ipbs.converged(fluxError,icError,iterations));
+  while (!ipbs.converged(fluxError,icError,iterations) && counter < sysParams.get_maxiter());
 
   // --- here the iterative loop ends! ---
 
@@ -276,10 +278,15 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   
   mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
 
+
+
   // Calculate the forces
-  typedef IpbsAnalysis<GV,GFS,std::vector<int> > Analyzer;
-  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity);
+  typedef IpbsAnalysis<GV,GFS,std::vector<int> , Ipbs> Analyzer;
+  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity, ipbs);
+
   analyzer.forces(u);
+  analyzer.surfacepot(u, "surface_potential.dat");
+  analyzer.E_ext(u, "e_ext.dat");
   
   if (communicator.rank() == 0) {
     std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() 
