@@ -47,9 +47,9 @@ class IpbsAnalysis
       // Open output file for force on particles
       std::ofstream force_file, vector_force_file;
   
-      vector_force_file.open (filename_helper("vector_forces").c_str(), std::ios::out);
+      vector_force_file.open (filename_helper(sysParams.get_outname() + "_forceVec.dat").c_str(), std::ios::out);
       if (communicator.rank() == 0) {
-        force_file.open ("forces.dat", std::ios::out);
+        force_file.open ((sysParams.get_outname() + "_forces.dat").c_str(), std::ios::out);
       }
        
       // Do the loop for boundary type 2 (iterated b.c.)
@@ -120,7 +120,7 @@ class IpbsAnalysis
             if(it->hasBoundaryIntersections() == true) {
               for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
                 if(ii->boundary() == true) {
-                  if (pgmap[ii->boundarySegmentIndex()] == i) {
+                  if (pgmap[ii->boundarySegmentIndex()] == int(i)) {
                     Dune::FieldVector<Real, dim> evalPos = ii->geometry().center();
                     Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
                       it->geometry().local(evalPos);

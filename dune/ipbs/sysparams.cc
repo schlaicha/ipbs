@@ -52,12 +52,12 @@ void SysParams::set_symmetry(int value)
   symmetry = value;
 }
 
-void SysParams::set_maxiter(int _maxiter)
+void SysParams::set_maxiter(unsigned int _maxiter)
 {
   maxiter = _maxiter;
 }
 
-int SysParams::get_maxiter()
+unsigned int SysParams::get_maxiter()
 {
   return maxiter;
 }
@@ -179,6 +179,16 @@ void SysParams::set_meshfile(std::string filename)
 std::string SysParams::get_meshfile()
 {
   return meshfile;
+}
+
+void SysParams::set_outname(std::string _outname)
+{
+  outname = _outname;
+}
+
+std::string SysParams::get_outname()
+{
+  return outname;
 }
 
 void SysParams::set_integration_l(double value) {

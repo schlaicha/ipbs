@@ -5,7 +5,7 @@
 radius = 3;
 position = 0;  // Center position of the sphere
 box_size = 20;
-outer_refinement =.1;
+outer_refinement =2.;
 middle_refinement =1.;
 inner_refinement = 0.1;
 
