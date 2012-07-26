@@ -59,8 +59,6 @@ test_surfacepot_LDFLAGS = $(AM_LDFLAGS) \
 		$(DUNE_LDFLAGS)
 test_surfacepot_DEPENDENCIES = sphere2d.msh
 
-test_parser_SOURCES = parser.cc
-
 # distribution tarball
 # SOURCES = parser.cc 
 # gridcheck not used explicitly, we should still ship it :)
