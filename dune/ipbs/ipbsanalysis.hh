@@ -56,7 +56,8 @@ class IpbsAnalysis
       // TODO: implement that!
       for (size_t i = 0; i < sysParams.get_npart(); i++)
       {
-        std::cout << std::endl << "Calculating the force acting on particle id " << i << std::endl;
+        if (communicator.rank() == 0)
+          std::cout << "Calculating the force acting on particle id " << i << std::endl;
         Dune::FieldVector<Real, dim> F(0);
   
         for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();

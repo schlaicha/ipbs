@@ -128,8 +128,8 @@ class DataWriter {
       std::ostringstream pieceName;
       if( communicator.size() > 1 )
       {
-        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << ":";
-        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << ":";
+        pieceName << "s" << std::setfill( '0' ) << std::setw( 4 ) << communicator.size() << "-";
+        pieceName << "p" << std::setfill( '0' ) << std::setw( 4 ) << communicator.rank() << "-";
       }
       pieceName << name << ".dat";
       return pieceName.str();

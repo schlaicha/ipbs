@@ -74,8 +74,10 @@ class Ipbsolver
     bool converged()
     {
       iterationCounter++;
-      std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
-        << " relative error in induced charge density is " << icError << std::endl;
+      if (communicator.rank() == 0) {
+        std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
+          << " relative error in induced charge density is " << icError << std::endl;
+        }
       if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
@@ -94,8 +96,10 @@ class Ipbsolver
       _fluxError = fluxError;
       _icError = icError;
       _iterations = iterationCounter;
-      std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
-        << " relative error in induced charge density is " << icError << std::endl;
+      if (communicator.rank() == 0) {
+        std::cout << "in iteration " << iterationCounter << " the relative fluxError is " << fluxError
+          << " relative error in induced charge density is " << icError << std::endl;
+      }
       if ( std::max(fluxError, icError) < sysParams.get_tolerance() ) {
         return true;
       }
@@ -211,8 +215,8 @@ class Ipbsolver
                     break;
             }
             double normaldist = (r_prime-r)*unitNormal;
-            double scalaerdistsq =  (r_prime-r)* (r_prime-r);
-            if (normaldist < d && scalaerdistsq - normaldist*normaldist < l*l) {
+            double scalardistsq =  (r_prime-r)* (r_prime-r);
+            if (normaldist < d && scalardistsq - normaldist*normaldist < l*l) {
 //            if (r_prime[0] < d && abs(r[1]-r_prime[1])<l) {
                 if (i==0 && sysParams.get_verbose() > 1)
                     std::cout << "innerboxpoint " << l << " " << r_prime << std::endl;
@@ -236,6 +240,9 @@ class Ipbsolver
           }
         }
       }
+
+      communicator.sum( &nearFieldChargeArea[0], fluxes.size() );
+      communicator.sum( &nearFieldCharge[0], fluxes.size() );
 
 
       unsigned int target = my_offset + my_len;
@@ -291,7 +298,8 @@ class Ipbsolver
 
       for (unsigned int i = 0; i<ipbsVolumes.size(); i++) {
           if (d>0 && l>0)
-              E_ext[i] +=sysParams.pi/sysParams.get_bjerrum()*nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
+              E_ext[i] += sysParams.pi/sysParams.get_bjerrum()
+                *nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
       }
 
       // Collect results from all nodes
@@ -349,12 +357,11 @@ class Ipbsolver
         bContainer[i] = sysParams.get_alpha_ipbs() * fluxes[i]
                         + ( 1 - sysParams.get_alpha_ipbs()) * bContainer[i];
         double local_fluxError = fabs(2.0*(fluxes[i]-bContainer[i])
-                     /(fluxes[i]+bContainer[i]));
+                                  /(fluxes[i]+bContainer[i]));
         fluxError = std::max(fluxError, local_fluxError);
       }
       communicator.barrier();
       communicator.max(&fluxError, 1);
- 
     }
 
 

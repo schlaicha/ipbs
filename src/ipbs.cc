@@ -144,11 +144,11 @@ int main(int argc, char** argv)
   // Load balance the parallel grid
   std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
 
- // Call problem driver
- ipbs_Pk<GridType, PGMap, PDEGREE>(grid, elementIndexToEntity, boundaryIndexToEntity);
+  // Call problem driver
+  ipbs_Pk<GridType, PGMap, PDEGREE>(grid, elementIndexToEntity, boundaryIndexToEntity);
   
- // done
- return 0;
+  // done
+  return 0;
  }
  catch (Dune::Exception &e){
   std::cerr << "Dune reported error: " << e << std::endl;
