@@ -233,7 +233,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
     // save snapshots every N step
     if(iterations % sysParams.get_outStep() == 0) {
       std::stringstream out;
-      out << "ipbs_step_" << iterations;
+      out << sysParams.get_outname() << "_step_" << iterations;
       std::string filename = out.str();
       DGF udgf_snapshot(gfs,u);
       Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
@@ -263,22 +263,9 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   DGF udgf(gfs,u);
   Dune::VTKWriter<GV> vtkwriter(gv,Dune::VTKOptions::conforming);
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf,"solution"));
-  vtkwriter.write("ipbs_solution",Dune::VTK::appendedraw);
-
-  // Prepare filename for sequential Gnuplot output
-  std::string filename = "ipbs_solution";
-  std::ostringstream s;
-  if(communicator.size() > 1)
-  {
-    s << 's' << std::setw(4) << std::setfill('0') << communicator.size() << '-';
-    s << 'p' << std::setw(4) << std::setfill('0') << communicator.rank() << '-';
-  }
-  s << filename << ".dat";
-  filename = s.str();
-  
-  mydatawriter.writeIpbsCellData(gfs, u, "solution", "ipbs_solution", status);
-
-
+  vtkwriter.write((sysParams.get_outname() + "_solution").c_str(), Dune::VTK::appendedraw);
+  // Also do Gnuplot output
+  mydatawriter.writeIpbsCellData(gfs, u, "solution", sysParams.get_outname() + "_solution", status);
 
   // Calculate the forces
   typedef IpbsAnalysis<GV,GFS,std::vector<int> , Ipbs> Analyzer;

@@ -37,6 +37,7 @@ void parser(std::string config_file)
   const int verbose = 1;
   const double lambda = 1.0;
   const double bjerrum = 0.7;
+  const std::string defaultOutput = "ipbs";
 
 
   /** \brief A parser to read in the system setup
@@ -69,6 +70,7 @@ void parser(std::string config_file)
 
   // Output
   sysParams.set_outStep(configuration.get<int>("output.steps",0));
+  sysParams.set_outname(configuration.get<std::string>("output.name",defaultOutput));
 
   // Create particles
   size_t n_particle = configuration.get<size_t>("system.NPart");

@@ -12,7 +12,7 @@ class SysParams {
   public:
     SysParams();	// We now only need a default constructor
 
-	static constexpr double pi = 3.14159265358979323846;
+	const double pi;
   
     // Return parameters needed during runtime
 	double get_bjerrum();
@@ -23,7 +23,7 @@ class SysParams {
 	double get_error();
 	double get_alpha_ic();
 	double get_alpha_ipbs();
-	int get_maxiter();
+	unsigned int get_maxiter();
 	double get_tolerance();
  	int get_symmetry();
   int get_verbose();
@@ -69,12 +69,12 @@ class SysParams {
 	double charge_density;
 	double charge;
 	double epsilon;
-  double tolerance;
-  double totalError;
+    double tolerance;
+    double totalError;
 	int symmetry;
-  int npart;
-  int salt;
-  int outstep;
+    int npart;
+    int salt;
+    int outstep;
 	double alpha_ic;	// SOR parameter
 	double alpha_ipbs;	// SOR parameter
   int maxiter;
