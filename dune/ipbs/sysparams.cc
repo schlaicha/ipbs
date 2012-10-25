@@ -196,6 +196,14 @@ double SysParams::get_integration_d() {
     return integration_d;
 }
 
+void SysParams::set_integration_maxintorder(double value) {
+    integration_maxintorder = value;
+}
+
+double SysParams::get_integration_maxintorder() {
+    return integration_maxintorder;
+}
+
 void SysParams::set_pH(double pH_) {
     pH=pH_;
 }

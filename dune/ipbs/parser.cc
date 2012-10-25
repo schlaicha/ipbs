@@ -65,6 +65,7 @@ void parser(std::string config_file)
   
   sysParams.set_integration_l(configuration.get<double>("solver.l", 0.15*sysParams.get_lambda()));
   sysParams.set_integration_d(configuration.get<double>("solver.d", 0.075*sysParams.get_lambda()));
+  sysParams.set_integration_maxintorder(configuration.get<double>("solver.maxintorder", 10));
 
   // Output
   sysParams.set_outStep(configuration.get<int>("output.steps",0));

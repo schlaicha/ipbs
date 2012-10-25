@@ -34,6 +34,7 @@ class SysParams {
   double get_pH();
   double get_integration_d();
   double get_integration_l();
+  double get_integration_maxintorder();
 
   // Functions setting the private members
   void add_error(double);
@@ -59,6 +60,7 @@ class SysParams {
   void set_pH(double value);
   void set_integration_d(double value);
   void set_integration_l(double value);
+  void set_integration_maxintorder(double value);
 	
   private:
 	double lambda;
@@ -80,6 +82,7 @@ class SysParams {
   int verbose;
   double integration_d;
   double integration_l;
+  double integration_maxintorder;
   double refinementFraction;
   int refinementSteps;
   double pH;

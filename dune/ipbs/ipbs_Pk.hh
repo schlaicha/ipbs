@@ -195,7 +195,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   NEWTON newton(go,u,ls);
   newton.setLineSearchStrategy(newton.hackbuschReuskenAcceptBest);
   newton.setVerbosityLevel(sysParams.get_verbose());
-  newton.setMinLinearReduction(1e-6);
+  newton.setMinLinearReduction(1e-9);
   newton.setMaxIterations(100);
   newton.setLineSearchMaxIterations(50);
 

@@ -58,7 +58,7 @@ Dune::FieldMatrix<Real, GFS::Traits::GridViewType::dimension,
   for (int i = 0; i < dim; i++)
   {
     //res[i][i] -= 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * .5 * gradphi.two_norm2();
-    res[i][i] -= 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * ( sysParams.get_lambda2i() * (std::cosh(value) - 1.0) + .5 * gradphi.two_norm2());
+    res[i][i] += 1.0/(4.0 * sysParams.pi * sysParams.get_bjerrum()) * ( sysParams.get_lambda2i() * (std::cosh(value) - 1.0) - .5 * gradphi.two_norm2());
   }
   return res;
 }

@@ -141,15 +141,33 @@ int main(int argc, char** argv)
   // create the grid
   GridType* grid = factory.createGrid();
  
-  // Load balance the parallel grid
-  std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
+//  // Load balance the parallel grid
+//  std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
+  
+  typedef GridType::LeafGridView myGV;
+
+  myGV gv = grid->leafView();
+
+  typedef typename myGV::Codim<0>::Iterator GVIT;
+  typedef typename myGV::IntersectionIterator IntersectionIterator;
+  
+  GVIT it = gv.begin<0>();
+
+//  for (; it != gv.end<0>(); ++it) {
+//    for (IntersectionIterator iit = gv.ibegin(*it); iit!=  gv.iend(*it); ++iit) 
+//      if (iit->boundary())
+//        std::cout << "" << iit->geometry().center() << " " << iit->boundarySegmentIndex() 
+////            << " " << factory.insertionIndex(*iit) 
+////            << " " << boundaryIndexToEntity[factory.insertionIndex(*iit)] 
+//            << " " << boundaryIndexToEntity[iit->boundarySegmentIndex()]  << std::endl ;
+//    }
+  
 
  // Call problem driver
  ipbs_Pk<GridType, PGMap, PDEGREE>(grid, elementIndexToEntity, boundaryIndexToEntity);
+  }
   
  // done
- return 0;
- }
  catch (Dune::Exception &e){
   std::cerr << "Dune reported error: " << e << std::endl;
  }

@@ -44,7 +44,9 @@ public :
         return true;
       return false;
     }
-    else DUNE_THROW(Dune::NotImplemented,"Dirichlet interpolation for 3d still has to be done");
+  //  else DUNE_THROW(Dune::NotImplemented,"Dirichlet interpolation for 3d still has to be done");
+    else 
+        return false;
   }
 
 

@@ -168,6 +168,8 @@ public:
         // evaluate flux boundary condition
 	      typename J::Traits::RangeType y;
       	j.evaluate(ig, y);
+
+//        std::cout << global << " " << y << std::endl;
 	
       	// integrate j
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());

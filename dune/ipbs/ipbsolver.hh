@@ -160,7 +160,7 @@ class Ipbsolver
 
           // select quadrature rule
           Dune::GeometryType gt = it->geometry().type();
-          unsigned int io = (int) ceil( 10*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
+          unsigned int io = (int) ceil( sysParams.get_integration_maxintorder()*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
           if (io>51)
               io=51;
           const Dune::QuadratureRule<DF,dim>& 
