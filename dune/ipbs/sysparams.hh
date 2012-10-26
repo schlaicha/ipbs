@@ -35,6 +35,7 @@ class SysParams {
   double get_integration_d();
   double get_integration_l();
   double get_integration_maxintorder();
+  std::string get_outname();
 
   // Functions setting the private members
   void add_error(double);
@@ -44,7 +45,7 @@ class SysParams {
   void set_bjerrum (double value);
   void set_alpha_ic(double);
   void set_alpha_ipbs(double);
-  void set_maxiter(int);
+  void set_maxiter(unsigned int);
   void set_meshfile(std::string filename);
   void set_refinement(int level);
   void set_tolerance(double value);
@@ -61,6 +62,7 @@ class SysParams {
   void set_integration_d(double value);
   void set_integration_l(double value);
   void set_integration_maxintorder(double value);
+  void set_outname(std::string _outname);
 	
   private:
 	double lambda;
@@ -69,16 +71,17 @@ class SysParams {
 	double charge_density;
 	double charge;
 	double epsilon;
-    double tolerance;
-    double totalError;
+  double tolerance;
+  double totalError;
 	int symmetry;
-    int npart;
-    int salt;
-    int outstep;
+  int npart;
+  int salt;
+  int outstep;
 	double alpha_ic;	// SOR parameter
 	double alpha_ipbs;	// SOR parameter
   int maxiter;
   std::string meshfile;
+  std::string outname;
   int verbose;
   double integration_d;
   double integration_l;
