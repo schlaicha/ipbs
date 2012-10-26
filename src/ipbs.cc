@@ -142,7 +142,7 @@ int main(int argc, char** argv)
   GridType* grid = factory.createGrid();
  
 //  // Load balance the parallel grid
-//  std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
+  std::cout << "Grid has been modified by load balancing: " << grid->loadBalance() << std::endl;
   
   typedef GridType::LeafGridView myGV;
 
