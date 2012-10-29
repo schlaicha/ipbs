@@ -218,9 +218,9 @@ class Ipbsolver
             double scalardistsq =  (r_prime-r)* (r_prime-r);
             if (normaldist < d && scalardistsq - normaldist*normaldist < l*l) {
 //            if (r_prime[0] < d && abs(r[1]-r_prime[1])<l) {
-                if (i==0 && sysParams.get_verbose() > 1)
+                if (i==0 && sysParams.get_verbose() > 3)
                     std::cout << "innerboxpoint " << l << " " << r_prime << std::endl;
-                E_ext_ions *= 0;
+                E_ext_ions = 0;
 //                double nf =  sysParams.get_lambda2i()*0.0001*4*sysParams.pi*exp(-r_prime[0])*weight;
                 double nf =  sysParams.get_lambda2i()*std::sinh(value)*weight;
                 if ( sysParams.get_symmetry() > 0) {
@@ -229,7 +229,7 @@ class Ipbsolver
                 nearFieldCharge[i] += nf;
                 nearFieldChargeArea[i] += weight;
             } else {
-                if (i==0 && sysParams.get_verbose() > 1)
+                if (i==0 && sysParams.get_verbose() > 3)
                     std::cout << "integrationpoint " << r_prime << std::endl;
             }
             E_ext[i] += E_ext_ions;
@@ -330,7 +330,7 @@ class Ipbsolver
 
         double thisChargeDensity = boundary[ipbsType[i]]->get_charge_density() 
                                   + inducedChargeDensity[i] + regulatedChargeDensity[i];
-      
+
         /* Equation 3.4.4 DA Schlaich */
         fluxes[i] = E_ext[i] + 2. * sysParams.pi*sysParams.get_bjerrum() * thisChargeDensity;
       }
