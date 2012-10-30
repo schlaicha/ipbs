@@ -38,7 +38,7 @@ class IpbsAnalysis
     // ------------------------------------------------------------------------
     /// Force computation
     // ------------------------------------------------------------------------
-    void forces(const U& u) const
+    void forces(const U& u, std::string fname) const
     {
       // Here we once more loop over all elements on this node (need of the element information
       // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
@@ -47,9 +47,9 @@ class IpbsAnalysis
       // Open output file for force on particles
       std::ofstream force_file, vector_force_file;
   
-      vector_force_file.open (filename_helper(sysParams.get_outname() + "_forceVec.dat").c_str(), std::ios::out);
+      vector_force_file.open (filename_helper(sysParams.get_outname() + "_forceVec").c_str(), std::ios::out);
       if (communicator.rank() == 0) {
-        force_file.open ((sysParams.get_outname() + "_forces.dat").c_str(), std::ios::out);
+        force_file.open (fname.c_str(), std::ios::out);
       }
        
       // Do the loop for boundary type 2 (iterated b.c.)

@@ -141,41 +141,43 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
 #endif
   GO go(gfs,cc,gfs,cc,lop);
 
+const int solverMaxIter = 20000;
+
   // <<<5a>>> Select a linear solver backend
 #if HAVE_MPI
 #if LINEARSOLVER == BCGS_SSORk
   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_SSORk<GO> LS;
-  LS ls( gfs, 5000, 5, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, 5, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == BCGS_NOPREC
   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_NOPREC<GFS> LS;
-  LS ls( gfs, 5000, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == CG_SSORk
   typedef Dune::PDELab::ISTLBackend_NOVLP_CG_SSORk< GO > LS;
-  LS ls( gfs, 5000, 5, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, 5, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == CG_NOPREC
   typedef Dune::PDELab::ISTLBackend_NOVLP_CG_NOPREC<GFS> LS;
-  LS ls( gfs, 5000, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == CG_Jacobi
   typedef Dune::PDELab::ISTLBackend_NOVLP_CG_Jacobi< GFS > LS;
-  LS ls( gfs, 5000, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == CG_AMG_SSOR
     typedef Dune::PDELab::ISTLBackend_NOVLP_CG_AMG_SSOR<GO> LS;
-    LS ls( gfs, 5, 5000, sysParams.get_verbose() );
+    LS ls( gfs, 5, solverMaxIter, sysParams.get_verbose() );
 #endif
 
 #if LINEARSOLVER == BCGS_AMG_SSOR
   typedef Dune::PDELab::ISTLBackend_NOVLP_BCGS_AMG_SSOR<GO> LS;
-  LS ls( gfs, 5000, sysParams.get_verbose() );
+  LS ls( gfs, solverMaxIter, sysParams.get_verbose() );
 #endif
 
 #else
@@ -210,6 +212,10 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
 
   DataWriter<GV,dim> mydatawriter(gv);
 
+  // Analysis class
+  typedef IpbsAnalysis<GV,GFS,std::vector<int> , Ipbs> Analyzer;
+  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity, ipbs);
+
   // --- Here the iterative loop starts ---
 
   unsigned int counter = 0;
@@ -240,6 +246,10 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(udgf_snapshot,"solution"));
       vtkwriter.write(filename,Dune::VTK::appendedraw);
       mydatawriter.writeIpbsCellData(gfs, u, "solution", filename, status);
+      std::stringstream fname;
+      fname << "forces_step_" << iterations;
+      std::string forcefilename = fname.str();
+      analyzer.forces(u, forcefilename);
     }
 
     timer.reset();
@@ -267,11 +277,7 @@ void ipbs_Pk(GridType* grid, const PGMap& elementIndexToEntity,
   // Also do Gnuplot output
   mydatawriter.writeIpbsCellData(gfs, u, "solution", sysParams.get_outname() + "_solution", status);
 
-  // Calculate the forces
-  typedef IpbsAnalysis<GV,GFS,std::vector<int> , Ipbs> Analyzer;
-  const Analyzer analyzer(gv, gfs, boundaryIndexToEntity, ipbs);
-
-  analyzer.forces(u);
+  analyzer.forces(u, "forces.dat");
   analyzer.surfacepot(u, "surface_potential.dat");
   analyzer.E_ext(u, "e_ext.dat");
   
