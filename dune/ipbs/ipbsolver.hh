@@ -296,11 +296,13 @@ class Ipbsolver
         } // end of j loop
       } // end of i loop
 
-      for (unsigned int i = 0; i<ipbsVolumes.size(); i++) {
-          if (d>0 && l>0)
-              E_ext[i] += sysParams.pi/sysParams.get_bjerrum()
+     for (unsigned int i = 0; i<ipbsVolumes.size(); i++) {
+       if (nearFieldChargeArea[i] > 0) 
+       {
+         E_ext[i] += sysParams.pi/sysParams.get_bjerrum()
                 *nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
-      }
+       }
+     }
 
       // Collect results from all nodes
       communicator.barrier();
