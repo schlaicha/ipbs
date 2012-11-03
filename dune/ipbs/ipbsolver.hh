@@ -125,10 +125,8 @@ class Ipbsolver
       double d = sysParams.get_integration_d();
       double l = sysParams.get_integration_l();
 
-      std::vector<double> nearFieldCharge;
-      std::vector<double> nearFieldChargeArea;
-      nearFieldCharge.resize(ipbsPositions.size(),0);
-      nearFieldChargeArea.resize(ipbsPositions.size(),0);
+      ContainerType nearFieldCharge(ipbsPositions.size(), 0);
+      ContainerType nearFieldChargeArea(ipbsPositions.size(), 0);
 
       fluxError = 0;  // reset the fluxError for next iteration step
       
@@ -241,9 +239,8 @@ class Ipbsolver
         }
       }
 
-      communicator.sum( &nearFieldChargeArea[0], fluxes.size() );
-      communicator.sum( &nearFieldCharge[0], fluxes.size() );
-
+      communicator.sum( &nearFieldChargeArea[0], nearFieldChargeArea.size() );
+      communicator.sum( &nearFieldCharge[0], nearFieldCharge.size() );
 
       unsigned int target = my_offset + my_len;
       // For each element on this processor calculate the contribution to surface integral part of the flux
@@ -296,13 +293,14 @@ class Ipbsolver
         } // end of j loop
       } // end of i loop
 
-     for (unsigned int i = 0; i<ipbsVolumes.size(); i++) {
-       if (nearFieldChargeArea[i] > 0) 
-       {
-         E_ext[i] += sysParams.pi/sysParams.get_bjerrum()
-                *nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
-       }
-     }
+      communicator.barrier();
+      for (unsigned int i = my_offset; i<target; i++) {
+        if (nearFieldChargeArea[i] > 0) 
+        {
+          E_ext[i] += sysParams.pi/sysParams.get_bjerrum()
+                 *nearFieldCharge[i]*d/(2*sysParams.pi)/nearFieldChargeArea[i];
+        }
+      }
 
       // Collect results from all nodes
       communicator.barrier();
