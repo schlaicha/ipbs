@@ -100,6 +100,10 @@ class IpbsAnalysis
       }
     }
 
+    // ------------------------------------------------------------------------
+    /// Average surface potential (useful for many testcases)
+    // ------------------------------------------------------------------------
+    
     void surfacepot(const U& u, std::string filename) const
     {
       std::ofstream pot_file;
@@ -142,6 +146,40 @@ class IpbsAnalysis
       }
     }
 
+    // ------------------------------------------------------------------------
+    /// Determine the system's electrostatic energy
+    // ------------------------------------------------------------------------
+    double energy(const U&u, std::string filename) const {
+      
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+        DGF udgf(gfs,u);
+      typedef typename DGF::Traits::RangeType RT;
+      
+      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+        it!=gv.template end<0,Dune::Interior_Partition>(); ++it) {
+        
+        Dune::FieldVector<Real, dim> evalPos = it->geometry().center();
+        Dune::FieldVector<Real, dim> local = it->geometry().local(evalPos);
+        RT value;
+            
+        // evaluate the potential
+        udgf.evaluate(*it, local, value);
+        Dune::FieldVector<Real,dim> gradphi;
+        typename Dune::PDELab::DiscreteGridFunctionGradient
+          < GFS, DataContainer > grads(gfs,u);
+        grads.evaluate(*it, local, gradphi);
+
+        double density = ( sysParams.get_lambda2i() / 
+              (4.*sysParams.pi * sysParams.get_bjerrum()) 
+              * std::sinh(- value) );
+
+      }
+
+    }
+    
+    // ------------------------------------------------------------------------
+    /// Print the external field at IPBS boundaries to file
+    // ------------------------------------------------------------------------
     void E_ext(const U& u, std::string filename) const {
         std::ofstream E_ext_file;
         E_ext_file.open( filename.c_str() );
