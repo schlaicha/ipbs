@@ -162,28 +162,11 @@ class IpbsAnalysis
         DGF udgf(gfs,u);
       typedef typename DGF::Traits::RangeType RT;
 
-      double energy = 0;
       double senergy = 0;
       
       for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
         it!=gv.template end<0,Dune::Interior_Partition>(); ++it) {
         
-        //Dune::FieldVector<Real, dim> evalPos = it->geometry().center();
-        //Dune::FieldVector<Real, dim> local = it->geometry().local(evalPos);
-        //RT value;
-        //    
-        //// evaluate the potential
-        //udgf.evaluate(*it, local, value);
-
-        //double charge_density = - ( sysParams.get_lambda2i() / 
-        //      (4.*sysParams.pi * sysParams.get_bjerrum()) 
-        //      * std::sinh( value) );
-        //double local_energy = charge_density * value * it->geometry().volume();
-        //if (sysParams.get_symmetry() > 0) {
-        //  local_energy *= 2. * sysParams.pi * evalPos[1];
-        //}
-        //energy += local_energy;
-
         if(it->hasBoundaryIntersections() == true) {
           for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
             if(ii->boundary() == true) {
@@ -226,8 +209,6 @@ class IpbsAnalysis
         en_file << senergy << std::endl;
         en_file.close();
       }
-
-      //std::cout << "Volume: " << energy << " Surface: " << senergy << " sum: " << senergy+energy << std::endl;
     }
     
     // ------------------------------------------------------------------------
