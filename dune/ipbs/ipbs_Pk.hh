@@ -280,6 +280,8 @@ const int solverMaxIter = 20000;
   analyzer.forces(u, "forces.dat");
   analyzer.surfacepot(u, "surface_potential.dat");
   analyzer.E_ext(u, "e_ext.dat");
+
+  analyzer.energy(u, "idiot");
   
   if (communicator.rank() == 0) {
     std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() 

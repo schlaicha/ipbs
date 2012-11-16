@@ -396,7 +396,24 @@ class Ipbsolver
 
 
 
-  // ------------------------------------------------------------------------
+   // ------------------------------------------------------------------------
+  
+  protected:
+    template <typename I>
+    double get_lcd(const I& i) const
+    {
+      int mappedIndex = indexLookupMap.find(boundaryElemMapper.map(*i.inside()))->second + my_offset;
+      double lcd = 0;
+      if ( boundary[ boundaryIndexToEntity[i.boundarySegmentIndex()] ]->get_type() == 2) {
+        lcd = boundary[ipbsType[mappedIndex]]->get_charge_density() 
+                        + inducedChargeDensity[mappedIndex];
+                        + regulatedChargeDensity[mappedIndex]; /**< The local charge density 
+                                                     on this particular surface element */
+      }
+      return lcd;
+    }
+
+  // ------------------------------------------------------------------------ 
 
 
   private:
