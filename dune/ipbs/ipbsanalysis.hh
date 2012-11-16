@@ -11,6 +11,7 @@
 
 #include "maxwelltensor.hh"
 #include "sysparams.hh"
+#include "boundary.hh"
 
 extern SysParams sysParams;
 extern std::vector<Boundary*> boundary;
@@ -38,7 +39,7 @@ class IpbsAnalysis
     // ------------------------------------------------------------------------
     /// Force computation
     // ------------------------------------------------------------------------
-    void forces(const U& u) const
+    void forces(const U& u, std::string fname) const
     {
       // Here we once more loop over all elements on this node (need of the element information
       // for the gradient calculation) and integrate Maxwell stress tensor over the particles surface
@@ -47,9 +48,9 @@ class IpbsAnalysis
       // Open output file for force on particles
       std::ofstream force_file, vector_force_file;
   
-      vector_force_file.open (filename_helper(sysParams.get_outname() + "_forceVec.dat").c_str(), std::ios::out);
+      vector_force_file.open (filename_helper(sysParams.get_outname() + "_forceVec").c_str(), std::ios::out);
       if (communicator.rank() == 0) {
-        force_file.open ((sysParams.get_outname() + "_forces.dat").c_str(), std::ios::out);
+        force_file.open (fname.c_str(), std::ios::out);
       }
        
       // Do the loop for boundary type 2 (iterated b.c.)
@@ -100,6 +101,10 @@ class IpbsAnalysis
       }
     }
 
+    // ------------------------------------------------------------------------
+    /// Average surface potential (useful for many testcases)
+    // ------------------------------------------------------------------------
+    
     void surfacepot(const U& u, std::string filename) const
     {
       std::ofstream pot_file;
@@ -142,6 +147,73 @@ class IpbsAnalysis
       }
     }
 
+    // ------------------------------------------------------------------------
+    /// Determine the system's electrostatic energy
+    // ------------------------------------------------------------------------
+    double energy(const U&u, std::string filename) const {
+
+      std::ofstream en_file;
+
+      if (gv.comm().rank() ==0) {
+        en_file.open( filename.c_str() );
+      }
+      
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+        DGF udgf(gfs,u);
+      typedef typename DGF::Traits::RangeType RT;
+
+      double senergy = 0;
+      
+      for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+        it!=gv.template end<0,Dune::Interior_Partition>(); ++it) {
+        
+        if(it->hasBoundaryIntersections() == true) {
+          for (IntersectionIterator ii = gv.ibegin(*it); ii != gv.iend(*it); ++ii) {
+            if(ii->boundary() == true) {
+                Dune::FieldVector<Real, dim> sevalPos = ii->geometry().center();
+                Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> slocal =
+                  it->geometry().local(sevalPos);
+                RT svalue;
+                // evaluate the potential
+                udgf.evaluate(*it, slocal, svalue);
+
+                double local_senergy = 0;
+
+                if (boundary[ pgmap[ii->boundarySegmentIndex()] ]->get_type() == 0) { 
+                  // Dirichlet
+                  DUNE_THROW(Dune::NotImplemented,"Dirichlet boundaries are not yet supported for energy calculations"); 
+                  // 1/4/pi grad(phi) * n * phi
+                  // just implement :P
+                }
+                else if (boundary[ pgmap[ii->boundarySegmentIndex()] ]->get_type() == 1) { 
+                  // Neumann
+                  local_senergy =  boundary[ pgmap[ii->boundarySegmentIndex()] ]
+                    ->get_charge_density() * svalue * ii->geometry().volume();
+                }
+                else if (boundary[ pgmap[ii->boundarySegmentIndex()] ]->get_type() == 2) { 
+                  // IPBS
+                  local_senergy = ipbsolver.get_lcd(*ii) * svalue * ii->geometry().volume();
+                }
+                
+                if (sysParams.get_symmetry() > 0) {
+                  local_senergy *= 2. * sysParams.pi * sevalPos[1];
+                }
+                senergy += local_senergy;
+            }
+          }
+        }
+
+      }
+      communicator.sum(&senergy,1);
+      if (communicator.rank() == 0) {
+        en_file << senergy << std::endl;
+        en_file.close();
+      }
+    }
+    
+    // ------------------------------------------------------------------------
+    /// Print the external field at IPBS boundaries to file
+    // ------------------------------------------------------------------------
     void E_ext(const U& u, std::string filename) const {
         std::ofstream E_ext_file;
         E_ext_file.open( filename.c_str() );
