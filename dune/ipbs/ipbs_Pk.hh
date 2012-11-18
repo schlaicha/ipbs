@@ -282,6 +282,12 @@ const int solverMaxIter = 20000;
   analyzer.E_ext(u, "e_ext.dat");
 
   analyzer.energy(u, "idiot");
+  std::vector<double> corners;
+  corners.push_back(-10);
+  corners.push_back(10);
+  corners.push_back(0);
+  corners.push_back(10);
+  analyzer.write_structured_output(u, "structured.dat", corners, 0.2);
   
   if (communicator.rank() == 0) {
     std::cout << "P " << communicator.size() << " N: " << elementIndexToEntity.size() << " M: " << ipbs.get_n() 
