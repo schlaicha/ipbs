@@ -180,8 +180,15 @@ class IpbsAnalysis
                 double local_senergy = 0;
 
                 if (boundary[ pgmap[ii->boundarySegmentIndex()] ]->get_type() == 0) { 
+                  Dune::FieldVector<Real,dim> gradphi;
+                  typename Dune::PDELab::DiscreteGridFunctionGradient< GFS, U > grads(gfs,u);
+                  grads.evaluate(*it, slocal, gradphi);
+                  Dune::FieldVector<Real, dim> normal = ii->centerUnitOuterNormal();
+
+                  local_senergy = 1./4./sysParams.pi/sysParams.get_bjerrum()* (gradphi*normal) * svalue *ii->geometry().volume();
+
                   // Dirichlet
-                  DUNE_THROW(Dune::NotImplemented,"Dirichlet boundaries are not yet supported for energy calculations"); 
+//                  DUNE_THROW(Dune::NotImplemented,"Dirichlet boundaries are not yet supported for energy calculations"); 
                   // 1/4/pi grad(phi) * n * phi
                   // just implement :P
                 }
@@ -221,6 +228,102 @@ class IpbsAnalysis
             E_ext_file << ipbsolver.ipbsPositions[i] << " " << ipbsolver.E_ext[i] << std::endl;
         }
     }
+    
+    void write_structured_output(const U& u, std::string filename, std::vector<double> & corners, double res) const {
+      if (communicator.size() != 1) 
+        DUNE_THROW(Dune::NotImplemented,"structured_output is only available in the serial implementation."); 
+
+      typedef Dune::PDELab::DiscreteGridFunction<GFS,U> DGF;
+      DGF udgf(gfs,u);
+      typedef typename DGF::Traits::RangeType RT;
+
+      std::ofstream ofile;
+      ofile.open(filename);
+
+      if (WORLDDIM==2) {
+         double minz;
+         double maxz;
+         double minr;
+         double maxr;
+        try {
+          minz=corners[0];
+          maxz=corners[1];
+          minr=corners[2];
+          maxr=corners[3];
+        } catch (...) {
+          DUNE_THROW(Dune::NotImplemented,"write_structured_output: corners are wrong."); 
+        }
+        unsigned int nz = (int) floor((maxz-minz)/res);
+        unsigned int nr = (int) floor((maxr-minr)/res);
+        std::vector<double> values;
+        values.resize(nz*nr);
+        for (unsigned int i = 0; i<nz*nr; i++) {
+          values[i]=-1;
+        }
+        typedef Dune::FieldVector< Real, dim > Corner;
+        Corner corner0, corner1, corner2;
+        Real localminz, localminr, localmaxr, localmaxz;
+        Dune::FieldVector< Real, dim> pos;
+        for (LeafIterator it = gv.template begin<0,Dune::Interior_Partition>();
+                 	it!=gv.template end<0,Dune::Interior_Partition>(); ++it) {
+          corner0 = it->geometry().corner(0);
+          corner1 = it->geometry().corner(1);
+          corner2 = it->geometry().corner(2);
+          localminz=std::min(std::min(corner0[0], corner1[0]), corner2[0]);
+          localminr=std::min(std::min(corner0[1], corner1[1]), corner2[1]);
+          localmaxz=std::max(std::max(corner0[0], corner1[0]), corner2[0]);
+          localmaxr=std::max(std::max(corner0[1], corner1[1]), corner2[1]);
+          int m0=(int)floor((localminz-minz)/res);
+          int n0=(int)floor((localminr-minr)/res);
+
+          Real r,z;
+          int m, n;
+          m=m0;
+          z=minz+m*res;
+          while (z < localmaxz) {
+            n=n0;
+            r=minr+n*res;
+            while (r < localmaxr ) {
+              z=minz+m*res;
+              r=minr+n*res;
+              pos[0]=z; pos[1]=r;
+              Dune::FieldVector<double,GFS::Traits::GridViewType::dimension> local =
+                  it->geometry().local(pos);
+                RT value;
+                // check if we are in the unit element
+                if (local[0]>=0 && local[1]>=0 && 1-local[0]>=local[1] && m >= 0 && m < nz && n >=0 && n < nr ) {
+                  // evaluate the potential
+                  udgf.evaluate(*it, local, value);
+                  if (values[m*nr+n] != -1) {
+                    std::cout << "double assignment at " << pos << std::endl;
+                  } else {
+                    values[m*nr+n] = value;
+                  }
+//                  ofile << pos << " " << value << std::endl;
+                }
+
+                n++;
+            }
+            m++;
+          }
+          
+
+        }
+        for (unsigned int i = 0; i<nz; i++) {
+          for (unsigned int j = 0; j<nr; j++) {
+            pos[0]=minz+i*res;
+            pos[1]=minr+j*res;
+            ofile << pos << " " << values[i*nr+j] << std::endl;
+          }
+          ofile << std::endl;
+        }
+        ofile.close();
+
+      } else if (WORLDDIM==3) {
+        DUNE_THROW(Dune::NotImplemented,"structured_output is only available in two dimension."); 
+      }
+    }
+
   
   private:
      
