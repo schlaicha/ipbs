@@ -156,91 +156,91 @@ class Ipbsolver
                	it!=gv.template end<0,Dune::Interior_Partition>(); ++it)
       {
 
-        // For each element on this processor calculate the contribution to volume integral part of the flux
-        for (size_t i = 0; i < ipbsPositions.size(); i++)
-        {
-
-          // select quadrature rule
-          Dune::GeometryType gt = it->geometry().type();
-          unsigned int io = (int) ceil( sysParams.get_integration_maxintorder()*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
-          if (io>51)
-              io=51;
-          const Dune::QuadratureRule<DF,dim>& 
-            rule = Dune::QuadratureRules<DF,dim>::rule(gt,io);
-
-          // loop over quadrature points
-          for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
-                     q_it=rule.begin(); q_it!=rule.end(); ++q_it)
-          {
-            double E_ext_ions = 0.;
-            // Get the position vector of the this element's center
-            Dune::FieldVector<ctype,dim> r_prime = it->geometry().global(q_it->position());
-            //Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
-                      
-            RT value;
-            udgf.evaluate(*it,q_it->position(),value);
-            //udgf.evaluate(*it,it->geometry().local(r_prime),value);
-            
-            double weight = q_it->weight() * it->geometry().integrationElement(q_it->position());
-            //double weight = it->geometry().volume();
-
-            Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
-            Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
-            unitNormal *= -1.;
-
-            Dune::FieldVector<ctype,dim> e_field(0.);
-
-            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > 
-                        (r, r_prime, sysParams.get_symmetry());
-
-            e_field *= weight;
-            E_ext_ions = e_field * unitNormal;
-            E_ext_ions *= 1./ (4.0*sysParams.pi) * sysParams.get_lambda2i();
-
-            if ( sysParams.get_symmetry() > 0) {
-                E_ext_ions *= r_prime[1];
-            }
-
-            // Now get the counterion distribution and calculate flux
-            switch (sysParams.get_salt())
-            {
-                case 0:
-                    E_ext_ions *= -std::sinh(value);
-
-                    break;
-                case 1:
-                    E_ext_ions *= std::exp(value); // Counterions have opposite sign!
-                    break;
-            }
-            double normaldist = (r_prime-r)*unitNormal;
-            double scalardistsq =  (r_prime-r)* (r_prime-r);
-            if (normaldist < d && scalardistsq - normaldist*normaldist < l*l) {
-//            if (r_prime[0] < d && abs(r[1]-r_prime[1])<l) {
-                if (i==0 && sysParams.get_verbose() > 3)
-                    std::cout << "innerboxpoint " << l << " " << r_prime << std::endl;
-                E_ext_ions = 0;
-//                double nf =  sysParams.get_lambda2i()*0.0001*4*sysParams.pi*exp(-r_prime[0])*weight;
-                double nf =  sysParams.get_lambda2i()*std::sinh(value)*weight;
-                if ( sysParams.get_symmetry() > 0) {
-//                  nf *= r_prime[1];
-                }
-                nearFieldCharge[i] += nf;
-                nearFieldChargeArea[i] += weight;
-            } else {
-                if (i==0 && sysParams.get_verbose() > 3)
-                    std::cout << "integrationpoint " << r_prime << std::endl;
-            }
-            E_ext[i] += E_ext_ions;
-            if (sysParams.get_symmetry() == 0)
-              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i];
-            else
-              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i]*2*sysParams.pi*r[1];
-          }
-        }
+//        // For each element on this processor calculate the contribution to volume integral part of the flux
+//        for (size_t i = 0; i < ipbsPositions.size(); i++)
+//        {
+//
+//          // select quadrature rule
+//          Dune::GeometryType gt = it->geometry().type();
+//          unsigned int io = (int) ceil( sysParams.get_integration_maxintorder()*pow(ipbsVolumes[i], 1./(dim-1)) / sqrt( (ipbsPositions[i]-it->geometry().center())*(ipbsPositions[i]-it->geometry().center())));
+//          if (io>51)
+//              io=51;
+//          const Dune::QuadratureRule<DF,dim>& 
+//            rule = Dune::QuadratureRules<DF,dim>::rule(gt,io);
+//
+//          // loop over quadrature points
+//          for (typename Dune::QuadratureRule<DF,dim>::const_iterator 
+//                     q_it=rule.begin(); q_it!=rule.end(); ++q_it)
+//          {
+//            double E_ext_ions = 0.;
+//            // Get the position vector of the this element's center
+//            Dune::FieldVector<ctype,dim> r_prime = it->geometry().global(q_it->position());
+//            //Dune::FieldVector<ctype,dim> r_prime = it->geometry().center();
+//                      
+//            RT value;
+//            udgf.evaluate(*it,q_it->position(),value);
+//            //udgf.evaluate(*it,it->geometry().local(r_prime),value);
+//            
+//            double weight = q_it->weight() * it->geometry().integrationElement(q_it->position());
+//            //double weight = it->geometry().volume();
+//
+//            Dune::FieldVector<ctype,dim> r (ipbsPositions[i]);
+//            Dune::FieldVector<ctype, dim> unitNormal(ipbsNormals[i]);
+//            unitNormal *= -1.;
+//
+//            Dune::FieldVector<ctype,dim> e_field(0.);
+//
+//            e_field = E_field<Dune::FieldVector<ctype,dim> ,Dune::FieldVector<ctype,dim> > 
+//                        (r, r_prime, sysParams.get_symmetry());
+//
+//            e_field *= weight;
+//            E_ext_ions = e_field * unitNormal;
+//            E_ext_ions *= 1./ (4.0*sysParams.pi) * sysParams.get_lambda2i();
+//
+//            if ( sysParams.get_symmetry() > 0) {
+//                E_ext_ions *= r_prime[1];
+//            }
+//
+//            // Now get the counterion distribution and calculate flux
+//            switch (sysParams.get_salt())
+//            {
+//                case 0:
+//                    E_ext_ions *= -std::sinh(value);
+//
+//                    break;
+//                case 1:
+//                    E_ext_ions *= std::exp(value); // Counterions have opposite sign!
+//                    break;
+//            }
+//            double normaldist = (r_prime-r)*unitNormal;
+//            double scalardistsq =  (r_prime-r)* (r_prime-r);
+//            if (normaldist < d && scalardistsq - normaldist*normaldist < l*l) {
+////            if (r_prime[0] < d && abs(r[1]-r_prime[1])<l) {
+//                if (i==0 && sysParams.get_verbose() > 3)
+//                    std::cout << "innerboxpoint " << l << " " << r_prime << std::endl;
+//                E_ext_ions = 0;
+////                double nf =  sysParams.get_lambda2i()*0.0001*4*sysParams.pi*exp(-r_prime[0])*weight;
+//                double nf =  sysParams.get_lambda2i()*std::sinh(value)*weight;
+//                if ( sysParams.get_symmetry() > 0) {
+////                  nf *= r_prime[1];
+//                }
+//                nearFieldCharge[i] += nf;
+//                nearFieldChargeArea[i] += weight;
+//            } else {
+//                if (i==0 && sysParams.get_verbose() > 3)
+//                    std::cout << "integrationpoint " << r_prime << std::endl;
+//            }
+//            E_ext[i] += E_ext_ions;
+//            if (sysParams.get_symmetry() == 0)
+//              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i];
+//            else
+//              efieldShift[ ipbsType[i] ] -= E_ext_ions*ipbsVolumes[i]*2*sysParams.pi*r[1];
+//          }
+//        }
       }
-
-      communicator.sum( &nearFieldChargeArea[0], nearFieldChargeArea.size() );
-      communicator.sum( &nearFieldCharge[0], nearFieldCharge.size() );
+//
+//      communicator.sum( &nearFieldChargeArea[0], nearFieldChargeArea.size() );
+//      communicator.sum( &nearFieldCharge[0], nearFieldCharge.size() );
 
       unsigned int target = my_offset + my_len;
       // For each element on this processor calculate the contribution to surface integral part of the flux

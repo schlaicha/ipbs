@@ -95,18 +95,18 @@ public:
 
         RF f=0.;
         //if (globalpos[0] < -0.0 && globalpos[0] > -.5 && globalpos[1] < .5.) f = -10.;
-      	// Parameters describing the PDE
-        switch (sysParams.get_salt())
-        {
-          case 0:
-            f = -1.0 * sysParams.get_lambda2i() * sinh(u);
-            break;
-          case 1:
-            f = -1.0 * sysParams.get_lambda2i() * exp(u);
-            break;
-          case 2:
-            f = -1.0 * sysParams.get_lambda2i() * u;
-        }
+//      	// Parameters describing the PDE
+//        switch (sysParams.get_salt())
+//        {
+//          case 0:
+//            f = -1.0 * sysParams.get_lambda2i() * sinh(u);
+//            break;
+//          case 1:
+//            f = -1.0 * sysParams.get_lambda2i() * exp(u);
+//            break;
+//          case 2:
+//            f = -1.0 * sysParams.get_lambda2i() * u;
+//        }
       	RF a = 0.; 
 
         // integrate grad u * grad phi_i + a*u*phi_i - f phi_i
